@@ -23,8 +23,8 @@ export default function Step4Future() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">未來預測瀑布圖</h2>
-          <p className="text-sm text-gray-400 mt-1">
+          <h2 className="text-2xl font-bold text-gray-800">未來預測瀑布圖</h2>
+          <p className="text-sm text-gray-500 mt-1">
             根據 Step 2 設定的未來假設，預測各驅動因子對營收成長的貢獻。
           </p>
         </div>

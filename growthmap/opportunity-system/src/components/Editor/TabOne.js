@@ -37,7 +37,7 @@ export default function TabOne({ data, onChange }) {
     <div className="space-y-6">
       {/* 機會點名稱 */}
       <div>
-        <label className="block text-sm font-semibold text-navy-800 mb-1">
+        <label className="block text-sm font-semibold text-gray-600 mb-1">
           增長機會名稱 <span className="text-red-500">*</span>
         </label>
         <input
@@ -45,13 +45,13 @@ export default function TabOne({ data, onChange }) {
           value={opportunityName}
           onChange={(e) => onChange({ opportunityName: e.target.value })}
           placeholder="例如：東南亞植物基飲品市場進入"
-          className="w-full rounded-lg border-navy-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+          className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
         />
       </div>
 
       {/* 使用的 BCG 外部工具 */}
       <div>
-        <label className="block text-sm font-semibold text-navy-800 mb-2">
+        <label className="block text-sm font-semibold text-gray-600 mb-2">
           使用的 BCG 外部分析工具 (可複選)
         </label>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -60,15 +60,15 @@ export default function TabOne({ data, onChange }) {
               key={tool.id}
               className={`flex items-center p-2.5 rounded-lg border cursor-pointer transition-colors text-xs ${
                 usedTools.includes(tool.id)
-                  ? 'bg-emerald-50 border-emerald-400 text-emerald-800'
-                  : 'bg-white border-navy-200 text-navy-600 hover:border-navy-300'
+                  ? 'bg-emerald-50/80 border-emerald-400 text-emerald-800'
+                  : 'bg-white/30 border-gray-200/60 text-gray-600 hover:border-gray-300'
               }`}
             >
               <input
                 type="checkbox"
                 checked={usedTools.includes(tool.id)}
                 onChange={() => handleToolToggle(tool.id)}
-                className="rounded text-emerald-600 focus:ring-emerald-500 mr-2"
+                className="rounded text-emerald-600 focus:ring-emerald-500 mr-2 border-gray-300/60"
               />
               <span className="font-medium mr-1">{tool.id}.</span>
               {tool.name}
@@ -79,7 +79,7 @@ export default function TabOne({ data, onChange }) {
 
       {/* 起點評估 */}
       <div>
-        <label className="block text-sm font-semibold text-navy-800 mb-2">
+        <label className="block text-sm font-semibold text-gray-600 mb-2">
           起點評估 (companyType)
         </label>
         <div className="flex gap-4">
@@ -88,8 +88,8 @@ export default function TabOne({ data, onChange }) {
               key={type}
               className={`flex items-center px-4 py-2.5 rounded-lg border cursor-pointer transition-colors ${
                 template1.companyType === type
-                  ? 'bg-navy-800 border-navy-800 text-white'
-                  : 'bg-white border-navy-200 text-navy-700 hover:border-navy-400'
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-white/30 border-gray-200/60 text-gray-700 hover:border-gray-400'
               }`}
             >
               <input
@@ -108,7 +108,7 @@ export default function TabOne({ data, onChange }) {
 
       {/* 成長面向 */}
       <div>
-        <label className="block text-sm font-semibold text-navy-800 mb-2">
+        <label className="block text-sm font-semibold text-gray-600 mb-2">
           成長面向 (growthDimension)
         </label>
         <div className="flex flex-wrap gap-3">
@@ -118,7 +118,7 @@ export default function TabOne({ data, onChange }) {
               className={`flex items-center px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                 template1.growthDimension === dim
                   ? 'bg-emerald-600 border-emerald-600 text-white'
-                  : 'bg-white border-navy-200 text-navy-700 hover:border-navy-400'
+                  : 'bg-white/30 border-gray-200/60 text-gray-700 hover:border-gray-400'
               }`}
             >
               <input
@@ -137,7 +137,7 @@ export default function TabOne({ data, onChange }) {
 
       {/* 成長槓桿 */}
       <div>
-        <label className="block text-sm font-semibold text-navy-800 mb-2">
+        <label className="block text-sm font-semibold text-gray-600 mb-2">
           成長槓桿 (growthLever)
         </label>
         <div className="flex flex-wrap gap-3">
@@ -146,8 +146,8 @@ export default function TabOne({ data, onChange }) {
               key={lever}
               className={`flex items-center px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                 template1.growthLever === lever
-                  ? 'bg-navy-700 border-navy-700 text-white'
-                  : 'bg-white border-navy-200 text-navy-700 hover:border-navy-400'
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-white/30 border-gray-200/60 text-gray-700 hover:border-gray-400'
               }`}
             >
               <input
@@ -171,7 +171,7 @@ export default function TabOne({ data, onChange }) {
       {/* 成長類型 */}
       {growthTypeOptions.length > 0 && (
         <div>
-          <label className="block text-sm font-semibold text-navy-800 mb-2">
+          <label className="block text-sm font-semibold text-gray-600 mb-2">
             成長類型 (growthType，可複選)
           </label>
           <div className="flex flex-wrap gap-2">
@@ -180,15 +180,15 @@ export default function TabOne({ data, onChange }) {
                 key={type}
                 className={`flex items-center px-3 py-2 rounded-lg border cursor-pointer transition-colors text-sm ${
                   (template1.growthType || []).includes(type)
-                    ? 'bg-emerald-50 border-emerald-400 text-emerald-800'
-                    : 'bg-white border-navy-200 text-navy-600 hover:border-navy-300'
+                    ? 'bg-emerald-50/80 border-emerald-400 text-emerald-800'
+                    : 'bg-white/30 border-gray-200/60 text-gray-600 hover:border-gray-300'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={(template1.growthType || []).includes(type)}
                   onChange={() => handleGrowthTypeToggle(type)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 mr-2"
+                  className="rounded text-emerald-600 focus:ring-emerald-500 mr-2 border-gray-300/60"
                 />
                 {type}
               </label>
@@ -199,7 +199,7 @@ export default function TabOne({ data, onChange }) {
 
       {/* 主要洞察 */}
       <div>
-        <label className="block text-sm font-semibold text-navy-800 mb-1">
+        <label className="block text-sm font-semibold text-gray-600 mb-1">
           主要洞察 (insights)
         </label>
         <textarea
@@ -207,7 +207,7 @@ export default function TabOne({ data, onChange }) {
           onChange={(e) => updateField('insights', e.target.value)}
           rows={4}
           placeholder="使用工具獲得的洞察，幫助打破既有框架..."
-          className="w-full rounded-lg border-navy-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+          className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
         />
       </div>
     </div>

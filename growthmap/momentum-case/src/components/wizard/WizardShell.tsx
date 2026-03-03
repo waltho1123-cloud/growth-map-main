@@ -35,32 +35,32 @@ export default function WizardShell() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-[#242442] border-b border-white/10 px-6 py-4">
+      <header className="glass-header px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <a
               href="/"
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors shrink-0"
             >
               <span>←</span>
               <span>返回藍圖</span>
             </a>
-            <div className="w-px h-8 bg-white/10" />
+            <div className="w-px h-8 bg-gray-200" />
             <div>
-              <h1 className="text-xl font-bold text-white">
+              <h1 className="text-xl font-bold text-gray-800">
                 <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
               </h1>
-              <p className="text-sm text-gray-400 mt-0.5">商周百億 CEO 班 — 課後作業</p>
+              <p className="text-sm text-gray-500 mt-0.5">商周百億 CEO 班 — 課後作業</p>
             </div>
           </div>
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-gray-500">
             Step {currentStep} / {STEPS.length - 1}
           </div>
         </div>
       </header>
 
       {/* Progress Bar */}
-      <nav className="bg-[#242442] border-b border-white/10 px-6 py-3">
+      <nav className="glass-header px-6 py-3">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-1">
             {STEPS.map((step, i) => (
@@ -73,7 +73,7 @@ export default function WizardShell() {
                     ? 'bg-[#00A651] text-white'
                     : i < currentStep
                       ? 'bg-[#00A651]/20 text-[#00A651] hover:bg-[#00A651]/30'
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }
                 `}
               >
@@ -95,12 +95,12 @@ export default function WizardShell() {
       </main>
 
       {/* Bottom Navigation */}
-      <footer className="bg-[#242442] border-t border-white/10 px-6 py-4">
+      <footer className="glass-header px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <button
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
             disabled={currentStep === 0}
-            className="px-5 py-2.5 rounded-lg text-sm font-medium bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="px-5 py-2.5 rounded-lg text-sm font-medium bg-white/50 text-gray-600 hover:bg-white/70 border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             ← 上一步
           </button>

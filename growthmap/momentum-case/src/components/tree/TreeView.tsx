@@ -29,19 +29,19 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
             relative cursor-pointer rounded-xl px-4 py-3 min-w-[110px] text-center
             border-2 transition-all select-none
             ${isSelected
-              ? 'border-[#00A651] bg-[#00A651]/20 shadow-lg shadow-[#00A651]/20'
-              : 'border-white/10 bg-[#242442] hover:border-white/30'
+              ? 'border-[#00A651] bg-[#00A651]/10 shadow-lg shadow-[#00A651]/10'
+              : 'border-gray-200 bg-white/60 hover:border-gray-300'
             }
           `}
         >
-          <div className="text-sm font-semibold text-white truncate max-w-[120px]">
+          <div className="text-sm font-semibold text-gray-800 truncate max-w-[120px]">
             {node.name}
           </div>
           <div className={`
             text-[10px] mt-1 px-2 py-0.5 rounded-full inline-block
             ${node.logic === 'add'
-              ? 'bg-blue-500/20 text-blue-300'
-              : 'bg-amber-500/20 text-amber-300'
+              ? 'bg-blue-100 text-blue-600'
+              : 'bg-amber-100 text-amber-600'
             }
           `}>
             {node.logic === 'add' ? '＋ 加法' : '× 乘法'}
@@ -62,7 +62,7 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
           {!isRoot && (
             <button
               onClick={(e) => { e.stopPropagation(); removeNode(node.id); }}
-              className="w-6 h-6 rounded-md bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center text-xs font-bold transition-all"
+              className="w-6 h-6 rounded-md bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center text-xs font-bold transition-all"
               title="刪除節點"
             >
               ×
@@ -77,9 +77,9 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
           {/* Horizontal connector + branch lines */}
           <div className="flex flex-col items-center justify-center relative w-10 self-stretch">
             {/* Horizontal line from parent */}
-            <div className="absolute left-0 top-1/2 w-3 h-0.5 bg-[#00A651]/60" />
+            <div className="absolute left-0 top-1/2 w-3 h-0.5 bg-[#00A651]/40" />
             {/* Vertical trunk */}
-            <div className="absolute left-3 bg-[#00A651]/60 w-0.5"
+            <div className="absolute left-3 bg-[#00A651]/40 w-0.5"
               style={{
                 top: node.children.length === 1 ? '50%' : `${100 / (node.children.length * 2 + (node.children.length - 1))}%`,
                 bottom: node.children.length === 1 ? '50%' : `${100 / (node.children.length * 2 + (node.children.length - 1))}%`,
@@ -92,7 +92,7 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
             {node.children.map((child, i) => (
               <div key={child.id} className="flex items-center relative">
                 {/* Branch line */}
-                <div className="absolute -left-[28px] top-1/2 w-7 h-0.5 bg-[#00A651]/60" />
+                <div className="absolute -left-[28px] top-1/2 w-7 h-0.5 bg-[#00A651]/40" />
                 <TreeNodeComponent
                   node={child}
                   onSelect={onSelect}
@@ -134,7 +134,7 @@ export default function TreeView() {
     <div className="flex gap-6 items-start">
       {/* Tree Area */}
       <div className="flex-1 overflow-auto">
-        <div className="bg-[#1A1A2E]/50 rounded-xl border border-white/5 p-8 min-h-[400px]">
+        <div className="glass-card rounded-xl p-8 min-h-[400px]">
           <TreeNodeComponent
             node={tree}
             onSelect={setSelectedNode}

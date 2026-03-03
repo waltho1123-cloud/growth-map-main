@@ -19,32 +19,31 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-50 to-slate-100">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-navy-900 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <header className="glass-header">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-4 mb-2">
             <a
               href="/"
-              className="flex items-center gap-1.5 text-sm text-navy-200 hover:text-white transition-colors"
-              style={{ color: '#94a3b8' }}
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
             >
               <span>←</span>
               <span>返回藍圖</span>
             </a>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-800">
             202601 BW CEO Workshop — Class 3 作業
           </h1>
-          <p className="text-navy-200 mt-1 text-sm">
+          <p className="text-gray-500 mt-1 text-sm">
             BW CEO 成長機會探索系統 · Opportunity Identification System
           </p>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* 提示 */}
-        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+        <div className="bg-amber-50/80 border-l-4 border-amber-400 p-4 rounded-r-lg">
           <div className="flex items-start">
             <span className="text-amber-500 mr-2 text-lg">⚠️</span>
             <p className="text-amber-800 text-sm font-medium">
@@ -54,7 +53,7 @@ export default function Dashboard() {
         </div>
 
         {/* 進度列 */}
-        <div className="bg-white rounded-xl shadow-sm border border-navy-100 p-6">
+        <div className="glass-card rounded-2xl p-6">
           <ProgressBar count={opportunities.length} />
         </div>
 
@@ -71,7 +70,7 @@ export default function Dashboard() {
           </button>
           <button
             onClick={handleExport}
-            className="inline-flex items-center px-5 py-2.5 bg-navy-700 text-white font-semibold rounded-lg shadow hover:bg-navy-800 transition-colors focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2"
+            className="inline-flex items-center px-5 py-2.5 glass-card text-gray-700 font-semibold rounded-lg hover:bg-white/70 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
           >
             <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -82,9 +81,9 @@ export default function Dashboard() {
         </div>
 
         {/* 清單表格 */}
-        <div className="bg-white rounded-xl shadow-sm border border-navy-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-navy-100">
-            <h2 className="text-lg font-semibold text-navy-900">
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/40">
+            <h2 className="text-lg font-semibold text-gray-800">
               增長機會長清單 (Long-list)
             </h2>
           </div>

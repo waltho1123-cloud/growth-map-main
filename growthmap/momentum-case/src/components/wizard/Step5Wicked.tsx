@@ -22,8 +22,8 @@ export default function Step5Wicked() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">棘手型挑戰</h2>
-          <p className="text-sm text-gray-400 mt-1">
+          <h2 className="text-2xl font-bold text-gray-800">棘手型挑戰</h2>
+          <p className="text-sm text-gray-500 mt-1">
             辨識並記錄各賽道面臨的棘手型（Wicked）挑戰與指導原則。
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function Step5Wicked() {
       </div>
 
       {wickedChallenges.length === 0 ? (
-        <div className="bg-[#242442] rounded-xl border border-white/10 p-12 text-center">
+        <div className="glass-card rounded-xl p-12 text-center">
           <p className="text-gray-500">尚無棘手型挑戰。點擊上方按鈕新增。</p>
         </div>
       ) : (
@@ -45,15 +45,15 @@ export default function Step5Wicked() {
           {wickedChallenges.map((wc, idx) => (
             <div
               key={wc.id}
-              className="bg-[#242442] rounded-xl border border-white/10 p-6 space-y-4"
+              className="glass-card rounded-xl p-6 space-y-4"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-white">
+                <h3 className="text-base font-semibold text-gray-800">
                   挑戰 #{idx + 1}
                 </h3>
                 <button
                   onClick={() => removeWickedChallenge(wc.id)}
-                  className="text-red-400 hover:text-red-300 text-sm transition-colors"
+                  className="text-red-500 hover:text-red-600 text-sm transition-colors"
                 >
                   刪除
                 </button>
@@ -65,7 +65,7 @@ export default function Step5Wicked() {
                     key={field.key}
                     className={field.key === 'description' || field.key === 'wickedType' || field.key === 'guideline' ? 'md:col-span-2' : ''}
                   >
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    <label className="block text-sm font-medium text-gray-600 mb-1.5">
                       {field.label}
                     </label>
                     {(field.key === 'description' || field.key === 'wickedType' || field.key === 'guideline') ? (
@@ -76,7 +76,7 @@ export default function Step5Wicked() {
                         }
                         placeholder={field.placeholder}
                         rows={2}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00A651] transition-colors resize-none"
+                        className="w-full neu-input rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none resize-none"
                       />
                     ) : (
                       <input
@@ -86,7 +86,7 @@ export default function Step5Wicked() {
                           updateWickedChallenge(wc.id, { [field.key]: e.target.value })
                         }
                         placeholder={field.placeholder}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00A651] transition-colors"
+                        className="w-full neu-input rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none"
                       />
                     )}
                   </div>

@@ -42,24 +42,24 @@ export default function Step0Dashboard() {
     <div className="space-y-8">
       {/* Welcome */}
       <div className="text-center py-8">
-        <h2 className="text-3xl font-bold text-white mb-3">
+        <h2 className="text-3xl font-bold text-gray-800 mb-3">
           歡迎來到<span className="text-[#00A651]">成長藍圖</span>實作平台
         </h2>
-        <p className="text-gray-400 max-w-2xl mx-auto">
+        <p className="text-gray-500 max-w-2xl mx-auto">
           本平台協助您完成商周百億 CEO 班的課後作業。請依序完成以下五個任務，
           建構您企業的營收成長藍圖。
         </p>
       </div>
 
       {/* External Survey Link */}
-      <div className="bg-[#242442] rounded-xl p-6 border border-white/10">
+      <div className="glass-card rounded-xl p-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-lg bg-[#00A651]/20 flex items-center justify-center text-2xl">
             📋
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-white">課前問卷</h3>
-            <p className="text-sm text-gray-400">請先完成課前問卷，以便講師了解您的企業現況。</p>
+            <h3 className="text-lg font-semibold text-gray-800">課前問卷</h3>
+            <p className="text-sm text-gray-500">請先完成課前問卷，以便講師了解您的企業現況。</p>
           </div>
           <a
             href="#"
@@ -78,15 +78,15 @@ export default function Step0Dashboard() {
           <button
             key={task.step}
             onClick={() => setCurrentStep(task.step)}
-            className="bg-[#242442] rounded-xl p-6 border border-white/10 hover:border-[#00A651]/50 transition-all text-left group"
+            className="glass-card glass-card-hover rounded-xl p-6 transition-all text-left group"
           >
             <div className="flex items-start gap-4">
               <span className="text-3xl">{task.icon}</span>
               <div>
-                <h3 className="text-base font-semibold text-white group-hover:text-[#00A651] transition-colors">
+                <h3 className="text-base font-semibold text-gray-800 group-hover:text-[#00A651] transition-colors">
                   {task.title}
                 </h3>
-                <p className="text-sm text-gray-400 mt-1">{task.description}</p>
+                <p className="text-sm text-gray-500 mt-1">{task.description}</p>
               </div>
             </div>
           </button>

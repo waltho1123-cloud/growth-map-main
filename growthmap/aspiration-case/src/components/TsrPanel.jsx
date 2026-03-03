@@ -14,7 +14,7 @@ function NumberField({ value, onChange, unit = '', placeholder = '0' }) {
         type="number"
         value={value || ''}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className={`w-full border border-border-dark rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue-light/40 focus:border-brand-blue-light ${unit ? 'pr-10' : ''}`}
+        className={`neu-input w-full rounded-md px-3 py-2 text-sm focus:outline-none ${unit ? 'pr-10' : ''}`}
         placeholder={placeholder}
         step="0.1"
       />
@@ -29,7 +29,7 @@ export default function TsrPanel({ data, onChange }) {
   return (
     <div className="space-y-6">
       {/* 提示 */}
-      <div className="bg-bg-warning border border-amber-300 rounded-md px-4 py-2.5 text-sm text-amber-800 flex items-center gap-2">
+      <div className="bg-bg-warning/80 backdrop-blur-sm border border-amber-300/60 rounded-md px-4 py-2.5 text-sm text-amber-800 flex items-center gap-2">
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -50,7 +50,7 @@ export default function TsrPanel({ data, onChange }) {
       {/* 貢獻度拆解 + 2028 目標 並排 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 貢獻度拆解 */}
-        <div className="border border-border rounded-lg p-4">
+        <div className="border border-white/40 rounded-lg p-4 bg-white/30">
           <h4 className="text-sm font-semibold text-gray-700 mb-3">TSR 貢獻度拆解</h4>
           <div className="space-y-3">
             <FieldGroup label="營收增長 (%)">
@@ -78,7 +78,7 @@ export default function TsrPanel({ data, onChange }) {
         </div>
 
         {/* 2028 財務目標 */}
-        <div className="border border-border rounded-lg p-4">
+        <div className="border border-white/40 rounded-lg p-4 bg-white/30">
           <h4 className="text-sm font-semibold text-gray-700 mb-3">2028 財務目標</h4>
           <div className="space-y-3">
             <FieldGroup label="2028 營收 (億)">

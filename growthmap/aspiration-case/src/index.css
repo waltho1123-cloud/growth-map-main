@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-blue: #1e3a5f;
-  --color-brand-blue-light: #2563eb;
+  --color-brand-blue: #4f46e5;
+  --color-brand-blue-light: #6366f1;
   --color-brand-green: #059669;
   --color-brand-green-light: #10b981;
-  --color-border: #e5e7eb;
-  --color-border-dark: #d1d5db;
-  --color-bg-section: #f9fafb;
-  --color-bg-highlight: #eff6ff;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-dark: rgba(0, 0, 0, 0.12);
+  --color-bg-section: rgba(255, 255, 255, 0.55);
+  --color-bg-highlight: rgba(99, 102, 241, 0.06);
   --color-bg-warning: #fef3c7;
 }
 
-/* 隱藏 number input 的上下箭頭，避免與單位符號重疊 */
+/* Hide number input spinner arrows */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -25,8 +25,54 @@ input[type="number"] {
 body {
   margin: 0;
   font-family: "Inter", "Noto Sans TC", system-ui, -apple-system, sans-serif;
-  background-color: #ffffff;
-  color: #1f2937;
+  background-color: #eef1f5;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(99, 102, 241, 0.06), transparent),
+    radial-gradient(ellipse 60% 50% at 90% 80%, rgba(16, 185, 129, 0.05), transparent);
+  background-attachment: fixed;
+  color: #1b1f3b;
+}
+
+/* Glassmorphism utilities */
+.glass-card {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    6px 6px 14px rgba(0, 0, 0, 0.07),
+    -6px -6px 14px rgba(255, 255, 255, 0.85);
+}
+
+.glass-header {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.neu-input {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    inset 1px 1px 3px rgba(0, 0, 0, 0.04),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.6);
+}
+
+.neu-input:focus {
+  border-color: #059669;
+  box-shadow:
+    inset 1px 1px 3px rgba(0, 0, 0, 0.04),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.6),
+    0 0 0 2px rgba(5, 150, 105, 0.15);
+  outline: none;
+}
+
+.neu-inset {
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.06),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.8);
 }
 
 @media print {

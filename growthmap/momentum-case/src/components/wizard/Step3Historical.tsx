@@ -9,8 +9,8 @@ export default function Step3Historical() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-bold text-white">歷史瀑布圖</h2>
-        <p className="text-sm text-gray-400 mt-1">
+        <h2 className="text-2xl font-bold text-gray-800">歷史瀑布圖</h2>
+        <p className="text-sm text-gray-500 mt-1">
           根據 Step 2 設定的歷史貢獻度，視覺化各驅動因子對營收成長的歷史貢獻。
         </p>
       </div>

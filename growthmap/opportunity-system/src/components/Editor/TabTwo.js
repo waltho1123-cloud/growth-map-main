@@ -36,16 +36,16 @@ export default function TabTwo({ data, onChange }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-navy-50 rounded-lg p-4 border border-navy-100">
-        <p className="text-sm text-navy-600">
-          <span className="font-semibold text-navy-800">模板二：具體機會展開</span>
+      <div className="glass-card rounded-lg p-4">
+        <p className="text-sm text-gray-600">
+          <span className="font-semibold text-gray-800">模板二：具體機會展開</span>
           　—　請詳細描述此增長機會的目標客戶、獨特賣點、市場進入策略與實施步驟。
         </p>
       </div>
 
       {fields.map((field) => (
         <div key={field.key}>
-          <label className="block text-sm font-semibold text-navy-800 mb-1">
+          <label className="block text-sm font-semibold text-gray-600 mb-1">
             {field.label}
           </label>
           <textarea
@@ -53,7 +53,7 @@ export default function TabTwo({ data, onChange }) {
             onChange={(e) => updateField(field.key, e.target.value)}
             rows={field.rows}
             placeholder={field.placeholder}
-            className="w-full rounded-lg border-navy-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+            className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
           />
         </div>
       ))}

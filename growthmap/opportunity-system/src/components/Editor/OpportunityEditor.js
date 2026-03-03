@@ -76,23 +76,23 @@ export default function OpportunityEditor() {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-navy-900/50 backdrop-blur-sm" onClick={handleClose} />
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Editor Panel */}
-      <div className="absolute inset-y-0 right-0 w-full max-w-4xl bg-white shadow-2xl flex flex-col animate-slide-in">
+      <div className="absolute inset-y-0 right-0 w-full max-w-4xl glass-card flex flex-col animate-slide-in" style={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', background: 'rgba(255,255,255,0.72)' }}>
         {/* Header */}
-        <div className="bg-navy-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="glass-header px-6 py-4 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-lg font-bold">
+            <h2 className="text-lg font-bold text-gray-800">
               {opp.opportunityName || '新增增長機會'}
             </h2>
-            <p className="text-navy-300 text-xs mt-0.5">
+            <p className="text-gray-400 text-xs mt-0.5">
               即時自動儲存中
             </p>
           </div>
           <button
             onClick={handleClose}
-            className="text-navy-300 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-gray-700 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -101,7 +101,7 @@ export default function OpportunityEditor() {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-navy-100 bg-navy-50 px-6 shrink-0">
+        <div className="border-b border-gray-200/50 bg-white/30 px-6 shrink-0">
           <nav className="flex space-x-1">
             {TABS.map((tab) => (
               <button
@@ -109,8 +109,8 @@ export default function OpportunityEditor() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-700 bg-white rounded-t-lg'
-                    : 'border-transparent text-navy-500 hover:text-navy-700 hover:border-navy-300'
+                    ? 'border-emerald-500 text-emerald-700 bg-white/50 rounded-t-lg'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <span className="block">{tab.label}</span>
@@ -128,10 +128,10 @@ export default function OpportunityEditor() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-navy-100 px-6 py-4 bg-navy-50 flex justify-between items-center shrink-0">
+        <div className="border-t border-gray-200/50 px-6 py-4 bg-white/30 flex justify-between items-center shrink-0">
           <button
             onClick={handleClose}
-            className="px-4 py-2 text-sm text-navy-600 hover:text-navy-800 font-medium"
+            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 font-medium glass-card rounded-lg hover:bg-white/60 transition-colors"
           >
             取消
           </button>

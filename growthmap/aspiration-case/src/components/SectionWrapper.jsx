@@ -1,7 +1,7 @@
 export default function SectionWrapper({ title, number, children }) {
   return (
-    <section className="border border-border rounded-lg overflow-hidden">
-      <div className="bg-bg-section border-b border-border px-6 py-3 flex items-center gap-3">
+    <section className="glass-card rounded-2xl overflow-hidden">
+      <div className="bg-white/30 border-b border-white/40 px-6 py-3 flex items-center gap-3">
         {number && (
           <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brand-blue text-white text-xs font-bold">
             {number}

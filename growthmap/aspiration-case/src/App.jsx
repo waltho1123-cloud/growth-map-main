@@ -118,14 +118,14 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       {/* 頁首 */}
-      <header className="bg-brand-blue text-white py-6 px-8 no-print">
+      <header className="glass-header text-gray-800 py-6 px-8 no-print">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-4 mb-2">
             <a
               href="/"
-              className="flex items-center gap-1.5 text-sm text-blue-200 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
             >
               <span>←</span>
               <span>返回藍圖</span>
@@ -134,7 +134,7 @@ export default function App() {
           <h1 className="text-2xl font-bold tracking-tight">
             企業成長藍圖
           </h1>
-          <p className="text-blue-200 mt-1 text-sm">
+          <p className="text-gray-500 mt-1 text-sm">
             建立加速增長情境 (Aspiration Case)
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function App() {
       </main>
 
       {/* 匯出按鈕 */}
-      <div className="no-print sticky bottom-0 bg-white/90 backdrop-blur border-t border-border py-4 px-8">
+      <div className="no-print sticky bottom-0 glass-header py-4 px-8">
         <div className="max-w-5xl mx-auto flex justify-end">
           <ExportButton companyName={companyInfo.name} />
         </div>

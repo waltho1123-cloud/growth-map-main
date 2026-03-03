@@ -18,17 +18,19 @@ function AppContent() {
 function App() {
   return (
     <OpportunityProvider>
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            borderRadius: '10px',
-            fontSize: '14px',
-          },
-        }}
-      />
-      <AppContent />
+      <div className="min-h-screen">
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              borderRadius: '10px',
+              fontSize: '14px',
+            },
+          }}
+        />
+        <AppContent />
+      </div>
     </OpportunityProvider>
   );
 }

@@ -3,8 +3,8 @@ export default function FinalDecisionPanel({ partASubtotal, partBRevenue, aspira
     n > 0 ? n.toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'
 
   return (
-    <section className="border-2 border-brand-green rounded-lg overflow-hidden">
-      <div className="bg-emerald-50 border-b border-brand-green/30 px-6 py-3 flex items-center gap-3">
+    <section className="glass-card border-2 border-brand-green/40 rounded-2xl overflow-hidden">
+      <div className="bg-emerald-50/40 backdrop-blur-sm border-b border-brand-green/20 px-6 py-3 flex items-center gap-3">
         <svg className="w-5 h-5 text-brand-green" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -20,27 +20,27 @@ export default function FinalDecisionPanel({ partASubtotal, partBRevenue, aspira
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* 客戶視角 */}
-          <div className="border border-border rounded-lg p-4 text-center">
+          <div className="border border-white/40 rounded-lg p-4 text-center bg-white/40">
             <div className="text-xs font-medium text-gray-500 mb-1">A. 客戶視角營收加總</div>
             <div className="text-2xl font-bold text-brand-blue">{formatNum(partASubtotal)}</div>
             <div className="text-xs text-gray-400 mt-1">億 (Market View)</div>
           </div>
 
           {/* 股東視角 */}
-          <div className="border border-border rounded-lg p-4 text-center">
+          <div className="border border-white/40 rounded-lg p-4 text-center bg-white/40">
             <div className="text-xs font-medium text-gray-500 mb-1">B. 股東視角 2028 營收</div>
             <div className="text-2xl font-bold text-brand-blue">{formatNum(partBRevenue)}</div>
             <div className="text-xs text-gray-400 mt-1">億 (Shareholder View)</div>
           </div>
 
           {/* 最終決策 */}
-          <div className="border-2 border-brand-green rounded-lg p-4 bg-emerald-50/50 text-center">
+          <div className="border-2 border-brand-green/50 rounded-lg p-4 bg-emerald-50/30 backdrop-blur-sm text-center">
             <div className="text-xs font-semibold text-brand-green mb-1">最終拍板目標</div>
             <input
               type="number"
               value={aspirationRevenue || ''}
               onChange={(e) => onFinalDecision(parseFloat(e.target.value) || 0)}
-              className="w-full text-center text-2xl font-bold text-brand-green border border-brand-green/30 rounded-md px-3 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-brand-green/40"
+              className="neu-input w-full text-center text-2xl font-bold text-brand-green rounded-md px-3 py-1 focus:outline-none"
               placeholder="0"
             />
             <div className="text-xs text-gray-400 mt-1">億 (Final Decision)</div>

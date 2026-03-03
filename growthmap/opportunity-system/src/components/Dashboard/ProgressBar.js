@@ -20,14 +20,14 @@ export default function ProgressBar({ count }) {
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-1">
-        <span className="text-sm font-medium text-navy-700">
-          已建立 <span className="text-lg font-bold text-navy-900">{count}</span> 個機會點
+        <span className="text-sm font-medium text-gray-600">
+          已建立 <span className="text-lg font-bold text-gray-800">{count}</span> 個機會點
         </span>
-        <span className="text-sm text-navy-500">
+        <span className="text-sm text-gray-500">
           目標 {PROGRESS_TARGET}~{PROGRESS_MAX} 個 · {label}
         </span>
       </div>
-      <div className="w-full bg-navy-100 rounded-full h-3 overflow-hidden">
+      <div className="w-full bg-white/40 rounded-full h-3 overflow-hidden" style={{ boxShadow: 'inset 1px 1px 3px rgba(0,0,0,0.06), inset -1px -1px 3px rgba(255,255,255,0.7)' }}>
         <div
           className={`h-full rounded-full transition-all duration-500 ${barColor}`}
           style={{ width: `${percentage}%` }}

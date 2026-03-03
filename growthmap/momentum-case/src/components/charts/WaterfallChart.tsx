@@ -83,16 +83,16 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
     return {
       title: title ? {
         text: title,
-        textStyle: { color: '#fff', fontSize: 16, fontWeight: 600 },
+        textStyle: { color: '#1b1f3b', fontSize: 16, fontWeight: 600 },
         left: 'center',
         top: 10,
       } : undefined,
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        backgroundColor: '#242442',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#fff' },
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        borderColor: 'rgba(0,0,0,0.08)',
+        textStyle: { color: '#1b1f3b' },
         formatter: (params: Array<{ name: string; value: number; seriesIndex: number }>) => {
           const bar = params.find((p) => p.seriesIndex === 1);
           if (!bar) return '';
@@ -115,20 +115,20 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
         type: 'category' as const,
         data: categories,
         axisLabel: {
-          color: '#9CA3AF',
+          color: '#6b7194',
           fontSize: 11,
           rotate: categories.length > 8 ? 30 : 0,
         },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+        axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } },
       },
       yAxis: {
         type: 'value' as const,
         axisLabel: {
-          color: '#9CA3AF',
+          color: '#6b7194',
           formatter: '{value}%',
         },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+        splitLine: { lineStyle: { color: 'rgba(0,0,0,0.06)' } },
+        axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } },
       },
       series: [
         {
@@ -147,7 +147,7 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
           label: {
             show: true,
             position: 'top',
-            color: '#fff',
+            color: '#1b1f3b',
             fontSize: 11,
             formatter: (p: { dataIndex: number }) => {
               const idx = p.dataIndex;
@@ -165,14 +165,14 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
 
   if (drivers.length === 0) {
     return (
-      <div className="bg-[#242442] rounded-xl border border-white/10 p-12 text-center">
+      <div className="glass-card rounded-xl p-12 text-center">
         <p className="text-gray-500">尚無驅動因子資料。請先完成 Step 2 設定。</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#242442] rounded-xl border border-white/10 p-4">
+    <div className="glass-card rounded-xl p-4">
       <ReactEChartsCore
         echarts={echarts}
         option={option}

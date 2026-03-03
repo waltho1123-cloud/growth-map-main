@@ -25,19 +25,19 @@ export default function TreeNode({ node, onSelect, selectedId }: TreeNodeProps) 
             relative cursor-pointer rounded-xl px-4 py-3 min-w-[120px] text-center
             border-2 transition-all select-none
             ${isSelected
-              ? 'border-[#00A651] bg-[#00A651]/20 shadow-lg shadow-[#00A651]/20'
-              : 'border-white/10 bg-[#242442] hover:border-white/30'
+              ? 'border-[#00A651] bg-[#00A651]/10 shadow-lg shadow-[#00A651]/10'
+              : 'border-gray-200 bg-white/60 hover:border-gray-300'
             }
           `}
         >
-          <div className="text-sm font-semibold text-white truncate max-w-[140px]">
+          <div className="text-sm font-semibold text-gray-800 truncate max-w-[140px]">
             {node.name}
           </div>
           <div className={`
             text-[10px] mt-1 px-2 py-0.5 rounded-full inline-block
             ${node.logic === 'add'
-              ? 'bg-blue-500/20 text-blue-300'
-              : 'bg-amber-500/20 text-amber-300'
+              ? 'bg-blue-100 text-blue-600'
+              : 'bg-amber-100 text-amber-600'
             }
           `}>
             {node.logic === 'add' ? '＋ 加法' : '× 乘法'}
@@ -59,7 +59,7 @@ export default function TreeNode({ node, onSelect, selectedId }: TreeNodeProps) 
           {!isRoot && (
             <button
               onClick={(e) => { e.stopPropagation(); removeNode(node.id); }}
-              className="w-7 h-7 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center text-sm transition-all"
+              className="w-7 h-7 rounded-lg bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center text-sm transition-all"
               title="刪除節點"
             >
               ×

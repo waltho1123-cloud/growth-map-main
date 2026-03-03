@@ -161,28 +161,10 @@ body {
   overflow: hidden;
 }
 
-/* Subtle top accent line */
-.unit-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 24px;
-  right: 24px;
-  height: 3px;
-  border-radius: 0 0 3px 3px;
-  background: linear-gradient(90deg, var(--color-in-progress), var(--color-available));
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
-
 .unit-card:hover {
   box-shadow: var(--shadow-neu-hover);
   transform: translateY(-4px);
   background: rgba(255, 255, 255, 0.7);
-}
-
-.unit-card:hover::before {
-  opacity: 1;
 }
 
 .unit-card:focus-visible {

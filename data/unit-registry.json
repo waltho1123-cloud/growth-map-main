@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "成長藍圖",
+    "subtitle": "Growth Blueprint",
+    "description": "透過系統化的策略規劃工具，從基準分析到機會識別，建構完整的業務成長路徑"
+  },
+  "units": [
+    {
+      "id": "unit-1",
+      "order": 1,
+      "nameCn": "建立自然增長情境",
+      "nameEn": "Momentum Case",
+      "description": "分析現有業務的自然成長趨勢，建立基準情境作為策略規劃的起點",
+      "route": "growthmap/momentum-case/out/index.html",
+      "icon": "\ud83d\udcc8",
+      "status": "available",
+      "tags": ["基礎分析", "情境建模"],
+      "prerequisite": null
+    },
+    {
+      "id": "unit-2",
+      "order": 2,
+      "nameCn": "建立加速增長情境",
+      "nameEn": "Aspiration Case",
+      "description": "設定超越自然增長的目標情境，定義加速成長的策略方向與關鍵假設",
+      "route": "growthmap/aspiration-case/dist/index.html",
+      "icon": "\ud83d\ude80",
+      "status": "available",
+      "tags": ["目標設定", "情境建模"],
+      "prerequisite": "unit-1"
+    },
+    {
+      "id": "unit-3",
+      "order": 3,
+      "nameCn": "識別機會",
+      "nameEn": "Identify Opportunities",
+      "description": "比對自然增長與加速增長之間的差距，系統化識別並優先排序成長機會",
+      "route": "growthmap/opportunity-system/build/index.html",
+      "icon": "\ud83d\udd0d",
+      "status": "available",
+      "tags": ["機會分析", "差距識別"],
+      "prerequisite": "unit-2"
+    }
+  ]
+}

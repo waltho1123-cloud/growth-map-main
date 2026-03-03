@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Next.js dev cache
+**/.next/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude local settings
+.claude/

@@ -1,0 +1,118 @@
+'use client';
+
+import { useAssignmentStore } from '@/store/useAssignmentStore';
+import Step0Dashboard from './Step0Dashboard';
+import Step1Tree from './Step1Tree';
+import Step2Drivers from './Step2Drivers';
+import Step3Historical from './Step3Historical';
+import Step4Future from './Step4Future';
+import Step5Wicked from './Step5Wicked';
+
+const STEPS = [
+  { label: '總覽', shortLabel: '0' },
+  { label: '營收拆解', shortLabel: '1' },
+  { label: '驅動因子', shortLabel: '2' },
+  { label: '歷史瀑布圖', shortLabel: '3' },
+  { label: '未來預測', shortLabel: '4' },
+  { label: '棘手挑戰', shortLabel: '5' },
+];
+
+export default function WizardShell() {
+  const { currentStep, setCurrentStep } = useAssignmentStore();
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 0: return <Step0Dashboard />;
+      case 1: return <Step1Tree />;
+      case 2: return <Step2Drivers />;
+      case 3: return <Step3Historical />;
+      case 4: return <Step4Future />;
+      case 5: return <Step5Wicked />;
+      default: return <Step0Dashboard />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="bg-[#242442] border-b border-white/10 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <a
+              href="/"
+              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors shrink-0"
+            >
+              <span>←</span>
+              <span>返回藍圖</span>
+            </a>
+            <div className="w-px h-8 bg-white/10" />
+            <div>
+              <h1 className="text-xl font-bold text-white">
+                <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
+              </h1>
+              <p className="text-sm text-gray-400 mt-0.5">商周百億 CEO 班 — 課後作業</p>
+            </div>
+          </div>
+          <div className="text-sm text-gray-400">
+            Step {currentStep} / {STEPS.length - 1}
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Bar */}
+      <nav className="bg-[#242442] border-b border-white/10 px-6 py-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-1">
+            {STEPS.map((step, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentStep(i)}
+                className={`
+                  flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
+                  ${i === currentStep
+                    ? 'bg-[#00A651] text-white'
+                    : i < currentStep
+                      ? 'bg-[#00A651]/20 text-[#00A651] hover:bg-[#00A651]/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                  }
+                `}
+              >
+                <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs border border-current">
+                  {i < currentStep ? '✓' : step.shortLabel}
+                </span>
+                <span className="hidden sm:inline">{step.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* Content */}
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          {renderStep()}
+        </div>
+      </main>
+
+      {/* Bottom Navigation */}
+      <footer className="bg-[#242442] border-t border-white/10 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <button
+            onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+            disabled={currentStep === 0}
+            className="px-5 py-2.5 rounded-lg text-sm font-medium bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          >
+            ← 上一步
+          </button>
+          <button
+            onClick={() => setCurrentStep(Math.min(STEPS.length - 1, currentStep + 1))}
+            disabled={currentStep === STEPS.length - 1}
+            className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#00A651] text-white hover:bg-[#00A651]/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          >
+            下一步 →
+          </button>
+        </div>
+      </footer>
+    </div>
+  );
+}

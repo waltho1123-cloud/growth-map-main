@@ -80,5 +80,5 @@ export const CAGR_OPTIONS = ['>15%', '10-15%', '5-10%', '<5%', '~2-5%', '<2%'];
 
 export const EBIT_OPTIONS = ['>5%', '~2-5%', '<2%'];
 
-export const PROGRESS_TARGET = 10;
-export const PROGRESS_MAX = 20;
+export const PROGRESS_TARGET = 7;
+export const PROGRESS_MAX = 10;

@@ -19,8 +19,8 @@ export default function Step2Drivers() {
         </p>
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden">
-        <table className="w-full">
+      <div className="glass-card rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[480px]">
           <thead>
             <tr className="border-b border-gray-200">
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">驅動因子路徑</th>

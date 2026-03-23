@@ -18,15 +18,16 @@ export default function OpportunityEditor() {
   const opp = state.opportunities.find((o) => o.id === state.editingId);
 
   // 草稿自動儲存 (debounced)
+  const editingId = opp?.id;
   const autoSave = useCallback(
     (updates) => {
-      if (!opp) return;
+      if (!editingId) return;
       dispatch({
         type: 'UPDATE_OPPORTUNITY',
-        payload: { id: opp.id, data: updates },
+        payload: { id: editingId, data: updates },
       });
     },
-    [opp, dispatch]
+    [editingId, dispatch]
   );
 
   // 防呆驗證
@@ -81,7 +82,7 @@ export default function OpportunityEditor() {
       {/* Editor Panel */}
       <div className="absolute inset-y-0 right-0 w-full max-w-4xl glass-card flex flex-col animate-slide-in" style={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', background: 'rgba(255,255,255,0.72)' }}>
         {/* Header */}
-        <div className="glass-header px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="glass-header px-4 sm:px-6 py-4 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-bold text-gray-800">
               {opp.opportunityName || '新增增長機會'}
@@ -101,8 +102,8 @@ export default function OpportunityEditor() {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200/50 bg-white/30 px-6 shrink-0">
-          <nav className="flex space-x-1">
+        <div className="border-b border-gray-200/50 bg-white/30 px-4 sm:px-6 shrink-0">
+          <nav className="flex space-x-1 overflow-x-auto">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -121,14 +122,14 @@ export default function OpportunityEditor() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {activeTab === 0 && <TabOne data={opp} onChange={handleChange} />}
           {activeTab === 1 && <TabTwo data={opp} onChange={handleChange} />}
           {activeTab === 2 && <TabThree data={opp} onChange={handleChange} />}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200/50 px-6 py-4 bg-white/30 flex justify-between items-center shrink-0">
+        <div className="border-t border-gray-200/50 px-4 sm:px-6 py-4 bg-white/30 flex flex-wrap justify-between items-center gap-3 shrink-0">
           <button
             onClick={handleClose}
             className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 font-medium glass-card rounded-lg hover:bg-white/60 transition-colors"

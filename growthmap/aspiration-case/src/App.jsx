@@ -120,7 +120,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {/* 頁首 */}
-      <header className="glass-header text-gray-800 py-6 px-8 no-print">
+      <header className="glass-header text-gray-800 py-6 px-4 sm:px-6 lg:px-8 no-print">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-4 mb-2">
             <a
@@ -132,7 +132,7 @@ export default function App() {
             </a>
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
-            企業成長藍圖
+            <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
           </h1>
           <p className="text-gray-500 mt-1 text-sm">
             建立加速增長情境 (Aspiration Case)
@@ -141,7 +141,7 @@ export default function App() {
       </header>
 
       {/* 主內容 */}
-      <main id="pdf-content" className="max-w-5xl mx-auto px-8 py-8 space-y-8">
+      <main id="pdf-content" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 pb-24">
 
         <SectionWrapper title="基本資訊與總目標設定" number="0">
           <CompanyBasics
@@ -184,7 +184,7 @@ export default function App() {
       </main>
 
       {/* 匯出按鈕 */}
-      <div className="no-print sticky bottom-0 glass-header py-4 px-8">
+      <div className="no-print sticky bottom-0 glass-header py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto flex justify-end">
           <ExportButton companyName={companyInfo.name} />
         </div>

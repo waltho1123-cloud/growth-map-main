@@ -35,18 +35,6 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
 
     // Build waterfall data: transparent base + colored bar
     const categories = ['起始', ...names, '合計'];
-    const baseData: (number | string)[] = [0]; // start base
-    const posData: (number | string)[] = ['-']; // start positive (100% base or 0)
-    const negData: (number | string)[] = ['-']; // start negative
-
-    let cumulative = 0;
-
-    // Starting bar (base value, e.g., 100%)
-    baseData[0] = 0;
-    posData[0] = 0; // Starting bar will be handled separately
-
-    const barData: number[] = [];
-    const transparentData: number[] = [];
 
     // Starting value = 0 (we show growth from 0)
     let runningTotal = 0;

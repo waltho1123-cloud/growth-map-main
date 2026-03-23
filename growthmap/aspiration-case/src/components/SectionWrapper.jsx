@@ -9,7 +9,7 @@ export default function SectionWrapper({ title, number, children }) {
         )}
         <h2 className="text-base font-semibold text-gray-800">{title}</h2>
       </div>
-      <div className="px-6 py-5">{children}</div>
+      <div className="px-3 sm:px-6 py-4 sm:py-5">{children}</div>
     </section>
   )
 }

@@ -1,21 +1,36 @@
-// BCG 外部分析工具 (1-16)
+// BCG 外部觀察 + 內部洞察工具 (1-24)
 export const BCG_TOOLS = [
-  { id: 1, name: '市場地圖 (Market Map)' },
-  { id: 2, name: '價值鏈分析 (Value Chain Analysis)' },
-  { id: 3, name: '利潤池分析 (Profit Pool)' },
-  { id: 4, name: '競爭基準分析 (Competitive Benchmarking)' },
-  { id: 5, name: '消費者旅程 (Consumer Journey)' },
-  { id: 6, name: '需求空間分析 (Demand Spaces)' },
-  { id: 7, name: '品牌定位 (Brand Positioning)' },
-  { id: 8, name: '通路分析 (Channel Analysis)' },
-  { id: 9, name: '定價分析 (Pricing Analysis)' },
-  { id: 10, name: '創新管道 (Innovation Pipeline)' },
-  { id: 11, name: '數位成熟度 (Digital Maturity)' },
-  { id: 12, name: '永續發展 (Sustainability)' },
-  { id: 13, name: '監管環境 (Regulatory Environment)' },
-  { id: 14, name: '總體經濟 (Macroeconomic)' },
-  { id: 15, name: '情境規劃 (Scenario Planning)' },
-  { id: 16, name: '量化分析 (Quantitative Analysis)' },
+  // 二、外部觀察 — 產業面
+  { id: 1, name: '市場地圖' },
+  { id: 2, name: '價值鏈分析' },
+  { id: 3, name: '全球大趨勢' },
+  { id: 4, name: '情境分析與戰略推演' },
+  { id: 5, name: '國際市場篩選' },
+  { id: 6, name: '數位成長' },
+  // 二、外部觀察 — 競爭者面
+  { id: 7, name: '創新分析' },
+  { id: 8, name: '競爭者策略' },
+  { id: 9, name: '顛覆性變革' },
+  { id: 10, name: '併購' },
+  { id: 11, name: '產品上市模型' },
+  { id: 12, name: '商業模式類型' },
+  // 二、外部觀察 — 客戶面
+  { id: 13, name: '需求導向型成長' },
+  { id: 14, name: '客戶趨勢' },
+  { id: 15, name: '質性客戶洞察' },
+  { id: 16, name: '量化客戶洞察' },
+  // 三、內部洞察 — 成長槓桿診斷
+  { id: 17, name: '行銷、銷售與訂價診斷' },
+  { id: 18, name: '創新診斷' },
+  // 三、內部洞察 — 競爭優勢
+  { id: 19, name: '優勢盤點' },
+  // 三、內部洞察 — 業務組合分析
+  { id: 20, name: '異常分析' },
+  { id: 21, name: '與強者共贏' },
+  { id: 22, name: '業務組合X光' },
+  // 三、內部洞察 — 創意工具
+  { id: 23, name: '合作機會' },
+  { id: 24, name: '重構思維框架' },
 ];
 
 export const COMPANY_TYPES = ['堡壘', '流動', '衰退'];

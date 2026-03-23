@@ -27,6 +27,12 @@
 
   // --- Helpers ---
 
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
   function validateUnit(unit, index) {
     for (const field of REQUIRED_FIELDS) {
       if (unit[field] == null || unit[field] === '') {
@@ -62,21 +68,21 @@
     return `
       <header class="portal-header">
         <span class="portal-header__icon" aria-hidden="true">\ud83d\uddfa\ufe0f</span>
-        <h1 class="portal-header__title">${metadata.title}</h1>
-        <p class="portal-header__subtitle">${metadata.subtitle}</p>
-        <p class="portal-header__description">${metadata.description}</p>
+        <h1 class="portal-header__title">${esc(metadata.title)}</h1>
+        <p class="portal-header__subtitle">${esc(metadata.subtitle)}</p>
+        <p class="portal-header__description">${esc(metadata.description)}</p>
       </header>`;
   }
 
   function renderStatusBadge(status) {
     const cfg = STATUS_CONFIG[status];
-    const icon = cfg.icon ? `<span>${cfg.icon}</span>` : '';
-    return `<span class="status-badge status-badge--${status}">${icon}${cfg.label}</span>`;
+    const icon = cfg.icon ? `<span>${esc(cfg.icon)}</span>` : '';
+    return `<span class="status-badge status-badge--${esc(status)}">${icon}${esc(cfg.label)}</span>`;
   }
 
   function renderTags(tags) {
     if (!tags || tags.length === 0) return '';
-    return `<div class="card-footer__tags">${tags.map(t => `<span class="card-footer__tag">${t}</span>`).join('')}</div>`;
+    return `<div class="card-footer__tags">${tags.map(t => `<span class="card-footer__tag">${esc(t)}</span>`).join('')}</div>`;
   }
 
   function renderCard(unit) {
@@ -90,21 +96,21 @@
     const arrow = clickable ? '<span class="card-footer__action-arrow" aria-hidden="true">\u2192</span>' : '';
 
     return `
-      <${tag}${href} class="unit-card ${modifier}" aria-label="${ariaLabel}" role="article"${tabindex}>
+      <${tag}${href} class="unit-card ${modifier}" aria-label="${esc(ariaLabel)}" role="listitem"${tabindex}>
         <div class="card-header">
           <div class="card-header__left">
-            <span class="card-header__icon" aria-hidden="true">${unit.icon || ''}</span>
-            <span class="card-header__order">\u55ae\u5143 ${unit.order}</span>
+            <span class="card-header__icon" aria-hidden="true">${esc(unit.icon || '')}</span>
+            <span class="card-header__order">\u55ae\u5143 ${esc(String(unit.order))}</span>
           </div>
           ${renderStatusBadge(unit.status)}
         </div>
         <div class="card-body">
-          <h2 class="card-body__name-cn">${unit.nameCn}</h2>
-          <p class="card-body__name-en">${unit.nameEn}</p>
-          <p class="card-body__description">${unit.description}</p>
+          <h2 class="card-body__name-cn">${esc(unit.nameCn)}</h2>
+          <p class="card-body__name-en">${esc(unit.nameEn)}</p>
+          <p class="card-body__description">${esc(unit.description)}</p>
         </div>
         <div class="card-footer">
-          <span class="card-footer__action">${actionText} ${arrow}</span>
+          <span class="card-footer__action">${esc(actionText)} ${arrow}</span>
           ${renderTags(unit.tags)}
         </div>
       </${tag}>`;
@@ -126,7 +132,7 @@
     return `
       <div class="error-state">
         <span class="error-state__icon" aria-hidden="true">\u26a0\ufe0f</span>
-        <p class="error-state__text">${message}</p>
+        <p class="error-state__text">${esc(message)}</p>
         <button class="error-state__retry" onclick="window.__portalInit()">重試</button>
       </div>`;
   }
@@ -149,7 +155,7 @@
       if (!res.ok) throw new Error(`載入失敗 (HTTP ${res.status})`);
       const registry = await res.json();
 
-      const metadata = registry.metadata || { title: '成長藍圖', subtitle: 'Growth Blueprint', description: '' };
+      const metadata = registry.metadata || { title: '成長藍圖實作平台', subtitle: 'Growth Blueprint Platform', description: '' };
       let units = Array.isArray(registry.units) ? registry.units : [];
 
       // Validate

@@ -1,4 +1,3 @@
-import jsPDF from 'jspdf';
 import { BCG_TOOLS } from './constants';
 
 // A4 橫式 (landscape) 尺寸
@@ -43,7 +42,8 @@ function addField(doc, y, label, value, maxWidth) {
   return y + 4 + lines.length * 3.5 + 2;
 }
 
-export function exportToPdf(opportunities) {
+export async function exportToPdf(opportunities) {
+  const { default: jsPDF } = await import('jspdf');
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
   // ===== 封面 =====

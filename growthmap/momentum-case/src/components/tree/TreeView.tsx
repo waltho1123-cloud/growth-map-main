@@ -13,7 +13,8 @@ interface TreeNodeProps {
 }
 
 function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps) {
-  const { addNode, removeNode } = useAssignmentStore();
+  const addNode = useAssignmentStore((s) => s.addNode);
+  const removeNode = useAssignmentStore((s) => s.removeNode);
   const isSelected = selectedId === node.id;
   const isRoot = node.id === 'root';
   const isLeaf = node.children.length === 0;
@@ -122,19 +123,21 @@ export default function TreeView() {
     return null;
   }, []);
 
+  const selectedIdRef = useRef(selectedNode?.id ?? null);
+  selectedIdRef.current = selectedNode?.id ?? null;
+
   useEffect(() => {
-    if (selectedNode) {
-      const updated = findNode(tree, selectedNode.id);
-      if (updated) setSelectedNode(updated);
-      else setSelectedNode(null);
+    if (selectedIdRef.current) {
+      const updated = findNode(tree, selectedIdRef.current);
+      setSelectedNode(updated ?? null);
     }
-  }, [tree, selectedNode, findNode]);
+  }, [tree, findNode]);
 
   return (
-    <div className="flex gap-6 items-start">
+    <div className="flex flex-col lg:flex-row gap-6 items-start">
       {/* Tree Area */}
-      <div className="flex-1 overflow-auto">
-        <div className="glass-card rounded-xl p-8 min-h-[400px]">
+      <div className="flex-1 w-full overflow-auto">
+        <div className="glass-card rounded-xl p-4 sm:p-8 min-h-[400px]">
           <TreeNodeComponent
             node={tree}
             onSelect={setSelectedNode}
@@ -145,7 +148,7 @@ export default function TreeView() {
       </div>
 
       {/* Editor Panel */}
-      <div className="w-72 shrink-0">
+      <div className="w-full lg:w-72 shrink-0">
         <NodeEditor
           node={selectedNode}
           onClose={() => setSelectedNode(null)}

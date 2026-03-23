@@ -10,12 +10,12 @@ export default function Dashboard() {
 
   const handleAdd = () => dispatch({ type: 'ADD_OPPORTUNITY' });
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (opportunities.length === 0) {
       alert('請先建立至少一個增長機會再匯出。');
       return;
     }
-    exportToPdf(opportunities);
+    await exportToPdf(opportunities);
   };
 
   return (
@@ -33,10 +33,10 @@ export default function Dashboard() {
             </a>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-800">
-            202601 BW CEO Workshop — Class 3 作業
+            <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
           </h1>
           <p className="text-gray-500 mt-1 text-sm">
-            BW CEO 成長機會探索系統 · Opportunity Identification System
+            識別機會(Identify Opportunities)
           </p>
         </div>
       </header>
@@ -58,7 +58,7 @@ export default function Dashboard() {
         </div>
 
         {/* 動作按鈕 */}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={handleAdd}
             className="inline-flex items-center px-5 py-2.5 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"

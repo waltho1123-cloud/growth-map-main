@@ -35,8 +35,8 @@ export default function WizardShell() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="glass-header px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <header className="glass-header px-4 sm:px-6 py-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-4">
             <a
               href="/"
@@ -45,12 +45,12 @@ export default function WizardShell() {
               <span>←</span>
               <span>返回藍圖</span>
             </a>
-            <div className="w-px h-8 bg-gray-200" />
+            <div className="w-px h-8 bg-gray-200 hidden sm:block" />
             <div>
               <h1 className="text-xl font-bold text-gray-800">
                 <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
               </h1>
-              <p className="text-sm text-gray-500 mt-0.5">商周百億 CEO 班 — 課後作業</p>
+              <p className="text-sm text-gray-500 mt-0.5">建立自然增長情境(Momentum Case)</p>
             </div>
           </div>
           <div className="text-sm text-gray-500">
@@ -60,9 +60,9 @@ export default function WizardShell() {
       </header>
 
       {/* Progress Bar */}
-      <nav className="glass-header px-6 py-3">
+      <nav className="glass-header px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 overflow-x-auto">
             {STEPS.map((step, i) => (
               <button
                 key={i}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { loadOpportunities, saveOpportunities } from '../utils/storage';
 
 const OpportunityContext = createContext();
@@ -73,9 +73,14 @@ export function OpportunityProvider({ children }) {
     editingId: null,
   });
 
-  // 自動儲存至 LocalStorage
+  // 自動儲存至 LocalStorage (debounced)
+  const saveTimer = useRef(null);
   useEffect(() => {
-    saveOpportunities(state.opportunities);
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveOpportunities(state.opportunities);
+    }, 300);
+    return () => clearTimeout(saveTimer.current);
   }, [state.opportunities]);
 
   return (

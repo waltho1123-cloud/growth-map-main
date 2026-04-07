@@ -6,6 +6,7 @@ import {
   GROWTH_LEVERS,
   GROWTH_TYPES_MAP,
 } from '../../utils/constants';
+import { IMEInput, IMETextarea } from '../IMEInput';
 
 export default function TabOne({ data, onChange }) {
   const { opportunityName, usedTools, template1 } = data;
@@ -40,10 +41,10 @@ export default function TabOne({ data, onChange }) {
         <label className="block text-sm font-semibold text-gray-600 mb-1">
           增長機會名稱 <span className="text-red-500">*</span>
         </label>
-        <input
+        <IMEInput
           type="text"
           value={opportunityName}
-          onChange={(e) => onChange({ opportunityName: e.target.value })}
+          onValueChange={(v) => onChange({ opportunityName: v })}
           placeholder="例如：東南亞植物基飲品市場進入"
           className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
         />
@@ -202,9 +203,9 @@ export default function TabOne({ data, onChange }) {
         <label className="block text-sm font-semibold text-gray-600 mb-1">
           主要洞察 (insights)
         </label>
-        <textarea
+        <IMETextarea
           value={template1.insights}
-          onChange={(e) => updateField('insights', e.target.value)}
+          onValueChange={(v) => updateField('insights', v)}
           rows={4}
           placeholder="使用工具獲得的洞察，幫助打破既有框架..."
           className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"

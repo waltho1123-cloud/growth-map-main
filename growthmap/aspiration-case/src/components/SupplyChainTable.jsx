@@ -1,3 +1,5 @@
+import { IMETextarea } from './IMEInput';
+
 const BOTTLENECK_LABELS = {
   procurement: '採購',
   manufacturing: '製造',
@@ -59,9 +61,9 @@ export default function SupplyChainTable({ data, categories, activeCategories, o
             </div>
 
             {/* 突破方案 */}
-            <textarea
+            <IMETextarea
               value={item.breakthrough}
-              onChange={(e) => onChange(idx, 'breakthrough', e.target.value)}
+              onValueChange={(v) => onChange(idx, 'breakthrough', v)}
               rows={2}
               className="neu-input w-full rounded-md px-3 py-2 text-sm resize-y focus:outline-none"
               placeholder="如何突破瓶頸？請描述解決方案..."

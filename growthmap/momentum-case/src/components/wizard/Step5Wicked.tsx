@@ -1,6 +1,7 @@
 'use client';
 
 import { useAssignmentStore } from '@/store/useAssignmentStore';
+import { IMEInput, IMETextarea } from '@/components/IMEInput';
 
 const FIELDS = [
   { key: 'track', label: '賽道', placeholder: '例：AI 解決方案' },
@@ -69,21 +70,21 @@ export default function Step5Wicked() {
                       {field.label}
                     </label>
                     {(field.key === 'description' || field.key === 'wickedType' || field.key === 'guideline') ? (
-                      <textarea
+                      <IMETextarea
                         value={wc[field.key]}
-                        onChange={(e) =>
-                          updateWickedChallenge(wc.id, { [field.key]: e.target.value })
+                        onValueChange={(v) =>
+                          updateWickedChallenge(wc.id, { [field.key]: v })
                         }
                         placeholder={field.placeholder}
                         rows={2}
                         className="w-full neu-input rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none resize-none"
                       />
                     ) : (
-                      <input
+                      <IMEInput
                         type="text"
                         value={wc[field.key]}
-                        onChange={(e) =>
-                          updateWickedChallenge(wc.id, { [field.key]: e.target.value })
+                        onValueChange={(v) =>
+                          updateWickedChallenge(wc.id, { [field.key]: v })
                         }
                         placeholder={field.placeholder}
                         className="w-full neu-input rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none"

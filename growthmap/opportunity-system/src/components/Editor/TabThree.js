@@ -1,5 +1,6 @@
 import React from 'react';
 import { COMPETITIVE_ENVIRONMENTS, CAGR_OPTIONS, EBIT_OPTIONS } from '../../utils/constants';
+import { IMEInput, IMETextarea } from '../IMEInput';
 
 export default function TabThree({ data, onChange }) {
   const { template3 } = data;
@@ -29,10 +30,10 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 市場規模 (marketSize)
               </label>
-              <input
+              <IMEInput
                 type="text"
                 value={template3.marketSize}
-                onChange={(e) => updateField('marketSize', e.target.value)}
+                onValueChange={(v) => updateField('marketSize', v)}
                 placeholder="例如：USD 50B (2025)"
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
               />
@@ -41,10 +42,10 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 單位價格 (unitPrice)
               </label>
-              <input
+              <IMEInput
                 type="text"
                 value={template3.unitPrice}
-                onChange={(e) => updateField('unitPrice', e.target.value)}
+                onValueChange={(v) => updateField('unitPrice', v)}
                 placeholder="例如：NT$ 150/unit"
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
               />
@@ -68,10 +69,10 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 前大品牌市佔率 (topBrandsShare)
               </label>
-              <input
+              <IMEInput
                 type="text"
                 value={template3.topBrandsShare}
-                onChange={(e) => updateField('topBrandsShare', e.target.value)}
+                onValueChange={(v) => updateField('topBrandsShare', v)}
                 placeholder="例如：前3大品牌佔 65%"
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
               />
@@ -90,10 +91,10 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 現有規模 (currentScale)
               </label>
-              <input
+              <IMEInput
                 type="text"
                 value={template3.currentScale}
-                onChange={(e) => updateField('currentScale', e.target.value)}
+                onValueChange={(v) => updateField('currentScale', v)}
                 placeholder="例如：年營收 NT$ 2B"
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
               />
@@ -166,9 +167,9 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 必要投資 (requiredInvestment)
               </label>
-              <textarea
+              <IMETextarea
                 value={template3.requiredInvestment}
-                onChange={(e) => updateField('requiredInvestment', e.target.value)}
+                onValueChange={(v) => updateField('requiredInvestment', v)}
                 rows={3}
                 placeholder="所需投入的資金、人力、時間等..."
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
@@ -178,9 +179,9 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 潛在障礙 (potentialHurdles)
               </label>
-              <textarea
+              <IMETextarea
                 value={template3.potentialHurdles}
-                onChange={(e) => updateField('potentialHurdles', e.target.value)}
+                onValueChange={(v) => updateField('potentialHurdles', v)}
                 rows={3}
                 placeholder="可能遭遇的挑戰與風險..."
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
@@ -200,9 +201,9 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 成功因子 (successFactors)
               </label>
-              <textarea
+              <IMETextarea
                 value={template3.successFactors}
-                onChange={(e) => updateField('successFactors', e.target.value)}
+                onValueChange={(v) => updateField('successFactors', v)}
                 rows={3}
                 placeholder="在此機會中勝出的關鍵成功因素..."
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
@@ -212,9 +213,9 @@ export default function TabThree({ data, onChange }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 核心能力 (coreCapabilities)
               </label>
-              <textarea
+              <IMETextarea
                 value={template3.coreCapabilities}
-                onChange={(e) => updateField('coreCapabilities', e.target.value)}
+                onValueChange={(v) => updateField('coreCapabilities', v)}
                 rows={3}
                 placeholder="公司為何能前進該機會的內部支撐理由..."
                 className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"

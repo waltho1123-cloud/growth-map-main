@@ -2,6 +2,7 @@
 
 import { TreeNodeData } from '@/types';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
+import { IMEInput } from '@/components/IMEInput';
 
 interface NodeEditorProps {
   node: TreeNodeData | null;
@@ -38,10 +39,10 @@ export default function NodeEditor({ node, onClose }: NodeEditorProps) {
           <label className="block text-sm font-medium text-gray-600 mb-1.5">
             節點名稱
           </label>
-          <input
+          <IMEInput
             type="text"
             value={node.name}
-            onChange={(e) => updateNode(node.id, { name: e.target.value })}
+            onValueChange={(v) => updateNode(node.id, { name: v })}
             className="w-full neu-input rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none"
           />
         </div>

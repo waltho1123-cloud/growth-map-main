@@ -1,4 +1,5 @@
 import React from 'react';
+import { IMETextarea } from '../IMEInput';
 
 export default function TabTwo({ data, onChange }) {
   const { template2 } = data;
@@ -48,9 +49,9 @@ export default function TabTwo({ data, onChange }) {
           <label className="block text-sm font-semibold text-gray-600 mb-1">
             {field.label}
           </label>
-          <textarea
+          <IMETextarea
             value={template2[field.key]}
-            onChange={(e) => updateField(field.key, e.target.value)}
+            onValueChange={(v) => updateField(field.key, v)}
             rows={field.rows}
             placeholder={field.placeholder}
             className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"

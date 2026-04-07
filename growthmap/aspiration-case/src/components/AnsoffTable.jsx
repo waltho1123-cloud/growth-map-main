@@ -6,6 +6,8 @@ const COLUMN_HEADERS = [
   { key: 'description', label: '說明', width: 'flex-1' },
 ]
 
+import { IMEInput } from './IMEInput';
+
 const CATEGORY_ICONS = {
   core: '📊',
   newProd: '🚀',
@@ -80,10 +82,10 @@ export default function AnsoffTable({ data, onChange }) {
 
               {/* 說明 */}
               <td className="py-3 px-3">
-                <input
+                <IMEInput
                   type="text"
                   value={row.description}
-                  onChange={(e) => onChange(idx, 'description', e.target.value)}
+                  onValueChange={(v) => onChange(idx, 'description', v)}
                   className="neu-input w-full rounded px-2 py-1.5 text-sm focus:outline-none"
                   placeholder="策略說明..."
                 />

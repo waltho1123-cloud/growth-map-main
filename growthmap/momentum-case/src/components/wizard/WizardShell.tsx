@@ -7,6 +7,7 @@ import Step2Drivers from './Step2Drivers';
 import Step3Historical from './Step3Historical';
 import Step4Future from './Step4Future';
 import Step5Wicked from './Step5Wicked';
+import ExportButton from '@/components/ExportButton';
 
 const STEPS = [
   { label: '總覽', shortLabel: '0' },
@@ -89,14 +90,19 @@ export default function WizardShell() {
 
       {/* Content */}
       <main className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+        <div id="pdf-content" className="max-w-7xl mx-auto px-6 py-6">
+          <div className="print-step-title hidden">
+            <h1 className="text-2xl font-bold text-gray-800">
+              建立自然增長情境 — Step {currentStep}. {STEPS[currentStep]?.label}
+            </h1>
+          </div>
           {renderStep()}
         </div>
       </main>
 
       {/* Bottom Navigation */}
       <footer className="glass-header px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
           <button
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
             disabled={currentStep === 0}
@@ -104,6 +110,7 @@ export default function WizardShell() {
           >
             ← 上一步
           </button>
+          <ExportButton stepLabel={`${currentStep}_${STEPS[currentStep]?.label ?? ''}`} />
           <button
             onClick={() => setCurrentStep(Math.min(STEPS.length - 1, currentStep + 1))}
             disabled={currentStep === STEPS.length - 1}

@@ -75,8 +75,90 @@ body {
     inset -2px -2px 5px rgba(255, 255, 255, 0.8);
 }
 
+/* When html2canvas snapshots the page via ExportButton, strip glass effects
+   and force inputs to render solidly. Same treatment as @media print. */
+.pdf-exporting,
+.pdf-exporting *,
+.pdf-exporting *::before,
+.pdf-exporting *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.pdf-exporting .glass-card,
+.pdf-exporting .glass-header {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+}
+.pdf-exporting input,
+.pdf-exporting textarea,
+.pdf-exporting select,
+.pdf-exporting .neu-input {
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  color: #1b1f3b !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  opacity: 1 !important;
+}
+
 @media print {
   .no-print {
     display: none !important;
+  }
+
+  /* Force browsers to render background colors and borders in print */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Backdrop-filter/blur effects don't render reliably in print — strip them */
+  .glass-card,
+  .glass-header,
+  .neu-input,
+  .neu-inset {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Turn translucent glass cards into solid white surfaces so nested inputs
+     don't disappear against their semi-transparent parents in print. */
+  .glass-card {
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+  }
+
+  /* Force every input/textarea/select to render with explicit solid
+     border, background and text color. Chrome's print engine can drop
+     values on type="number" inputs that inherit rgba backgrounds + inset
+     box-shadows (the `neu-input` style), which is why some TSR fields
+     went missing from the exported PDF. */
+  input,
+  textarea,
+  select,
+  .neu-input {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    color: #1b1f3b !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Avoid page-break splitting input rows / section cards in half */
+  input,
+  textarea,
+  .glass-card > *,
+  section,
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

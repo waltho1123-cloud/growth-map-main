@@ -40,14 +40,24 @@ type IMETextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onCha
 export function IMETextarea({ value, onValueChange, ...props }: IMETextareaProps) {
   const [local, setLocal] = useState(value);
   const composing = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!composing.current) setLocal(value);
   }, [value]);
 
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [local]);
+
   return (
     <textarea
       {...props}
+      ref={textareaRef}
       value={local}
       onChange={(e) => {
         setLocal(e.target.value);

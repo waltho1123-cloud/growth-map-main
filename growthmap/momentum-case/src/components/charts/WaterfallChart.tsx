@@ -32,6 +32,7 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
     });
 
     const total = values.reduce((s, v) => s + v, 0);
+    const dense = values.length > 8;
 
     // Build waterfall data: transparent base + colored bar
     const categories = ['起始', ...names, '合計'];
@@ -96,7 +97,7 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
         left: '3%',
         right: '4%',
         bottom: '8%',
-        top: title ? 50 : 20,
+        top: title ? (dense ? 90 : 50) : (dense ? 60 : 20),
         containLabel: true,
       },
       xAxis: {
@@ -134,9 +135,14 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
           data: finalBarData,
           label: {
             show: true,
-            position: 'top',
+            position: 'top' as const,
             color: '#1b1f3b',
-            fontSize: 11,
+            fontSize: dense ? 9 : 11,
+            fontWeight: 500,
+            rotate: dense ? 90 : 0,
+            align: (dense ? 'left' : 'center') as 'left' | 'center',
+            verticalAlign: (dense ? 'middle' : 'bottom') as 'middle' | 'bottom',
+            distance: dense ? 8 : 4,
             formatter: (p: { dataIndex: number }) => {
               const idx = p.dataIndex;
               if (idx === 0) return '';
@@ -145,6 +151,7 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
               return `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
             },
           },
+          labelLayout: { hideOverlap: true },
           barMaxWidth: 50,
         },
       ],
@@ -164,7 +171,7 @@ export default function WaterfallChart({ drivers, mode, title }: WaterfallChartP
       <ReactEChartsCore
         echarts={echarts}
         option={option}
-        style={{ height: 420 }}
+        style={{ height: drivers.length > 8 ? 480 : 420 }}
         notMerge={true}
       />
     </div>

@@ -27,7 +27,7 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
         <div
           onClick={() => onSelect(node)}
           className={`
-            relative cursor-pointer rounded-xl px-4 py-3 min-w-[110px] text-center
+            relative cursor-pointer rounded-xl px-4 py-3 min-w-[110px] max-w-[160px] text-center
             border-2 transition-all select-none
             ${isSelected
               ? 'border-[#00A651] bg-[#00A651]/10 shadow-lg shadow-[#00A651]/10'
@@ -35,24 +35,15 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
             }
           `}
         >
-          <div className="text-sm font-semibold text-gray-800 truncate max-w-[120px]">
+          <div className="text-sm font-semibold text-gray-800 whitespace-normal break-words leading-snug">
             {node.name}
-          </div>
-          <div className={`
-            text-[10px] mt-1 px-2 py-0.5 rounded-full inline-block
-            ${node.logic === 'add'
-              ? 'bg-blue-100 text-blue-600'
-              : 'bg-amber-100 text-amber-600'
-            }
-          `}>
-            {node.logic === 'add' ? '＋ 加法' : '× 乘法'}
           </div>
           {isLeaf && (
             <div className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[#00A651]" title="葉節點" />
           )}
         </div>
 
-        <div className="flex gap-1 mt-2">
+        <div className="pdf-hide flex gap-1 mt-2">
           <button
             onClick={(e) => { e.stopPropagation(); addNode(node.id); }}
             className="w-6 h-6 rounded-md bg-[#00A651]/20 text-[#00A651] hover:bg-[#00A651]/30 flex items-center justify-center text-sm font-bold transition-all"
@@ -77,23 +68,49 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
         <div className="flex items-center gap-0 ml-2">
           {/* Horizontal connector + branch lines */}
           <div className="flex flex-col items-center justify-center relative w-10 self-stretch">
-            {/* Horizontal line from parent */}
-            <div className="absolute left-0 top-1/2 w-3 h-0.5 bg-[#00A651]/40" />
-            {/* Vertical trunk */}
-            <div className="absolute left-3 bg-[#00A651]/40 w-0.5"
-              style={{
-                top: node.children.length === 1 ? '50%' : `${100 / (node.children.length * 2 + (node.children.length - 1))}%`,
-                bottom: node.children.length === 1 ? '50%' : `${100 / (node.children.length * 2 + (node.children.length - 1))}%`,
-              }}
+            {/* Horizontal line from parent — extends left into the ml-2 gap and right into the trunk (overlap) */}
+            <div
+              className="absolute h-[2px] bg-[#00A651]/40"
+              style={{ top: 'calc(50% - 1px)', left: '-8px', width: '22px' }}
             />
+            {/* Vertical trunk — only needed when 2+ children (single child connects via stub + branch) */}
+            {node.children.length > 1 && (
+              <div
+                className="absolute w-[2px] bg-[#00A651]/40"
+                style={{
+                  left: '12px',
+                  top: `${100 / (node.children.length * 2 + (node.children.length - 1))}%`,
+                  bottom: `${100 / (node.children.length * 2 + (node.children.length - 1))}%`,
+                }}
+              />
+            )}
+            {/* Logic badge on the connector line (shown only when there are 2+ children, like BCG) */}
+            {node.children.length > 1 && (
+              <div
+                className={`
+                  absolute w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold z-10 leading-none shadow-sm border
+                  ${node.logic === 'add'
+                    ? 'bg-blue-100 text-blue-600 border-blue-300'
+                    : 'bg-amber-100 text-amber-600 border-amber-300'
+                  }
+                `}
+                style={{ left: '3px', top: 'calc(50% - 10px)' }}
+                title={node.logic === 'add' ? '加法' : '乘法'}
+              >
+                {node.logic === 'add' ? '+' : '×'}
+              </div>
+            )}
             {/* Horizontal branches to children (rendered per child below) */}
           </div>
 
           <div className="flex flex-col gap-4">
-            {node.children.map((child, i) => (
+            {node.children.map((child) => (
               <div key={child.id} className="flex items-center relative">
-                {/* Branch line */}
-                <div className="absolute -left-[28px] top-1/2 w-7 h-0.5 bg-[#00A651]/40" />
+                {/* Branch line — overlaps the trunk by 2px on the left so the T-corner renders solidly */}
+                <div
+                  className="absolute h-[2px] bg-[#00A651]/40"
+                  style={{ top: 'calc(50% - 1px)', left: '-30px', width: '30px' }}
+                />
                 <TreeNodeComponent
                   node={child}
                   onSelect={onSelect}

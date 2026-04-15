@@ -2,16 +2,51 @@ export default function ExportButton({ companyName }) {
   const handleExport = async () => {
     try {
       const { default: html2canvas } = await import('html2canvas')
-      const { default: jsPDF } = await import('jspdf')
+      const { jsPDF } = await import('jspdf')
 
       const element = document.getElementById('pdf-content')
       if (!element) return
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#eef1f5',
+      // html2canvas snapshots HTML attributes, but user-typed values only live
+      // on the DOM `value` property. Sync current values onto the `value`
+      // attribute (and `checked` for checkboxes) so they get rasterized.
+      const inputs = element.querySelectorAll('input, textarea, select')
+      const restore = []
+      inputs.forEach((el) => {
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          restore.push(() => {
+            if (el.defaultChecked) el.setAttribute('checked', '')
+            else el.removeAttribute('checked')
+          })
+          if (el.checked) el.setAttribute('checked', '')
+          else el.removeAttribute('checked')
+        } else {
+          const prev = el.getAttribute('value')
+          restore.push(() => {
+            if (prev === null) el.removeAttribute('value')
+            else el.setAttribute('value', prev)
+          })
+          el.setAttribute('value', el.value ?? '')
+        }
       })
+
+      // Force the snapshot to use solid backgrounds & no backdrop blur, since
+      // html2canvas can't faithfully reproduce glassmorphism and may clip
+      // inputs living inside translucent containers. Mirrors @media print.
+      element.classList.add('pdf-exporting')
+
+      let canvas
+      try {
+        canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          windowWidth: element.scrollWidth,
+        })
+      } finally {
+        element.classList.remove('pdf-exporting')
+        restore.forEach((fn) => fn())
+      }
 
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')

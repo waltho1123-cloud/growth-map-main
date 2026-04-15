@@ -186,6 +186,12 @@
 .pdf-exporting *::after {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  /* Tailwind v4's base layer applies `outline-ring/50` to every element,
+     which compiles to `color-mix(in oklab, …)` — html2canvas 1.4.1 can't
+     parse it, and the rule cascades to pseudo-elements where inline-style
+     overrides can't reach. Neutralize it during export. */
+  outline: none !important;
+  outline-color: transparent !important;
 }
 .pdf-exporting .glass-card,
 .pdf-exporting .glass-header {

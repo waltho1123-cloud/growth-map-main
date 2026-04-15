@@ -13,6 +13,17 @@ function findAndRemoveNode(node: TreeNodeData, targetId: string): boolean {
   return node.children.some((c) => findAndRemoveNode(c, targetId));
 }
 
+function findAndMoveNode(node: TreeNodeData, targetId: string, direction: 'up' | 'down'): boolean {
+  const idx = node.children.findIndex((c) => c.id === targetId);
+  if (idx !== -1) {
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= node.children.length) return true;
+    [node.children[idx], node.children[swapIdx]] = [node.children[swapIdx], node.children[idx]];
+    return true;
+  }
+  return node.children.some((c) => findAndMoveNode(c, targetId, direction));
+}
+
 function findNode(node: TreeNodeData, id: string): TreeNodeData | null {
   if (node.id === id) return node;
   for (const child of node.children) {
@@ -29,10 +40,19 @@ function deepCloneTree(node: TreeNodeData): TreeNodeData {
   };
 }
 
+function deepCloneTreeWithNewIds(node: TreeNodeData): TreeNodeData {
+  return {
+    ...node,
+    id: uuidv4(),
+    children: node.children.map(deepCloneTreeWithNewIds),
+  };
+}
+
 export const useAssignmentStore = create<AssignmentState>()(
   persist(
     (set, get) => ({
       tree: defaultTree,
+      clipboard: null,
       drivers: generateDriversFromTree(defaultTree),
       wickedChallenges: defaultWickedChallenges,
       currentStep: 0,
@@ -59,6 +79,33 @@ export const useAssignmentStore = create<AssignmentState>()(
         findAndRemoveNode(tree, nodeId);
         set({ tree });
       },
+
+      moveNode: (nodeId, direction) => {
+        if (nodeId === 'root') return;
+        const tree = deepCloneTree(get().tree);
+        findAndMoveNode(tree, nodeId, direction);
+        set({ tree });
+      },
+
+      copyNode: (nodeId) => {
+        if (nodeId === 'root') return;
+        const source = findNode(get().tree, nodeId);
+        if (!source) return;
+        set({ clipboard: deepCloneTree(source) });
+      },
+
+      pasteNode: (parentId) => {
+        const clipboard = get().clipboard;
+        if (!clipboard) return;
+        const tree = deepCloneTree(get().tree);
+        const parent = findNode(tree, parentId);
+        if (parent) {
+          parent.children.push(deepCloneTreeWithNewIds(clipboard));
+          set({ tree });
+        }
+      },
+
+      clearClipboard: () => set({ clipboard: null }),
 
       updateNode: (nodeId, updates) => {
         const tree = deepCloneTree(get().tree);
@@ -131,6 +178,11 @@ export const useAssignmentStore = create<AssignmentState>()(
     }),
     {
       name: 'bw-growth-map-assignment',
+      partialize: (state) => {
+        const { clipboard: _clipboard, ...rest } = state;
+        void _clipboard;
+        return rest;
+      },
     }
   )
 );

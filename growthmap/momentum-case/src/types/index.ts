@@ -26,6 +26,9 @@ export interface AssignmentState {
   // Step 1: Tree
   tree: TreeNodeData;
 
+  // Clipboard for tree copy/paste (transient — not persisted)
+  clipboard: TreeNodeData | null;
+
   // Step 2: Drivers
   drivers: DriverData[];
 
@@ -39,7 +42,11 @@ export interface AssignmentState {
   setTree: (tree: TreeNodeData) => void;
   addNode: (parentId: string) => void;
   removeNode: (nodeId: string) => void;
+  moveNode: (nodeId: string, direction: 'up' | 'down') => void;
   updateNode: (nodeId: string, updates: Partial<Pick<TreeNodeData, 'name' | 'logic'>>) => void;
+  copyNode: (nodeId: string) => void;
+  pasteNode: (parentId: string) => void;
+  clearClipboard: () => void;
 
   setDrivers: (drivers: DriverData[]) => void;
   updateDriver: (id: string, updates: Partial<Pick<DriverData, 'historicalContribution' | 'futureAssumption'>>) => void;

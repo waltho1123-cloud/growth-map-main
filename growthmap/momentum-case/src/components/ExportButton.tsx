@@ -8,7 +8,8 @@ interface ExportButtonProps {
 export default function ExportButton({ stepLabel, className }: ExportButtonProps) {
   const handleExport = async () => {
     try {
-      const { default: html2canvas } = await import('html2canvas');
+      // html2canvas-pro: maintained fork with native oklch/lab/color-mix support.
+      const { default: html2canvas } = await import('html2canvas-pro');
       const { jsPDF } = await import('jspdf');
 
       const element = document.getElementById('pdf-content') as HTMLElement | null;

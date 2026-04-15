@@ -10,14 +10,22 @@ interface TreeNodeProps {
   onSelect: (node: TreeNodeData) => void;
   selectedId: string | null;
   depth: number;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
-function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps) {
+function TreeNodeComponent({ node, onSelect, selectedId, depth, canMoveUp = false, canMoveDown = false }: TreeNodeProps) {
   const addNode = useAssignmentStore((s) => s.addNode);
   const removeNode = useAssignmentStore((s) => s.removeNode);
+  const moveNode = useAssignmentStore((s) => s.moveNode);
+  const copyNode = useAssignmentStore((s) => s.copyNode);
+  const pasteNode = useAssignmentStore((s) => s.pasteNode);
+  const clipboard = useAssignmentStore((s) => s.clipboard);
   const isSelected = selectedId === node.id;
   const isRoot = node.id === 'root';
   const isLeaf = node.children.length === 0;
+  const hasClipboard = clipboard !== null;
+  const isCopiedSource = clipboard !== null && clipboard.id === node.id;
   const nodeRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -45,20 +53,65 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
 
         <div className="pdf-hide flex gap-1 mt-2">
           <button
-            onClick={(e) => { e.stopPropagation(); addNode(node.id); }}
-            className="w-6 h-6 rounded-md bg-[#00A651]/20 text-[#00A651] hover:bg-[#00A651]/30 flex items-center justify-center text-sm font-bold transition-all"
-            title="新增子節點"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (hasClipboard) pasteNode(node.id);
+              else addNode(node.id);
+            }}
+            className={`w-6 h-6 rounded-md flex items-center justify-center text-sm font-bold transition-all ${
+              hasClipboard
+                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                : 'bg-[#00A651]/20 text-[#00A651] hover:bg-[#00A651]/30'
+            }`}
+            title={hasClipboard ? `貼上「${clipboard!.name}」為子節點` : '新增子節點'}
           >
-            +
+            {hasClipboard ? '↓' : '+'}
           </button>
           {!isRoot && (
-            <button
-              onClick={(e) => { e.stopPropagation(); removeNode(node.id); }}
-              className="w-6 h-6 rounded-md bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center text-xs font-bold transition-all"
-              title="刪除節點"
-            >
-              ×
-            </button>
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (canMoveUp) moveNode(node.id, 'up'); }}
+                disabled={!canMoveUp}
+                className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold transition-all ${
+                  canMoveUp
+                    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer'
+                    : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                }`}
+                title="上移"
+              >
+                ↑
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (canMoveDown) moveNode(node.id, 'down'); }}
+                disabled={!canMoveDown}
+                className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold transition-all ${
+                  canMoveDown
+                    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer'
+                    : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                }`}
+                title="下移"
+              >
+                ↓
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); copyNode(node.id); }}
+                className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold transition-all ${
+                  isCopiedSource
+                    ? 'bg-blue-200 text-blue-700 ring-1 ring-blue-400'
+                    : 'bg-indigo-50 text-indigo-500 hover:bg-indigo-100'
+                }`}
+                title={isCopiedSource ? '已複製此節點（含子節點）' : '複製此節點（含子節點）'}
+              >
+                ⧉
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); removeNode(node.id); }}
+                className="w-6 h-6 rounded-md bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center text-xs font-bold transition-all"
+                title="刪除節點"
+              >
+                ×
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -104,7 +157,7 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
           </div>
 
           <div className="flex flex-col gap-4">
-            {node.children.map((child) => (
+            {node.children.map((child, idx) => (
               <div key={child.id} className="flex items-center relative">
                 {/* Branch line — overlaps the trunk by 2px on the left so the T-corner renders solidly */}
                 <div
@@ -116,6 +169,8 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
                   onSelect={onSelect}
                   selectedId={selectedId}
                   depth={depth + 1}
+                  canMoveUp={idx > 0}
+                  canMoveDown={idx < node.children.length - 1}
                 />
               </div>
             ))}
@@ -128,6 +183,8 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth }: TreeNodeProps)
 
 export default function TreeView() {
   const tree = useAssignmentStore((s) => s.tree);
+  const clipboard = useAssignmentStore((s) => s.clipboard);
+  const clearClipboard = useAssignmentStore((s) => s.clearClipboard);
   const [selectedNode, setSelectedNode] = useState<TreeNodeData | null>(null);
 
   // Sync selected node data when tree changes
@@ -154,6 +211,23 @@ export default function TreeView() {
     <div className="flex flex-col lg:flex-row gap-6 items-start">
       {/* Tree Area */}
       <div className="flex-1 w-full overflow-auto">
+        {clipboard && (
+          <div className="pdf-hide mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+            <span>
+              已複製「<span className="font-semibold">{clipboard.name}</span>」
+              {clipboard.children.length > 0 && (
+                <span className="text-blue-500"> （含 {clipboard.children.length} 個子節點）</span>
+              )}
+              — 點擊任一節點的藍色 <span className="font-mono">↓</span> 按鈕貼上
+            </span>
+            <button
+              onClick={clearClipboard}
+              className="shrink-0 rounded-md border border-blue-300 bg-white px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-100 transition-colors"
+            >
+              取消複製
+            </button>
+          </div>
+        )}
         <div className="glass-card rounded-xl p-4 sm:p-8 min-h-[400px]">
           <TreeNodeComponent
             node={tree}

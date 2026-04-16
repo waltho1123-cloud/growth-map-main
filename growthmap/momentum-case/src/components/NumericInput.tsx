@@ -20,7 +20,8 @@ function sanitize(raw: string): string {
   return s;
 }
 
-// Controlled numeric input using type="text" + inputMode="decimal".
+// Controlled numeric input using type="text" (no inputMode) so mobile users
+// get the full keyboard with minus sign available for negative values.
 // Using type="number" triggers React's stale-DOM bug: when the user's typed
 // string (e.g. "05") parses to the same number already in state, React skips
 // the DOM rewrite and leaves the leading zero visible.
@@ -39,7 +40,6 @@ export function NumericInput({ value, onValueChange, onFocus, onBlur, onChange, 
     <input
       {...rest}
       type="text"
-      inputMode="decimal"
       value={display}
       onFocus={(e) => {
         focusedRef.current = true;

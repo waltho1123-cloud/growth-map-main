@@ -1,12 +1,13 @@
+import { NumericInput as RawNumericInput } from './NumericInput';
+
 function NumericInput({ label, value, onChange, unit = '', highlight = false }) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-gray-500">{label}</label>
       <div className="relative">
-        <input
-          type="number"
-          value={value || ''}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        <RawNumericInput
+          value={value}
+          onValueChange={onChange}
           className={`neu-input w-full rounded-md px-3 py-2 text-sm focus:outline-none ${
             highlight
               ? 'border-brand-green bg-emerald-50/40 font-semibold text-brand-green'

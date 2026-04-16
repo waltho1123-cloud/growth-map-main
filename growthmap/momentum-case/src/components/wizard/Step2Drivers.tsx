@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
+import { NumericInput } from '@/components/NumericInput';
 
 export default function Step2Drivers() {
   const { drivers, updateDriver, syncDriversFromTree } = useAssignmentStore();
@@ -50,32 +51,28 @@ export default function Step2Drivers() {
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <input
-                        type="number"
+                      <NumericInput
                         value={driver.historicalContribution}
-                        onChange={(e) =>
-                          updateDriver(driver.id, {
-                            historicalContribution: parseFloat(e.target.value) || 0,
-                          })
+                        onValueChange={(n) =>
+                          updateDriver(driver.id, { historicalContribution: n })
                         }
                         className="w-24 neu-input rounded-lg px-3 py-1.5 text-gray-800 text-sm text-center focus:outline-none"
                         step="0.1"
+                        placeholder="0"
                       />
                       <span className="text-gray-500 text-sm">%</span>
                     </div>
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <input
-                        type="number"
+                      <NumericInput
                         value={driver.futureAssumption}
-                        onChange={(e) =>
-                          updateDriver(driver.id, {
-                            futureAssumption: parseFloat(e.target.value) || 0,
-                          })
+                        onValueChange={(n) =>
+                          updateDriver(driver.id, { futureAssumption: n })
                         }
                         className="w-24 neu-input rounded-lg px-3 py-1.5 text-gray-800 text-sm text-center focus:outline-none"
                         step="0.1"
+                        placeholder="0"
                       />
                       <span className="text-gray-500 text-sm">%</span>
                     </div>

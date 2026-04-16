@@ -7,6 +7,7 @@ const COLUMN_HEADERS = [
 ]
 
 import { IMEInput } from './IMEInput';
+import { NumericInput } from './NumericInput';
 
 const CATEGORY_ICONS = {
   core: '📊',
@@ -45,10 +46,9 @@ export default function AnsoffTable({ data, onChange }) {
 
               {/* 市場規模 */}
               <td className="py-3 px-3">
-                <input
-                  type="number"
-                  value={row.marketSize2028 || ''}
-                  onChange={(e) => onChange(idx, 'marketSize2028', parseFloat(e.target.value) || 0)}
+                <NumericInput
+                  value={row.marketSize2028}
+                  onValueChange={(n) => onChange(idx, 'marketSize2028', n)}
                   className="neu-input w-full rounded px-2 py-1.5 text-sm focus:outline-none"
                   placeholder="0"
                 />
@@ -57,10 +57,9 @@ export default function AnsoffTable({ data, onChange }) {
               {/* 市佔率 */}
               <td className="py-3 px-3">
                 <div className="relative">
-                  <input
-                    type="number"
-                    value={row.marketShare2028 || ''}
-                    onChange={(e) => onChange(idx, 'marketShare2028', parseFloat(e.target.value) || 0)}
+                  <NumericInput
+                    value={row.marketShare2028}
+                    onValueChange={(n) => onChange(idx, 'marketShare2028', n)}
                     className="neu-input w-full rounded px-2 pr-8 py-1.5 text-sm focus:outline-none"
                     placeholder="0"
                     min="0"

@@ -1,3 +1,5 @@
+import { NumericInput } from './NumericInput';
+
 function FieldGroup({ label, children }) {
   return (
     <div className="flex flex-col gap-1">
@@ -10,10 +12,9 @@ function FieldGroup({ label, children }) {
 function NumberField({ value, onChange, unit = '', placeholder = '0' }) {
   return (
     <div className="relative">
-      <input
-        type="number"
-        value={value || ''}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      <NumericInput
+        value={value}
+        onValueChange={onChange}
         className={`neu-input w-full rounded-md px-3 py-2 text-sm focus:outline-none ${unit ? 'pr-10' : ''}`}
         placeholder={placeholder}
         step="0.1"

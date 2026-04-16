@@ -1,3 +1,5 @@
+import { NumericInput } from './NumericInput';
+
 export default function FinalDecisionPanel({ partASubtotal, partBRevenue, aspirationRevenue, onFinalDecision }) {
   const formatNum = (n) =>
     n > 0 ? n.toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'
@@ -36,10 +38,9 @@ export default function FinalDecisionPanel({ partASubtotal, partBRevenue, aspira
           {/* 最終決策 */}
           <div className="border-2 border-brand-green/50 rounded-lg p-4 bg-emerald-50/30 backdrop-blur-sm text-center">
             <div className="text-xs font-semibold text-brand-green mb-1">最終拍板目標</div>
-            <input
-              type="number"
-              value={aspirationRevenue || ''}
-              onChange={(e) => onFinalDecision(parseFloat(e.target.value) || 0)}
+            <NumericInput
+              value={aspirationRevenue}
+              onValueChange={onFinalDecision}
               className="neu-input w-full text-center text-2xl font-bold text-brand-green rounded-md px-3 py-1 focus:outline-none"
               placeholder="0"
             />

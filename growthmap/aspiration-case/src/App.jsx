@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import CompanyBasics from './components/CompanyBasics'
 import AnsoffTable from './components/AnsoffTable'
 import TsrPanel from './components/TsrPanel'
@@ -6,20 +6,9 @@ import FinalDecisionPanel from './components/FinalDecisionPanel'
 import SupplyChainTable from './components/SupplyChainTable'
 import ExportButton from './components/ExportButton'
 import SectionWrapper from './components/SectionWrapper'
-
-const INITIAL_PART_A = [
-  { id: 'core', category: '既有市場/產品', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
-  { id: 'newProd', category: '新產品/服務', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
-  { id: 'newMarket', category: '新市場/客戶', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
-  { id: 'newModel', category: '新商業模式', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
-]
-
-const INITIAL_PART_C = [
-  { categoryId: 'core', bottlenecks: { procurement: false, manufacturing: false, logistics: false, tech: false }, breakthrough: '' },
-  { categoryId: 'newProd', bottlenecks: { procurement: false, manufacturing: false, logistics: false, tech: false }, breakthrough: '' },
-  { categoryId: 'newMarket', bottlenecks: { procurement: false, manufacturing: false, logistics: false, tech: false }, breakthrough: '' },
-  { categoryId: 'newModel', bottlenecks: { procurement: false, manufacturing: false, logistics: false, tech: false }, breakthrough: '' },
-]
+import { AuthWidget } from './components/AuthWidget'
+import { CloudSyncBootstrap } from './lib/cloud/CloudSyncBootstrap'
+import { useAspirationStore } from './store/useAspirationStore'
 
 function calcCAGR(start, end, years = 3) {
   if (!start || start <= 0 || !end || end <= 0) return 0
@@ -27,28 +16,15 @@ function calcCAGR(start, end, years = 3) {
 }
 
 export default function App() {
-  // === 模組一：基本資訊 ===
-  const [companyInfo, setCompanyInfo] = useState({
-    name: '',
-    revenue2025: 0,
-    naturalGrowth: { targetRevenue2028: 0, cagr: 0 },
-    aspirationGrowth: { targetRevenue2028: 0, cagr: 0 },
-  })
+  const companyInfo = useAspirationStore((s) => s.companyInfo)
+  const partA = useAspirationStore((s) => s.partA)
+  const partB = useAspirationStore((s) => s.partB)
+  const partC = useAspirationStore((s) => s.partC)
+  const updateCompany = useAspirationStore((s) => s.updateCompany)
+  const updatePartA = useAspirationStore((s) => s.updatePartA)
+  const updatePartB = useAspirationStore((s) => s.updatePartB)
+  const updatePartC = useAspirationStore((s) => s.updatePartC)
 
-  // === 模組二：A. 客戶/競爭面向 ===
-  const [partA, setPartA] = useState(INITIAL_PART_A)
-
-  // === 模組三：B. 股東面向 ===
-  const [partB, setPartB] = useState({
-    targetTsr3Years: 0,
-    contributions: { revenueGrowth: 0, ebitGrowth: 0, ebitMultiple: 0 },
-    targets2028: { revenue: 0, ebitMargin: 0, ebitMultiple: 0 },
-  })
-
-  // === 模組四：供應鏈面向 ===
-  const [partC, setPartC] = useState(INITIAL_PART_C)
-
-  // === 衍生計算 ===
   const naturalCAGR = useMemo(
     () => calcCAGR(companyInfo.revenue2025, companyInfo.naturalGrowth.targetRevenue2028),
     [companyInfo.revenue2025, companyInfo.naturalGrowth.targetRevenue2028]
@@ -69,56 +45,11 @@ export default function App() {
     [partA]
   )
 
-  // === 更新處理函式 ===
-  const handleCompanyChange = (field, value) => {
-    setCompanyInfo(prev => {
-      const next = { ...prev }
-      const keys = field.split('.')
-      if (keys.length === 1) {
-        next[field] = value
-      } else {
-        next[keys[0]] = { ...prev[keys[0]], [keys[1]]: value }
-      }
-      return next
-    })
-  }
-
-  const handlePartAChange = (index, field, value) => {
-    setPartA(prev => {
-      const next = [...prev]
-      const row = { ...next[index], [field]: value }
-      if (field === 'marketSize2028' || field === 'marketShare2028') {
-        row.revenue2028 = row.marketSize2028 * (row.marketShare2028 / 100)
-      }
-      next[index] = row
-      return next
-    })
-  }
-
-  const handlePartBChange = (section, field, value) => {
-    setPartB(prev => {
-      if (!section) return { ...prev, [field]: value }
-      return { ...prev, [section]: { ...prev[section], [field]: value } }
-    })
-  }
-
-  const handlePartCChange = (index, field, value) => {
-    setPartC(prev => {
-      const next = [...prev]
-      if (field === 'breakthrough') {
-        next[index] = { ...next[index], breakthrough: value }
-      } else {
-        next[index] = {
-          ...next[index],
-          bottlenecks: { ...next[index].bottlenecks, [field]: value },
-        }
-      }
-      return next
-    })
-  }
-
   return (
     <div className="min-h-screen">
+      <CloudSyncBootstrap />
+      <AuthWidget />
+
       {/* 頁首 */}
       <header className="glass-header text-gray-800 py-6 px-4 sm:px-6 lg:px-8 no-print">
         <div className="max-w-5xl mx-auto">
@@ -148,12 +79,12 @@ export default function App() {
             data={companyInfo}
             naturalCAGR={naturalCAGR}
             aspirationCAGR={aspirationCAGR}
-            onChange={handleCompanyChange}
+            onChange={updateCompany}
           />
         </SectionWrapper>
 
         <SectionWrapper title="A. 客戶/競爭面向 (安索夫矩陣)" number="A">
-          <AnsoffTable data={partA} onChange={handlePartAChange} />
+          <AnsoffTable data={partA} onChange={updatePartA} />
           <div className="mt-4 flex items-center justify-end gap-3 px-2">
             <span className="text-sm font-medium text-gray-500">客戶視角營收總計</span>
             <span className="text-lg font-bold text-brand-blue">
@@ -163,14 +94,14 @@ export default function App() {
         </SectionWrapper>
 
         <SectionWrapper title="B. 股東面向 (TSR 架構)" number="B">
-          <TsrPanel data={partB} onChange={handlePartBChange} />
+          <TsrPanel data={partB} onChange={updatePartB} />
         </SectionWrapper>
 
         <FinalDecisionPanel
           partASubtotal={partASubtotal}
           partBRevenue={partB.targets2028.revenue}
           aspirationRevenue={companyInfo.aspirationGrowth.targetRevenue2028}
-          onFinalDecision={(val) => handleCompanyChange('aspirationGrowth.targetRevenue2028', val)}
+          onFinalDecision={(val) => updateCompany('aspirationGrowth.targetRevenue2028', val)}
         />
 
         <SectionWrapper title="供應鏈面向瓶頸評估" number="C">
@@ -178,7 +109,7 @@ export default function App() {
             data={partC}
             categories={partA}
             activeCategories={activeCategories}
-            onChange={handlePartCChange}
+            onChange={updatePartC}
           />
         </SectionWrapper>
       </main>

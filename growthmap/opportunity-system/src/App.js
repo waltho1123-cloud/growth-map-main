@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { OpportunityProvider, useOpportunity } from './contexts/OpportunityContext';
 import Dashboard from './components/Dashboard/Dashboard';
 import OpportunityEditor from './components/Editor/OpportunityEditor';
+import { AuthWidget } from './components/AuthWidget';
 
 function AppContent() {
   const { state } = useOpportunity();
@@ -19,6 +20,7 @@ function App() {
   return (
     <OpportunityProvider>
       <div className="min-h-screen">
+        <AuthWidget />
         <Toaster
           position="top-center"
           toastOptions={{

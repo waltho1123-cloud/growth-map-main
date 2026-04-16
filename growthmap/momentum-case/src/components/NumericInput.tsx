@@ -58,7 +58,13 @@ export function NumericInput({ value, onValueChange, onFocus, onBlur, onChange, 
         onBlur?.(e);
       }}
       onChange={(e) => {
-        const s = sanitize(e.target.value);
+        const raw = e.target.value;
+        const s = sanitize(raw);
+        // When sanitize normalizes the input (e.g. "01" -> "1") but the
+        // resulting string equals the current display state, React bails out
+        // of the re-render and the DOM keeps showing the un-sanitized text.
+        // Force-sync the DOM value so the leading zero actually disappears.
+        if (raw !== s) e.target.value = s;
         setDisplay(s);
         const n = parseFloat(s);
         onValueChange(Number.isNaN(n) ? 0 : n);

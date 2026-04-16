@@ -64,12 +64,12 @@ export default function Step5Wicked() {
                 {FIELDS.map((field) => (
                   <div
                     key={field.key}
-                    className={field.key === 'description' || field.key === 'wickedType' || field.key === 'guideline' ? 'md:col-span-2' : ''}
+                    className={field.key === 'description' || field.key === 'challenge' || field.key === 'wickedType' || field.key === 'guideline' ? 'md:col-span-2' : ''}
                   >
                     <label className="block text-sm font-medium text-gray-600 mb-1.5">
                       {field.label}
                     </label>
-                    {(field.key === 'description' || field.key === 'wickedType' || field.key === 'guideline') ? (
+                    {(field.key === 'description' || field.key === 'challenge' || field.key === 'wickedType' || field.key === 'guideline') ? (
                       <IMETextarea
                         value={wc[field.key]}
                         onValueChange={(v) =>

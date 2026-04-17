@@ -33,14 +33,17 @@ export default function ExportButton({ stepLabel, className }: ExportButtonProps
           return;
         }
 
-        const text = el.value || '';
+        // Use actual value, or fall back to placeholder if value is empty
+        const text = el.value || (el instanceof HTMLInputElement ? el.placeholder : '') || '';
         if (!text) return;
 
         const div = document.createElement('div');
         const cs = window.getComputedStyle(el);
+        // If showing placeholder, use placeholder color; otherwise use input color
+        const textColor = el.value ? cs.color : (cs.getPropertyValue('--placeholder-color') || '#9ca3af');
         div.style.cssText = [
           `font: ${cs.font}`,
-          `color: ${cs.color}`,
+          `color: ${textColor}`,
           `background: ${cs.backgroundColor}`,
           `border: ${cs.border}`,
           `border-radius: ${cs.borderRadius}`,

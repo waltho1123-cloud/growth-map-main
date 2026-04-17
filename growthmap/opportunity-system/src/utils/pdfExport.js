@@ -6,14 +6,36 @@ const PAGE_H = 210;
 const MARGIN = 15;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
+const FONT_URL = process.env.PUBLIC_URL + '/fonts/NotoSansTC.ttf';
+let cachedFontBase64 = null;
+
+async function loadCJKFont() {
+  if (cachedFontBase64) return cachedFontBase64;
+  const res = await fetch(FONT_URL);
+  if (!res.ok) throw new Error('Failed to load CJK font');
+  const buf = await res.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  cachedFontBase64 = btoa(binary);
+  return cachedFontBase64;
+}
+
+function registerFont(doc, base64) {
+  doc.addFileToVFS('NotoSansTC.ttf', base64);
+  doc.addFont('NotoSansTC.ttf', 'NotoSansTC', 'normal');
+  doc.setFont('NotoSansTC');
+}
+
 function getToolName(id) {
   const tool = BCG_TOOLS.find((t) => t.id === id);
   return tool ? `${id}. ${tool.name}` : String(id);
 }
 
 function addHeader(doc, title, subtitle) {
-  doc.setFillColor(16, 42, 67); // navy-900
+  doc.setFillColor(16, 42, 67);
   doc.rect(0, 0, PAGE_W, 22, 'F');
+  doc.setFont('NotoSansTC');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
   doc.text(title, MARGIN, 14);
@@ -25,6 +47,7 @@ function addHeader(doc, title, subtitle) {
 function addSectionTitle(doc, y, num, title) {
   doc.setFillColor(240, 244, 248);
   doc.roundedRect(MARGIN, y, CONTENT_W, 8, 2, 2, 'F');
+  doc.setFont('NotoSansTC');
   doc.setTextColor(16, 42, 67);
   doc.setFontSize(9);
   doc.text(`${num}  ${title}`, MARGIN + 3, y + 5.5);
@@ -32,6 +55,7 @@ function addSectionTitle(doc, y, num, title) {
 }
 
 function addField(doc, y, label, value, maxWidth) {
+  doc.setFont('NotoSansTC');
   doc.setTextColor(98, 125, 152);
   doc.setFontSize(7);
   doc.text(label, MARGIN + 3, y);
@@ -44,11 +68,17 @@ function addField(doc, y, label, value, maxWidth) {
 
 export async function exportToPdf(opportunities) {
   const { default: jsPDF } = await import('jspdf');
+
+  // Load CJK font (fetched once, cached in memory)
+  const fontBase64 = await loadCJKFont();
+
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  registerFont(doc, fontBase64);
 
   // ===== 封面 =====
   doc.setFillColor(16, 42, 67);
   doc.rect(0, 0, PAGE_W, PAGE_H, 'F');
+  doc.setFont('NotoSansTC');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.text('Growth Opportunities', PAGE_W / 2, PAGE_H / 2 - 20, { align: 'center' });
@@ -114,10 +144,10 @@ export async function exportToPdf(opportunities) {
   doc.addPage();
   addHeader(doc, 'Growth Opportunity Long-list', `Total: ${opportunities.length}`);
 
-  // Table header
   let y = 30;
   doc.setFillColor(16, 42, 67);
   doc.rect(MARGIN, y, CONTENT_W, 8, 'F');
+  doc.setFont('NotoSansTC');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(7);
   doc.text('#', MARGIN + 2, y + 5.5);
@@ -127,7 +157,6 @@ export async function exportToPdf(opportunities) {
   doc.text('Growth Dimension', MARGIN + 200, y + 5.5);
   y += 8;
 
-  // Table rows
   opportunities.forEach((opp, idx) => {
     if (y > PAGE_H - 20) {
       doc.addPage();
@@ -137,6 +166,7 @@ export async function exportToPdf(opportunities) {
     const bg = idx % 2 === 0 ? [255, 255, 255] : [240, 244, 248];
     doc.setFillColor(...bg);
     doc.rect(MARGIN, y, CONTENT_W, 7, 'F');
+    doc.setFont('NotoSansTC');
     doc.setTextColor(36, 59, 83);
     doc.setFontSize(7);
     doc.text(String(idx + 1), MARGIN + 2, y + 5);

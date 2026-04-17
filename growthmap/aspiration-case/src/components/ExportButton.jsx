@@ -93,9 +93,7 @@ export default function ExportButton({ companyName }) {
         position += pageHeight
       }
 
-      const fileName = companyName
-        ? `專班_組別_${companyName}_Aspiration_case.pdf`
-        : 'Aspiration_case.pdf'
+      const fileName = 'Aspiration_Case_建立情境.pdf'
       pdf.save(fileName)
     } catch (err) {
       console.error('PDF export failed:', err)

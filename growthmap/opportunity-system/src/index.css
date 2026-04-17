@@ -57,3 +57,56 @@ body {
 .animate-slide-in {
   animation: slideIn 0.3s ease-out;
 }
+
+/* Hidden on screen, shown only during PDF export */
+.pdf-only { display: none !important; }
+
+/* --- PDF export snapshot fixes --- */
+.pdf-exporting {
+  overflow: visible !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  padding-bottom: 4px !important;
+}
+.pdf-exporting.overflow-hidden,
+.pdf-exporting .overflow-hidden,
+.pdf-exporting.overflow-x-auto,
+.pdf-exporting .overflow-x-auto {
+  overflow: visible !important;
+}
+
+/* BCG tool badge tooltip — stays visible on hover */
+.tool-badge::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  white-space: nowrap;
+  background: #1f2937;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 50;
+}
+.tool-badge::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 8px;
+  border: 4px solid transparent;
+  border-top-color: #1f2937;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 50;
+}
+.tool-badge:hover::after,
+.tool-badge:hover::before {
+  opacity: 1;
+}

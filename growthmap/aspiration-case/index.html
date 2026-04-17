@@ -6,10 +6,137 @@
     <title>企業成長藍圖 - 加速增長情境</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" /></noscript>
+    <style>
+      #app-skeleton {
+        font-family: 'Noto Sans TC', 'Inter', sans-serif;
+        background: #eef1f5;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+      }
+      #app-skeleton .sk-header {
+        background: rgba(255,255,255,0.85);
+        backdrop-filter: blur(12px);
+        padding: 24px 24px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+      }
+      #app-skeleton .sk-back {
+        font-size: 13px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      #app-skeleton .sk-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1f2937;
+      }
+      #app-skeleton .sk-title span {
+        color: #00A651;
+      }
+      #app-skeleton .sk-subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        margin-top: 4px;
+      }
+      #app-skeleton .sk-body {
+        max-width: 64rem;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
+      #app-skeleton .sk-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      }
+      #app-skeleton .sk-bar {
+        height: 14px;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        border-radius: 6px;
+        animation: sk-shimmer 1.5s ease-in-out infinite;
+      }
+      #app-skeleton .sk-bar.w60 { width: 60%; }
+      #app-skeleton .sk-bar.w40 { width: 40%; }
+      #app-skeleton .sk-bar.w80 { width: 80%; }
+      #app-skeleton .sk-bar.w50 { width: 50%; }
+      #app-skeleton .sk-bar.tall { height: 20px; }
+      #app-skeleton .sk-bar + .sk-bar { margin-top: 12px; }
+      #app-skeleton .sk-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0 24px;
+        gap: 14px;
+      }
+      #app-skeleton .sk-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e5e7eb;
+        border-top-color: #00A651;
+        border-radius: 50%;
+        animation: sk-spin 0.8s linear infinite;
+      }
+      #app-skeleton .sk-loader-text {
+        font-size: 14px;
+        color: #6b7280;
+      }
+      #app-skeleton .sk-progress {
+        width: 200px;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      #app-skeleton .sk-progress-bar {
+        height: 100%;
+        width: 0;
+        background: #00A651;
+        border-radius: 3px;
+        transition: width 1s ease-out;
+      }
+      @keyframes sk-shimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      @keyframes sk-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-skeleton">
+        <div class="sk-header">
+          <div class="sk-back">← 返回藍圖</div>
+          <div class="sk-title"><span>BW</span> 成長藍圖實作平台</div>
+          <div class="sk-subtitle">建立加速增長情境（Aspiration Case）</div>
+        </div>
+        <div class="sk-body">
+          <div class="sk-card">
+            <div class="sk-bar tall w60"></div>
+            <div class="sk-bar w80"></div>
+            <div class="sk-bar w40"></div>
+          </div>
+          <div class="sk-card">
+            <div class="sk-bar tall w50"></div>
+            <div class="sk-bar w80"></div>
+            <div class="sk-bar w60"></div>
+            <div class="sk-bar w40"></div>
+          </div>
+          <div class="sk-loader">
+            <div class="sk-spinner"></div>
+            <div class="sk-loader-text">載入中…</div>
+            <div class="sk-progress"><div class="sk-progress-bar" id="sk-bar"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>(function(){var b=document.getElementById('sk-bar');if(!b)return;var p=0;setInterval(function(){p+=p<60?6:p<85?2:0.3;if(p>95)p=95;b.style.width=p+'%'},1000)})()</script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

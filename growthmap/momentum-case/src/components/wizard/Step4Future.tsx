@@ -1,13 +1,8 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
-
-const WaterfallChart = dynamic(
-  () => import('@/components/charts/WaterfallChart'),
-  { ssr: false, loading: () => <div className="h-80 flex items-center justify-center text-gray-400">載入圖表中…</div> }
-);
+import WaterfallChart from '@/components/charts/WaterfallChart';
 
 export default function Step4Future() {
   const drivers = useAssignmentStore((s) => s.drivers);

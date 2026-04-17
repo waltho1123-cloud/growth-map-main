@@ -1,0 +1,32 @@
+**/node_modules
+**/.next
+**/.swc
+**/.turbo
+.git
+.agents
+.windsurf
+.claude
+.DS_Store
+
+# Source code (only need build outputs)
+growthmap/momentum-case/src
+growthmap/aspiration-case/src
+growthmap/opportunity-system/src
+growthmap/opportunity-system/public
+
+# Config files not needed at runtime
+**/package*.json
+**/yarn.lock
+**/pnpm-lock.yaml
+**/tsconfig*.json
+**/next.config.*
+**/vite.config.*
+**/tailwind.config.*
+**/postcss.config.*
+**/next-env.d.ts
+**/.eslintrc*
+**/.prettierrc*
+**/tsconfig.tsbuildinfo
+
+# Source maps
+**/*.map

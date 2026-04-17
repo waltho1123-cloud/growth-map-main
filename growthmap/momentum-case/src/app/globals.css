@@ -211,6 +211,20 @@
   appearance: none !important;
   opacity: 1 !important;
 }
+/* Tree connector lines & node boxes — Tailwind v4 bg-xxx/NN compiles to
+   color-mix() which html2canvas cannot parse; use explicit rgba for export */
+.pdf-exporting .tree-conn {
+  background-color: rgba(0, 166, 81, 0.4) !important;
+}
+.pdf-exporting .tree-node {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  box-shadow: none !important;
+}
+.pdf-exporting .tree-node.tree-node-selected {
+  background-color: rgba(0, 166, 81, 0.1) !important;
+  border-color: #00A651 !important;
+}
 /* Let wide content (tree, charts) render at natural width during export */
 .pdf-exporting .overflow-auto,
 .pdf-exporting .overflow-x-auto,

@@ -1,9 +1,9 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebase } from './firebase';
 
 export async function loadCloud(uid, appKey) {
-  const { db } = getFirebase();
+  const { db } = await getFirebase();
   if (!db) return null;
+  const { doc, getDoc } = await import('firebase/firestore');
   const snap = await getDoc(doc(db, 'users', uid, 'apps', appKey));
   if (!snap.exists()) return null;
   const raw = snap.data();
@@ -15,8 +15,9 @@ export async function loadCloud(uid, appKey) {
 }
 
 export async function saveCloud(uid, appKey, data) {
-  const { db } = getFirebase();
+  const { db } = await getFirebase();
   if (!db) return;
+  const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
   await setDoc(doc(db, 'users', uid, 'apps', appKey), {
     data,
     updatedAtMs: Date.now(),

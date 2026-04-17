@@ -1,18 +1,25 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
 import { firebaseConfig, isFirebaseConfigured } from './firebase-config';
 
 let app = null;
 let authInstance = null;
 let dbInstance = null;
+let initPromise = null;
 
-export function getFirebase() {
+export async function getFirebase() {
   if (!isFirebaseConfigured) return { app: null, auth: null, db: null };
-  if (!app) {
-    app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-    authInstance = getAuth(app);
-    dbInstance = getFirestore(app);
+  if (app) return { app, auth: authInstance, db: dbInstance };
+  if (!initPromise) {
+    initPromise = (async () => {
+      const [{ initializeApp, getApps }, { getAuth }, { getFirestore }] = await Promise.all([
+        import('firebase/app'),
+        import('firebase/auth'),
+        import('firebase/firestore'),
+      ]);
+      app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+      authInstance = getAuth(app);
+      dbInstance = getFirestore(app);
+    })();
   }
+  await initPromise;
   return { app, auth: authInstance, db: dbInstance };
 }

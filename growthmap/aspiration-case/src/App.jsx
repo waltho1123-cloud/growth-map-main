@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, lazy, Suspense } from 'react'
 import CompanyBasics from './components/CompanyBasics'
 import AnsoffTable from './components/AnsoffTable'
 import TsrPanel from './components/TsrPanel'
 import FinalDecisionPanel from './components/FinalDecisionPanel'
 import SupplyChainTable from './components/SupplyChainTable'
-import ExportButton from './components/ExportButton'
 import SectionWrapper from './components/SectionWrapper'
+
+const ExportButton = lazy(() => import('./components/ExportButton'))
 import { AuthWidget } from './components/AuthWidget'
 import { CloudSyncBootstrap } from './lib/cloud/CloudSyncBootstrap'
 import { useAspirationStore } from './store/useAspirationStore'
@@ -56,7 +57,8 @@ export default function App() {
           <div className="flex items-center gap-4 mb-2">
             <a
               href="/"
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+              onClick={(e) => { e.preventDefault(); window.location.href = '/'; }}
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors px-2 py-1.5 -ml-2 rounded-md hover:bg-gray-100"
             >
               <span>←</span>
               <span>返回藍圖</span>
@@ -117,7 +119,9 @@ export default function App() {
       {/* 匯出按鈕 */}
       <div className="no-print sticky bottom-0 glass-header py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto flex justify-end">
-          <ExportButton companyName={companyInfo.name} />
+          <Suspense fallback={<span className="text-sm text-gray-400">載入匯出…</span>}>
+            <ExportButton companyName={companyInfo.name} />
+          </Suspense>
         </div>
       </div>
     </div>

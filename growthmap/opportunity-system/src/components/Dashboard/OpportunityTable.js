@@ -1,6 +1,6 @@
 import React from 'react';
 import { useOpportunity } from '../../contexts/OpportunityContext';
-import { GROWTH_LEVERS } from '../../utils/constants';
+import { GROWTH_LEVERS, BCG_TOOLS } from '../../utils/constants';
 
 export default function OpportunityTable() {
   const { state, dispatch } = useOpportunity();
@@ -34,7 +34,11 @@ export default function OpportunityTable() {
     );
   }
 
+  // Collect unique tool IDs used across all opportunities
+  const usedToolIds = [...new Set(opportunities.flatMap((o) => o.usedTools))].sort((a, b) => a - b);
+
   return (
+    <>
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200/60">
         <thead>
@@ -51,7 +55,7 @@ export default function OpportunityTable() {
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
               成長面向
             </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-32">
+            <th className="pdf-hide px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-32">
               操作
             </th>
           </tr>
@@ -66,10 +70,12 @@ export default function OpportunityTable() {
                 <div className="flex flex-wrap gap-1">
                   {opp.usedTools.length > 0
                     ? opp.usedTools.map((toolId) => {
+                        const tool = BCG_TOOLS.find((t) => t.id === toolId);
                         return (
                           <span
                             key={toolId}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100/80 text-gray-700"
+                            data-tip={tool ? `#${toolId} ${tool.name}` : String(toolId)}
+                            className="tool-badge inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100/80 text-gray-700 cursor-default relative"
                           >
                             {toolId}
                           </span>
@@ -99,7 +105,7 @@ export default function OpportunityTable() {
               <td className="px-4 py-3 text-sm text-gray-600">
                 {opp.template1.growthDimension || <span className="text-gray-300">—</span>}
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className="pdf-hide px-4 py-3 text-center">
                 <button
                   onClick={() => handleEdit(opp.id)}
                   className="text-gray-600 hover:text-gray-900 mr-3 text-sm font-medium"
@@ -118,5 +124,23 @@ export default function OpportunityTable() {
         </tbody>
       </table>
     </div>
+    {/* BCG tool legend — hidden on screen, shown in PDF */}
+    {usedToolIds.length > 0 && (
+      <div className="pdf-only px-6 py-4 border-t border-gray-200/60">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">使用的 BCG 工具</h3>
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
+          {usedToolIds.map((id) => {
+            const tool = BCG_TOOLS.find((t) => t.id === id);
+            return (
+              <span key={id} className="text-xs text-gray-600">
+                <span className="font-medium text-gray-800">#{id}</span>{' '}
+                {tool ? tool.name : '—'}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    )}
+    </>
   );
 }

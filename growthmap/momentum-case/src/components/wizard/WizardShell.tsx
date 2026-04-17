@@ -22,12 +22,9 @@ const STEPS = [
 export default function WizardShell() {
   const { currentStep, setCurrentStep } = useAssignmentStore();
 
-  // Prefetch ECharts chunk in background so Step 3/4 render instantly
+  // Remove the inline loading skeleton once the app has mounted
   useEffect(() => {
-    const timer = setTimeout(() => {
-      import('@/components/charts/WaterfallChart');
-    }, 800);
-    return () => clearTimeout(timer);
+    document.getElementById('app-loading')?.remove();
   }, []);
 
   const renderStep = () => {
@@ -50,7 +47,8 @@ export default function WizardShell() {
           <div className="flex items-center gap-4">
             <a
               href="/"
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors shrink-0"
+              onClick={(e) => { e.preventDefault(); window.location.href = '/'; }}
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors shrink-0 px-2 py-1.5 -ml-2 rounded-md hover:bg-gray-100"
             >
               <span>←</span>
               <span>返回藍圖</span>

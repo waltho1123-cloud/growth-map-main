@@ -35,10 +35,10 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth, canMoveUp = fals
         <div
           onClick={() => onSelect(node)}
           className={`
-            relative cursor-pointer rounded-xl px-4 py-3 min-w-[110px] max-w-[160px] text-center
+            tree-node relative cursor-pointer rounded-xl px-4 py-3 min-w-[110px] max-w-[160px] text-center
             border-2 transition-all select-none
             ${isSelected
-              ? 'border-[#00A651] bg-[#00A651]/10 shadow-lg shadow-[#00A651]/10'
+              ? 'tree-node-selected border-[#00A651] bg-[#00A651]/10 shadow-lg shadow-[#00A651]/10'
               : 'border-gray-200 bg-white/60 hover:border-gray-300'
             }
           `}
@@ -123,13 +123,13 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth, canMoveUp = fals
           <div className="flex flex-col items-center justify-center relative w-10 self-stretch">
             {/* Horizontal line from parent — extends left into the ml-2 gap and right into the trunk (overlap) */}
             <div
-              className="absolute h-[2px] bg-[#00A651]/40"
+              className="tree-conn absolute h-[2px] bg-[#00A651]/40"
               style={{ top: 'calc(50% - 1px)', left: '-8px', width: '22px' }}
             />
             {/* Vertical trunk — only needed when 2+ children (single child connects via stub + branch) */}
             {node.children.length > 1 && (
               <div
-                className="absolute w-[2px] bg-[#00A651]/40"
+                className="tree-conn absolute w-[2px] bg-[#00A651]/40"
                 style={{
                   left: '12px',
                   top: `${100 / (node.children.length * 2 + (node.children.length - 1))}%`,
@@ -161,7 +161,7 @@ function TreeNodeComponent({ node, onSelect, selectedId, depth, canMoveUp = fals
               <div key={child.id} className="flex items-center relative">
                 {/* Branch line — overlaps the trunk by 2px on the left so the T-corner renders solidly */}
                 <div
-                  className="absolute h-[2px] bg-[#00A651]/40"
+                  className="tree-conn absolute h-[2px] bg-[#00A651]/40"
                   style={{ top: 'calc(50% - 1px)', left: '-30px', width: '30px' }}
                 />
                 <TreeNodeComponent

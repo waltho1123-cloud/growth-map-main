@@ -15,12 +15,13 @@ export default function ExportButton({ stepLabel, className }: ExportButtonProps
       const element = document.getElementById('pdf-content') as HTMLElement | null;
       if (!element) return;
 
-      // Sync live input values onto HTML attributes so html2canvas can see them.
-      const inputs = element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+      // Replace inputs/textareas with styled divs so html2canvas captures full text
+      // (inputs clip text beyond visible width; divs wrap naturally)
+      const formEls = element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
         'input, textarea, select'
       );
       const restore: Array<() => void> = [];
-      inputs.forEach((el) => {
+      formEls.forEach((el) => {
         if (el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio')) {
           const wasChecked = el.hasAttribute('checked');
           restore.push(() => {
@@ -29,19 +30,39 @@ export default function ExportButton({ stepLabel, className }: ExportButtonProps
           });
           if (el.checked) el.setAttribute('checked', '');
           else el.removeAttribute('checked');
-        } else {
-          const prev = el.getAttribute('value');
-          restore.push(() => {
-            if (prev === null) el.removeAttribute('value');
-            else el.setAttribute('value', prev);
-          });
-          el.setAttribute('value', el.value ?? '');
+          return;
         }
-        if (el instanceof HTMLTextAreaElement) {
-          const prevText = el.textContent;
-          restore.push(() => { el.textContent = prevText; });
-          el.textContent = el.value;
-        }
+
+        const text = el.value || '';
+        if (!text) return;
+
+        const div = document.createElement('div');
+        const cs = window.getComputedStyle(el);
+        div.style.cssText = [
+          `font: ${cs.font}`,
+          `color: ${cs.color}`,
+          `background: ${cs.backgroundColor}`,
+          `border: ${cs.border}`,
+          `border-radius: ${cs.borderRadius}`,
+          `padding: ${cs.padding}`,
+          `box-sizing: border-box`,
+          `width: ${cs.width}`,
+          `min-height: ${cs.height}`,
+          `white-space: pre-wrap`,
+          `word-break: break-word`,
+          `overflow-wrap: break-word`,
+          `line-height: ${cs.lineHeight}`,
+          `text-align: ${cs.textAlign}`,
+        ].join(';');
+        div.textContent = text;
+
+        el.parentNode?.insertBefore(div, el);
+        el.style.display = 'none';
+
+        restore.push(() => {
+          div.remove();
+          el.style.display = '';
+        });
       });
 
       // Swap echarts canvases with <img> so html2canvas captures them faithfully.

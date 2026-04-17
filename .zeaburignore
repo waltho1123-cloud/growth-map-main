@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Next.js dev cache & build artifacts (NOT the exported out/)
+**/.next/
+
+# Source code (only need build outputs for static hosting)
+growthmap/momentum-case/src/
+growthmap/aspiration-case/src/
+growthmap/opportunity-system/src/
+
+# Source maps (large, not needed in production)
+**/*.map
+
+# Package manager files
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+**/tsconfig*.json
+**/next.config.*
+**/vite.config.*
+**/tailwind.config.*
+**/postcss.config.*
+**/next-env.d.ts
+**/.eslintrc*
+**/.prettierrc*
+**/tsconfig.tsbuildinfo
+
+# Build tool configs
+**/.swc/
+**/.turbo/
+
+# IDE / OS
+.git/
+.agents/
+.windsurf/
+.claude/
+.DS_Store
+*.md
+
+# Opportunity system source (only need build/)
+growthmap/opportunity-system/public/

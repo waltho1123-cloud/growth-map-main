@@ -34,13 +34,14 @@ export default function ExportButton({ stepLabel, className }: ExportButtonProps
         }
 
         // Use actual value, or fall back to placeholder if value is empty
-        const text = el.value || (el instanceof HTMLInputElement ? el.placeholder : '') || '';
+        const text = el.value || (el instanceof HTMLInputElement ? el.placeholder : '') ||
+                     (el instanceof HTMLTextAreaElement ? el.placeholder : '') || '';
         if (!text) return;
 
         const div = document.createElement('div');
         const cs = window.getComputedStyle(el);
         // If showing placeholder, use placeholder color; otherwise use input color
-        const textColor = el.value ? cs.color : (cs.getPropertyValue('--placeholder-color') || '#9ca3af');
+        const textColor = el.value ? cs.color : '#9ca3af';
         div.style.cssText = [
           `font: ${cs.font}`,
           `color: ${textColor}`,
@@ -54,8 +55,10 @@ export default function ExportButton({ stepLabel, className }: ExportButtonProps
           `white-space: pre-wrap`,
           `word-break: break-word`,
           `overflow-wrap: break-word`,
+          `overflow: visible`,
           `line-height: ${cs.lineHeight}`,
           `text-align: ${cs.textAlign}`,
+          `display: block`,
         ].join(';');
         div.textContent = text;
 

@@ -1,7 +1,7 @@
 export default function ExportButton({ companyName }) {
   const handleExport = async () => {
     try {
-      const { default: html2canvas } = await import('html2canvas')
+      const { default: html2canvas } = await import('html2canvas-pro')
       const { jsPDF } = await import('jspdf')
 
       const element = document.getElementById('pdf-content')

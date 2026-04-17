@@ -7,32 +7,60 @@ export default function ExportButton({ companyName }) {
       const element = document.getElementById('pdf-content')
       if (!element) return
 
-      // html2canvas snapshots HTML attributes, but user-typed values only live
-      // on the DOM `value` property. Sync current values onto the `value`
-      // attribute (and `checked` for checkboxes) so they get rasterized.
-      const inputs = element.querySelectorAll('input, textarea, select')
-      const restore = []
-      inputs.forEach((el) => {
+      // ---- Phase 1: replace inputs/textareas with styled divs ----
+      // html2canvas captures the visible portion of an <input>, but users can
+      // scroll horizontally inside the box — that scrolled text gets clipped.
+      // Swapping to <div>s lets the full text render and wrap naturally.
+      const restoreFns = []
+      const formEls = element.querySelectorAll('input, textarea, select')
+
+      formEls.forEach((el) => {
         if (el.type === 'checkbox' || el.type === 'radio') {
-          restore.push(() => {
-            if (el.defaultChecked) el.setAttribute('checked', '')
+          // For checkboxes: sync checked attribute
+          const wasChecked = el.hasAttribute('checked')
+          restoreFns.push(() => {
+            if (wasChecked) el.setAttribute('checked', '')
             else el.removeAttribute('checked')
           })
           if (el.checked) el.setAttribute('checked', '')
           else el.removeAttribute('checked')
-        } else {
-          const prev = el.getAttribute('value')
-          restore.push(() => {
-            if (prev === null) el.removeAttribute('value')
-            else el.setAttribute('value', prev)
-          })
-          el.setAttribute('value', el.value ?? '')
+          return
         }
+
+        const text = el.value || ''
+        if (!text) return // empty — nothing to clip
+
+        // Create a visible div that shows the full text
+        const div = document.createElement('div')
+        const cs = window.getComputedStyle(el)
+        div.style.cssText = [
+          `font: ${cs.font}`,
+          `color: ${cs.color}`,
+          `background: ${cs.backgroundColor}`,
+          `border: ${cs.border}`,
+          `border-radius: ${cs.borderRadius}`,
+          `padding: ${cs.padding}`,
+          `box-sizing: border-box`,
+          `width: ${cs.width}`,
+          `min-height: ${cs.height}`,
+          `white-space: pre-wrap`,
+          `word-break: break-word`,
+          `overflow-wrap: break-word`,
+          `line-height: ${cs.lineHeight}`,
+          `text-align: ${cs.textAlign}`,
+        ].join(';')
+        div.textContent = text
+
+        el.parentNode.insertBefore(div, el)
+        el.style.display = 'none'
+
+        restoreFns.push(() => {
+          div.remove()
+          el.style.display = ''
+        })
       })
 
-      // Force the snapshot to use solid backgrounds & no backdrop blur, since
-      // html2canvas can't faithfully reproduce glassmorphism and may clip
-      // inputs living inside translucent containers. Mirrors @media print.
+      // ---- Phase 2: snapshot ----
       element.classList.add('pdf-exporting')
 
       let canvas
@@ -42,12 +70,15 @@ export default function ExportButton({ companyName }) {
           useCORS: true,
           backgroundColor: '#ffffff',
           windowWidth: element.scrollWidth,
+          width: element.scrollWidth,
+          height: element.scrollHeight,
         })
       } finally {
         element.classList.remove('pdf-exporting')
-        restore.forEach((fn) => fn())
+        restoreFns.forEach((fn) => fn())
       }
 
+      // ---- Phase 3: build PDF (multi-page) ----
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pdfWidth = pdf.internal.pageSize.getWidth()
@@ -56,7 +87,6 @@ export default function ExportButton({ companyName }) {
       let position = 0
       const pageHeight = pdf.internal.pageSize.getHeight()
 
-      // 多頁處理
       while (position < pdfHeight) {
         if (position > 0) pdf.addPage()
         pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, pdfHeight)

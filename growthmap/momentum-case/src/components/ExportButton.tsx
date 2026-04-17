@@ -123,6 +123,8 @@ export default function ExportButton({ stepLabel, className }: ExportButtonProps
         if (position > 0) pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, imgHeight);
         position += pdfHeight;
+        // Stop if remaining content is less than 5mm (avoids blank trailing page)
+        if (imgHeight - position < 5) break;
       }
 
       const safeLabel = (stepLabel ?? '總覽').replace(/[^\w\u4e00-\u9fa5\- ]/g, '');

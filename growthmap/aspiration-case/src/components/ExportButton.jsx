@@ -67,8 +67,9 @@ export default function ExportButton({ companyName }) {
         ? `專班_組別_${companyName}_Aspiration_case.pdf`
         : 'Aspiration_case.pdf'
       pdf.save(fileName)
-    } catch {
-      alert('匯出 PDF 需要安裝 html2canvas 與 jspdf 套件。\n請執行: npm install html2canvas jspdf')
+    } catch (err) {
+      console.error('PDF export failed:', err)
+      alert('匯出 PDF 發生錯誤：' + (err.message || err))
     }
   }
 

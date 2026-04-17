@@ -26,7 +26,7 @@ function snapshot(): SyncedSnapshot {
 // Mounted once in the root layout. Handles load-on-login and push-on-change.
 export function CloudSyncBootstrap() {
   const { user } = useAuth();
-  const localTsRef = useRef<number>(Date.now());
+  const localTsRef = useRef<number>(0);
   const applyingRef = useRef(false);
   // Gate push-on-change until the initial reconcile finishes, otherwise a
   // freshly-signed-in user can overwrite cloud with local before we've loaded it.

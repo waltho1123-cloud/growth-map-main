@@ -16,7 +16,7 @@ function snapshot() {
 
 export function CloudSyncBootstrap() {
   const { user } = useAuth();
-  const localTsRef = useRef(Date.now());
+  const localTsRef = useRef(0);
   const applyingRef = useRef(false);
   const reconciledRef = useRef(false);
 

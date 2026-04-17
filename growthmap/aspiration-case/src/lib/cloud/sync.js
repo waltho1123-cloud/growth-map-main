@@ -44,6 +44,9 @@ export function saveCloudDebounced(uid, appKey, data, delay = 1000) {
 }
 
 export function reconcile(localUpdatedAt, cloud) {
+  if (localUpdatedAt === 0) {
+    return cloud ? 'cloud' : 'same';
+  }
   if (!cloud) return 'upload';
   if (cloud.updatedAt > localUpdatedAt) return 'cloud';
   if (localUpdatedAt > cloud.updatedAt) return 'upload';

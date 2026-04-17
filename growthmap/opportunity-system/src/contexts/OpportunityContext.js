@@ -79,7 +79,7 @@ export function OpportunityProvider({ children }) {
     editingId: null,
   });
   const { user } = useAuth();
-  const localTsRef = useRef(Date.now());
+  const localTsRef = useRef(0);
   const applyingRef = useRef(false);
   // Gate the save effect until the initial cloud reconcile has finished,
   // otherwise a freshly-signed-in user can overwrite cloud with local data

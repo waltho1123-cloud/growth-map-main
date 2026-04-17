@@ -44,6 +44,12 @@ export function saveCloudDebounced(uid, appKey, data, delay = 1000) {
 }
 
 export function reconcile(localUpdatedAt, cloud) {
+  // localUpdatedAt === 0 表示「本地這次 session 從未被使用者改動過」。
+  // 在這種情況下絕對不能上傳 — 否則剛登入還沒載入雲端資料時，
+  // 會把空的 local state 覆蓋雲端真實資料（歷史踩過的 bug）。
+  if (localUpdatedAt === 0) {
+    return cloud ? 'cloud' : 'same';
+  }
   if (!cloud) return 'upload';
   if (cloud.updatedAt > localUpdatedAt) return 'cloud';
   if (localUpdatedAt > cloud.updatedAt) return 'upload';

@@ -56,6 +56,9 @@ export function saveCloudDebounced<T>(uid: string, appKey: AppKey, data: T, dela
 
 // Reconcile decision: "cloud" = download cloud to local; "upload" = upload local to cloud; "same" = no-op
 export function reconcile(localUpdatedAt: number, cloud: CloudDoc<unknown> | null): 'cloud' | 'upload' | 'same' {
+  if (localUpdatedAt === 0) {
+    return cloud ? 'cloud' : 'same';
+  }
   if (!cloud) return 'upload';
   if (cloud.updatedAt > localUpdatedAt) return 'cloud';
   if (localUpdatedAt > cloud.updatedAt) return 'upload';

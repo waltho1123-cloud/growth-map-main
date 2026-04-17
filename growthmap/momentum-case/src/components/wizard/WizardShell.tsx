@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 import Step0Dashboard from './Step0Dashboard';
 import Step1Tree from './Step1Tree';
@@ -20,6 +21,14 @@ const STEPS = [
 
 export default function WizardShell() {
   const { currentStep, setCurrentStep } = useAssignmentStore();
+
+  // Prefetch ECharts chunk in background so Step 3/4 render instantly
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      import('@/components/charts/WaterfallChart');
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   const renderStep = () => {
     switch (currentStep) {

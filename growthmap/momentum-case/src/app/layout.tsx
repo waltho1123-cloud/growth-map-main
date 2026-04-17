@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthWidget } from "@/components/AuthWidget";
-import { CloudSyncBootstrap } from "@/lib/cloud/CloudSyncBootstrap";
+import { CloudProvider } from "@/components/CloudProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,8 +28,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
-        <CloudSyncBootstrap />
-        <AuthWidget />
+        <CloudProvider />
         {children}
       </body>
     </html>

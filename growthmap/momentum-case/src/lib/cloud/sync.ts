@@ -1,6 +1,5 @@
 'use client';
 
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebase } from './firebase';
 
 export type CloudDoc<T> = {
@@ -12,8 +11,9 @@ export type CloudDoc<T> = {
 export type AppKey = 'momentum' | 'aspiration' | 'opportunity';
 
 export async function loadCloud<T>(uid: string, appKey: AppKey): Promise<CloudDoc<T> | null> {
-  const { db } = getFirebase();
+  const { db } = await getFirebase();
   if (!db) return null;
+  const { doc, getDoc } = await import('firebase/firestore');
   const snap = await getDoc(doc(db, 'users', uid, 'apps', appKey));
   if (!snap.exists()) return null;
   const raw = snap.data();
@@ -25,8 +25,9 @@ export async function loadCloud<T>(uid: string, appKey: AppKey): Promise<CloudDo
 }
 
 export async function saveCloud<T>(uid: string, appKey: AppKey, data: T): Promise<void> {
-  const { db } = getFirebase();
+  const { db } = await getFirebase();
   if (!db) return;
+  const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
   await setDoc(doc(db, 'users', uid, 'apps', appKey), {
     data,
     updatedAtMs: Date.now(),

@@ -1,4 +1,4 @@
-import { useMemo, lazy, Suspense } from 'react'
+import { useEffect, useMemo, lazy, Suspense } from 'react'
 import CompanyBasics from './components/CompanyBasics'
 import AnsoffTable from './components/AnsoffTable'
 import TsrPanel from './components/TsrPanel'
@@ -17,6 +17,7 @@ function calcCAGR(start, end, years = 3) {
 }
 
 export default function App() {
+  useEffect(() => { document.getElementById('app-skeleton')?.remove() }, [])
   const companyInfo = useAspirationStore((s) => s.companyInfo)
   const partA = useAspirationStore((s) => s.partA)
   const partB = useAspirationStore((s) => s.partB)

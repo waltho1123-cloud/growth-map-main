@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { OpportunityProvider, useOpportunity } from './contexts/OpportunityContext';
 import Dashboard from './components/Dashboard/Dashboard';
@@ -26,6 +26,7 @@ function AppContent() {
 }
 
 function App() {
+  useEffect(() => { document.getElementById('app-skeleton')?.remove() }, []);
   return (
     <OpportunityProvider>
       <div className="min-h-screen">

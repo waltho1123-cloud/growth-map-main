@@ -12,30 +12,30 @@ export default function Dashboard() {
 
   const handleSnapshot = async () => {
     setSnapshotting(true);
+    const el = document.getElementById('pdf-content');
+    if (!el) { setSnapshotting(false); return; }
+
+    const saved = el.style.cssText;
+    const inner = el.querySelector('.overflow-x-auto');
+    const innerSaved = inner ? inner.style.cssText : '';
+
     try {
       const { default: html2canvas } = await import('html2canvas');
       const { jsPDF } = await import('jspdf');
-      const el = document.getElementById('pdf-content');
-      if (!el) return;
 
       // Force overflow visible inline (overrides Tailwind regardless of specificity)
-      const saved = el.style.cssText;
       el.style.overflow = 'visible';
       el.style.backdropFilter = 'none';
       el.style.webkitBackdropFilter = 'none';
       el.style.background = '#ffffff';
       el.style.boxShadow = 'none';
       el.style.paddingBottom = '24px';
-      // Also fix inner overflow-x-auto wrapper
-      const inner = el.querySelector('.overflow-x-auto');
-      const innerSaved = inner ? inner.style.cssText : '';
       if (inner) inner.style.overflow = 'visible';
 
       // Hide 操作 column, show BCG tool legend
       el.querySelectorAll('.pdf-hide').forEach((e) => { e.style.display = 'none'; });
       el.querySelectorAll('.pdf-only').forEach((e) => { e.style.setProperty('display', 'block', 'important'); });
 
-      // Measure AFTER overflow fix
       const w = el.scrollWidth;
       const h = el.scrollHeight;
 
@@ -44,13 +44,6 @@ export default function Dashboard() {
         windowWidth: w, width: w, height: h,
       });
 
-      // Restore
-      el.style.cssText = saved;
-      if (inner) inner.style.cssText = innerSaved;
-      el.querySelectorAll('.pdf-hide').forEach((e) => { e.style.display = ''; });
-      el.querySelectorAll('.pdf-only').forEach((e) => { e.style.display = 'none'; });
-
-      // Always landscape for wide tables
       const pdf = new jsPDF('l', 'mm', 'a4');
       const pW = pdf.internal.pageSize.getWidth();
       const pH = pdf.internal.pageSize.getHeight();
@@ -68,6 +61,10 @@ export default function Dashboard() {
       console.error(e);
       alert('匯出 PDF 失敗，請重新整理後再試一次。');
     } finally {
+      el.style.cssText = saved;
+      if (inner) inner.style.cssText = innerSaved;
+      el.querySelectorAll('.pdf-hide').forEach((e) => { e.style.display = ''; });
+      el.querySelectorAll('.pdf-only').forEach((e) => { e.style.display = 'none'; });
       setSnapshotting(false);
     }
   };

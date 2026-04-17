@@ -77,7 +77,7 @@ export default function RootLayout({
             </div>
           </div>
         </div>
-        <script dangerouslySetInnerHTML={{ __html: `(function(){var b=document.getElementById('al-bar');if(!b)return;var p=0,i=setInterval(function(){p+=p<60?6:p<85?2:0.3;if(p>95)p=95;b.style.width=p+'%'},1000)})()` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var b=document.getElementById('al-bar');if(!b)return;var p=0,i=setInterval(function(){if(!document.contains(b)){clearInterval(i);return}p+=p<60?6:p<85?2:0.3;if(p>95){p=95;clearInterval(i)}b.style.width=p+'%'},1000)})()` }} />
         <CloudProvider />
         {children}
       </body>

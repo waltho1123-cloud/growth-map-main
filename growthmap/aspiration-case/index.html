@@ -136,7 +136,7 @@
         </div>
       </div>
     </div>
-    <script>(function(){var b=document.getElementById('sk-bar');if(!b)return;var p=0;setInterval(function(){p+=p<60?6:p<85?2:0.3;if(p>95)p=95;b.style.width=p+'%'},1000)})()</script>
+    <script>(function(){var b=document.getElementById('sk-bar');if(!b)return;var p=0,i=setInterval(function(){if(!document.contains(b)){clearInterval(i);return}p+=p<60?6:p<85?2:0.3;if(p>95){p=95;clearInterval(i)}b.style.width=p+'%'},1000)})()</script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

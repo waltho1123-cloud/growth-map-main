@@ -20,7 +20,14 @@ function extractData(state) {
   };
 }
 
-function reducer(state, action) {
+// 這些 action 會改動被綜合檢查（CHK-1~5）評估的資料：機會、營收、shortlist、
+// 目標快照、緩衝係數、工具啟用/分析。任一變動都應讓上次檢查結果失效（見下方 reducer）。
+const CHECK_INVALIDATING = new Set([
+  'ADD_OPPORTUNITY', 'UPDATE_OPPORTUNITY', 'DELETE_OPPORTUNITY',
+  'UPDATE_PROJECT_META', 'SET_TOOL_ACTIVATION', 'SET_TOOL_ANALYSIS',
+]);
+
+function baseReducer(state, action) {
   switch (action.type) {
     case 'ADD_OPPORTUNITY': {
       const newOpp = createEmptyOpportunity();
@@ -93,6 +100,16 @@ function reducer(state, action) {
     default:
       return state;
   }
+}
+
+// 資料一旦變動即令上次檢查失效（lastCheckRun → null），避免「檢查通過後又改資料」
+// 仍以過期的 pass 通過 canHandoff 而交付到不一致的快照（review ②）。
+function reducer(state, action) {
+  const next = baseReducer(state, action);
+  if (CHECK_INVALIDATING.has(action.type) && next.lastCheckRun) {
+    return { ...next, lastCheckRun: null };
+  }
+  return next;
 }
 
 function initState() {

@@ -1,4 +1,4 @@
-import { BCG_TOOLS } from './constants';
+import { BCG_TOOLS, GO_TO_MARKET_FACETS } from './constants';
 
 // A4 橫式 (landscape) 尺寸
 const PAGE_W = 297;
@@ -115,6 +115,19 @@ function addField(doc, y, label, value, maxWidth) {
   return y + 6 + lines.length * 6 + 4;
 }
 
+// 模板二「市場進入策略」新七面向（goToMarket 物件）→ 多行字串；
+// 無新資料時回退舊版字串欄位 goToMarketStrategy（review ③，向後相容）。
+function formatGoToMarket(t2) {
+  const gtm = t2.goToMarket;
+  if (gtm && typeof gtm === 'object') {
+    const lines = GO_TO_MARKET_FACETS
+      .map((f) => { const v = (gtm[f.key] || '').trim(); return v ? `${f.label}：${v}` : null; })
+      .filter(Boolean);
+    if (lines.length) return lines.join('\n');
+  }
+  return t2.goToMarketStrategy || '';
+}
+
 // Green gradient cover (simulated with rectangles)
 function drawGreenGradientCover(doc) {
   const steps = 40;
@@ -223,9 +236,9 @@ export async function exportToPdf(opportunities) {
     y = checkPageBreak(doc, y, 30, 'Template 2', pn2);
     y = addSectionBar(doc, y, '市場進入與實施');
     y = checkPageBreak(doc, y, 16, 'Template 2', pn2);
-    y = addField(doc, y, '上市策略 Go-to-Market', opp.template2.goToMarketStrategy, CONTENT_W - 12);
+    y = addField(doc, y, '上市策略 Go-to-Market（七面向）', formatGoToMarket(opp.template2), CONTENT_W - 12);
     y = checkPageBreak(doc, y, 16, 'Template 2', pn2);
-    addField(doc, y, '實施步驟 Implementation', opp.template2.implementationSteps, CONTENT_W - 12);
+    addField(doc, y, '實施步驟 Implementation', opp.template2.steps || opp.template2.implementationSteps, CONTENT_W - 12);
 
     addPageNumber(doc, pn2.val);
     pageNum = pn2.val;

@@ -18,6 +18,11 @@ export function aiText(v) {
   if (v == null) return '';
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-  if (typeof v === 'object') return v.text || v.insight || v.content || v.title || v.label || v.reason || v.message || v.note || v.detail || JSON.stringify(v);
+  if (typeof v === 'object') {
+    // 只在挑出的欄位本身是字串時才回傳它，否則退回整體 JSON，
+    // 確保永遠回字串（候選欄位的值可能又是巢狀物件，不可直接回傳）。
+    const pick = v.text || v.insight || v.content || v.title || v.label || v.reason || v.message || v.note || v.detail;
+    return typeof pick === 'string' ? pick : JSON.stringify(v);
+  }
   return String(v);
 }

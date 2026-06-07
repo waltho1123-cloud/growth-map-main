@@ -11,7 +11,9 @@ export const config = {
     sonnet: process.env.MODEL_SONNET || 'claude-sonnet-4-6', // 洞察生成 / 模版三評分 / 排序
     haiku: process.env.MODEL_HAIKU || 'claude-haiku-4-5', // 去識別化前處理（預留）
   },
-  allowedOrigins: (process.env.ALLOWED_ORIGINS || '*').split(',').map((s) => s.trim()),
+  // 預設 fail-closed：未設定 ALLOWED_ORIGINS 時不允許任何跨來源，
+  // 避免部署時忘了設定就變成對外全開的付費 Anthropic proxy。要全開需顯式設 '*'。
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
   requireAuth: process.env.REQUIRE_AUTH === 'true',
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
 };

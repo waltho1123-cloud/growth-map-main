@@ -32,6 +32,7 @@ app.use('/api/*', async (c, next) => {
 // 簡易 rate limit（in-memory，per-IP；AI 端點 20/min，SDD §3.1）
 const hits = new Map();
 app.use('/api/*', async (c, next) => {
+  if (c.req.method === 'OPTIONS') return next(); // 預檢不計入額度（cors 通常已先短路）
   const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'local';
   const now = Date.now();
   const recent = (hits.get(ip) || []).filter((t) => now - t < 60000);
@@ -40,6 +41,10 @@ app.use('/api/*', async (c, next) => {
   }
   recent.push(now);
   hits.set(ip, recent);
+  // 避免 hits Map 無界成長：超過上限時清掉所有過期 IP
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) if (v.every((t) => now - t >= 60000)) hits.delete(k);
+  }
   return next();
 });
 
@@ -80,7 +85,14 @@ app.post('/api/ai/tasks', async (c) => {
       const parsed = parseJson(text);
       if (!parsed) return c.json({ error: { code: 'IDO_AI_PARSE_ERROR', message: 'AI 輸出解析失敗' } }, 502);
       payload = task.normalize ? task.normalize(parsed) : parsed;
-      confidence = typeof parsed.confidence === 'number' ? parsed.confidence : null;
+      // 容錯：模型可能把 confidence 回成字串（'0.8'）或省略；解析失敗才視為未知
+      const rawConf = parsed.confidence;
+      confidence =
+        typeof rawConf === 'number'
+          ? rawConf
+          : rawConf != null && rawConf !== '' && Number.isFinite(Number(rawConf))
+          ? Number(rawConf)
+          : null;
     }
     return c.json({ taskCode: body.taskCode, state: 'draft', payload, confidence, model, usage });
   } catch (e) {

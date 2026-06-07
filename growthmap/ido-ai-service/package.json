@@ -1,0 +1,19 @@
+{
+  "name": "ido-ai-service",
+  "version": "1.0.0",
+  "description": "識別機會模組 AI/BFF 服務 — Claude 代理（人在迴路：僅回 draft 建議，不寫業務資料）",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "dev": "node --watch --env-file-if-exists=.env src/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.14"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}

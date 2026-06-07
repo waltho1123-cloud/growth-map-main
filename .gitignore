@@ -3,6 +3,8 @@ node_modules/
 
 # Next.js dev cache
 **/.next/
+# next dev 會在 dev/build 間改寫 next-env.d.ts 的路徑（造成持續 diff），不追蹤
+**/next-env.d.ts
 
 # OS files
 .DS_Store

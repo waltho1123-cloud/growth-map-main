@@ -121,8 +121,17 @@ export default function TabThree({ data, onChange }) {
               <div className="font-medium">
                 Size {ai.payload?.ratings?.size} · Potential {ai.payload?.ratings?.potential} · Path {ai.payload?.ratings?.path} · Right to Win {ai.payload?.ratings?.rightToWin}
               </div>
-              <div className="text-xs text-gray-500">EBIT {ai.payload?.ebitBand || '—'} · CAGR {ai.payload?.cagrBand || '—'}</div>
-              {ai.payload?.rationale && <div className="text-xs mt-1 text-gray-600">{ai.payload.rationale}</div>}
+              <div className="text-xs text-gray-500">EBIT {typeof ai.payload?.ebitBand === 'string' ? ai.payload.ebitBand : '—'} · CAGR {typeof ai.payload?.cagrBand === 'string' ? ai.payload.cagrBand : '—'}</div>
+              {ai.payload?.rationale && (
+                <div className="text-xs mt-1 text-gray-600 space-y-0.5">
+                  {(typeof ai.payload.rationale === 'string'
+                    ? [ai.payload.rationale]
+                    : Object.values(ai.payload.rationale).filter((v) => typeof v === 'string' && v)
+                  ).map((line, i) => (
+                    <div key={i}>{line}</div>
+                  ))}
+                </div>
+              )}
             </AiSuggestionCard>
           )}
         </div>

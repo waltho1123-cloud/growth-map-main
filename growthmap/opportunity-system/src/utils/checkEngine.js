@@ -1,5 +1,5 @@
 // 綜合檢查引擎 CHK-1~5（SDD §4.3）與機會排序分數（§4.4）。純前端、規則驅動。
-import { SCORING_WEIGHTS } from './constants';
+import { SCORING_WEIGHTS, LONGLIST_MIN, LONGLIST_MAX } from './constants';
 import { ARCHETYPE_GUIDANCE, BCG_TOOL_LIBRARY } from './toolLibrary';
 import { isShortlisted } from './opportunityStatus';
 
@@ -36,7 +36,7 @@ function recommendedModesOf(archetype) {
 function chk1(shortlisted, projectMeta) {
   const sum = shortlisted.reduce((a, o) => a + (Number(o.estRevenue) || 0), 0);
   const snap = projectMeta.targetSnapshot;
-  const buffer = projectMeta.bufferRatio || 1.2;
+  const buffer = projectMeta.bufferRatio ?? 1.2;
   if (!snap || !snap.growthGap) {
     return { code: 'CHK-1', title: '機會營收充足度', status: 'warn', detail: { sum, message: '尚未同步第二堂成長差距，無法判定。請先於工作台「從第二堂同步」。' } };
   }
@@ -60,7 +60,7 @@ function chk2(shortlisted, recommendedModes) {
   if (shortlisted.length === 0) {
     return { code: 'CHK-2', title: '定位對齊度', status: 'warn', detail: { message: '尚無長清單機會可比對。' } };
   }
-  const deviations = shortlisted.filter((o) => !recommendedModes.includes(o.template1.growthLever));
+  const deviations = shortlisted.filter((o) => !recommendedModes.includes(o.template1?.growthLever));
   const ratio = deviations.length / shortlisted.length;
   let status = 'pass';
   if (ratio > 0.2) status = 'fail';
@@ -84,7 +84,7 @@ function chk3(shortlisted, archetype, recommendedModes) {
   }
   const dist = { '鞏固核心業務': 0, '拓展鄰近機會': 0, '探索新興市場': 0 };
   shortlisted.forEach((o) => {
-    const l = o.template1.growthLever;
+    const l = o.template1?.growthLever;
     if (dist[l] !== undefined) dist[l]++;
   });
   const total = shortlisted.length;
@@ -92,7 +92,7 @@ function chk3(shortlisted, archetype, recommendedModes) {
   let status = 'pass';
   let message = '成長模式分布合理，並有適度破框。';
   if (recommendedModes) {
-    const offCount = shortlisted.filter((o) => !recommendedModes.includes(o.template1.growthLever)).length;
+    const offCount = shortlisted.filter((o) => !recommendedModes.includes(o.template1?.growthLever)).length;
     if (offCount / total > 0.5) {
       status = 'fail';
       message = '多數機會偏離原型建議成長模式，與企業原型嚴重背離。';
@@ -109,10 +109,10 @@ function chk3(shortlisted, archetype, recommendedModes) {
 function chk4(shortlisted) {
   const n = shortlisted.length;
   let status = 'fail';
-  if (n >= 7 && n <= 12) status = 'pass';
-  else if ((n >= 5 && n < 7) || (n > 12 && n <= 15)) status = 'warn';
-  const message = status === 'pass' ? `長清單共 ${n} 個，落在建議區間 7–12。` : `長清單共 ${n} 個，建議調整至 7–12 個。`;
-  return { code: 'CHK-4', title: '長清單數量（7–12）', status, detail: { n, message } };
+  if (n >= LONGLIST_MIN && n <= LONGLIST_MAX) status = 'pass';
+  else if ((n >= LONGLIST_MIN - 2 && n < LONGLIST_MIN) || (n > LONGLIST_MAX && n <= LONGLIST_MAX + 3)) status = 'warn';
+  const message = status === 'pass' ? `長清單共 ${n} 個，落在建議區間 ${LONGLIST_MIN}–${LONGLIST_MAX}。` : `長清單共 ${n} 個，建議調整至 ${LONGLIST_MIN}–${LONGLIST_MAX} 個。`;
+  return { code: 'CHK-4', title: `長清單數量（${LONGLIST_MIN}–${LONGLIST_MAX}）`, status, detail: { n, message } };
 }
 
 // CHK-5 工具覆蓋度（P1）
@@ -167,7 +167,7 @@ export function computeScore(opp, recommendedModes) {
   const r = (opp.template3 && opp.template3.ratings) || {};
   const n = (x) => (x > 0 ? (x - 1) / 4 : 0); // 未評分（0）視為 0 貢獻
   let alignment = 0.75; // 無原型時中性
-  if (recommendedModes) alignment = recommendedModes.includes(opp.template1.growthLever) ? 1 : 0.4;
+  if (recommendedModes) alignment = recommendedModes.includes(opp.template1?.growthLever) ? 1 : 0.4;
   const W = SCORING_WEIGHTS;
   const score =
     100 *

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useOpportunity } from '../../contexts/OpportunityContext';
-import { GROWTH_LEVERS, BCG_TOOLS, OPPORTUNITY_STATUS, OPPORTUNITY_STATUS_LABELS } from '../../utils/constants';
+import { GROWTH_LEVERS, OPPORTUNITY_STATUS, OPPORTUNITY_STATUS_LABELS } from '../../utils/constants';
+import { TOOL_NAME_BY_ID } from '../../utils/toolLibrary';
 import { effectiveStatus, canShortlist, isShortlisted } from '../../utils/opportunityStatus';
 import { computeScore, resolveArchetype, recommendedModesOf } from '../../utils/checkEngine';
 import toast from 'react-hot-toast';
@@ -102,11 +103,11 @@ export default function OpportunityTable() {
                   <div className="flex flex-wrap gap-1">
                     {opp.usedTools.length > 0
                       ? opp.usedTools.map((toolId) => {
-                          const tool = BCG_TOOLS.find((t) => t.id === toolId);
+                          const name = TOOL_NAME_BY_ID[toolId];
                           return (
                             <span
                               key={toolId}
-                              data-tip={tool ? `#${toolId} ${tool.name}` : String(toolId)}
+                              data-tip={name ? `#${toolId} ${name}` : String(toolId)}
                               className="tool-badge inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100/80 text-gray-700 cursor-default relative"
                             >
                               {toolId}
@@ -167,11 +168,11 @@ export default function OpportunityTable() {
         <h3 className="text-sm font-semibold text-gray-700 mb-2">使用的 BCG 工具</h3>
         <div className="flex flex-wrap gap-x-6 gap-y-1">
           {usedToolIds.map((id) => {
-            const tool = BCG_TOOLS.find((t) => t.id === id);
+            const name = TOOL_NAME_BY_ID[id];
             return (
               <span key={id} className="text-xs text-gray-600">
                 <span className="font-medium text-gray-800">#{id}</span>{' '}
-                {tool ? tool.name : '—'}
+                {name || '—'}
               </span>
             );
           })}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNav } from '../../contexts/NavContext';
 import { isAiEnabled, streamCoach } from '../../lib/ai/aiClient';
 import toast from 'react-hot-toast';
@@ -9,6 +9,12 @@ export default function CoachDrawer() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const abortRef = useRef(null);
+
+  // 關閉抽屜時中止進行中的串流：避免對隱藏組件 setState，並通知後端停止串流（停止計費）
+  useEffect(() => {
+    if (!coachOpen) abortRef.current?.abort();
+  }, [coachOpen]);
 
   if (!isAiEnabled() || !coachOpen) return null;
 
@@ -19,6 +25,8 @@ export default function CoachDrawer() {
     setMessages([...next, { role: 'assistant', content: '' }]);
     setInput('');
     setStreaming(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       await streamCoach(next, (delta) => {
         setMessages((cur) => {
@@ -27,8 +35,9 @@ export default function CoachDrawer() {
           copy[copy.length - 1] = { role: 'assistant', content: (last?.content || '') + delta };
           return copy;
         });
-      });
+      }, controller.signal);
     } catch (e) {
+      if (e.name === 'AbortError') return; // 使用者主動關閉抽屜，不視為錯誤
       toast.error(e.message || '教練連線失敗');
       setMessages((cur) => (cur[cur.length - 1]?.content ? cur : cur.slice(0, -1)));
     } finally {

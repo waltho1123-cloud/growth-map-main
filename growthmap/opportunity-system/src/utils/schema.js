@@ -32,6 +32,7 @@ export function createDefaultProjectMeta() {
     toolActivation: defaultToolActivation(),
     targetSnapshot: null, // { aspiration, momentum, growthGap, currency, syncedAt }
     archetypeSnapshot: null, // { archetype, recommendedModes, syncedAt }
+    lastHandoff: null, // { version, frozenAt }，由 ADD_SNAPSHOT 寫入
   };
 }
 
@@ -183,6 +184,7 @@ export function migrateData(data) {
       toolActivation: { ...base.toolActivation, ...(savedMeta.toolActivation || {}) },
       targetSnapshot: savedMeta.targetSnapshot || null,
       archetypeSnapshot: savedMeta.archetypeSnapshot || null,
+      lastHandoff: savedMeta.lastHandoff || null, // 保留交付記錄，勿在每次 migrate/reconcile 丟失
     },
     toolAnalyses: data.toolAnalyses && typeof data.toolAnalyses === 'object' ? data.toolAnalyses : {},
     lastCheckRun: data.lastCheckRun || null,

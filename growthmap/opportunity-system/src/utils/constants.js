@@ -99,10 +99,6 @@ export const TOOL_ANALYSIS_STATUS = {
 // 評分上限（四象限 1–5 燈號）
 export const RATING_MAX = 5;
 
-// SDD 對齊的分級（模版三 / 燈號）
-export const EBIT_BANDS = ['5-10%', '10-15%', '>15%'];
-export const CAGR_BANDS = ['<2%', '~2-5%', '>5%'];
-
 // 機會排序權重（SDD §4.4，可於設定頁調整）
 export const SCORING_WEIGHTS = {
   size: 0.30,

@@ -34,11 +34,18 @@ export default function AiRankPanel() {
   };
 
   const accept = () => {
-    (ai.order || []).forEach((id, idx) => {
-      dispatch({ type: 'UPDATE_OPPORTUNITY', payload: { id, data: { rank: idx + 1 } } });
-    });
+    // 只採納能對應現有長清單機會的 id，避免模型回標題/幻覺 id 時靜默 no-op 卻仍顯示成功
+    const order = ai.order || [];
+    const validIds = order.filter((id) => byId[id]);
+    if (validIds.length === 0) {
+      toast.error('AI 回傳的排序無法對應現有機會，請重試');
+      return;
+    }
+    const rankById = {};
+    validIds.forEach((id, idx) => { rankById[id] = idx + 1; });
+    dispatch({ type: 'SET_RANKS', payload: rankById });
     clear();
-    toast.success('已採納 AI 排序');
+    toast.success(validIds.length === order.length ? '已採納 AI 排序' : `已採納 AI 排序（${validIds.length}/${order.length} 項可對應）`);
   };
 
   const byId = Object.fromEntries(shortlisted.map((o) => [o.id, o.opportunityName || '未命名']));

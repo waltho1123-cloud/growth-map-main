@@ -88,6 +88,17 @@ function baseReducer(state, action) {
     case 'SET_CHECK_RUN': {
       return { ...state, lastCheckRun: action.payload };
     }
+    // 採納 AI 排序（AI-04）：批次寫入 rank，未列入者清掉舊 rank（避免殘留衝突）。
+    // rank 不影響任何 CHK 規則，故刻意不納入 CHECK_INVALIDATING、不使檢查失效。
+    case 'SET_RANKS': {
+      const rankById = action.payload;
+      return {
+        ...state,
+        opportunities: state.opportunities.map((o) =>
+          o.id in rankById ? { ...o, rank: rankById[o.id] } : o.rank != null ? { ...o, rank: null } : o
+        ),
+      };
+    }
     // 交付：附加不可變快照（MOD-04/08，GD-09），記錄最近交付
     case 'ADD_SNAPSHOT': {
       const snap = action.payload;
@@ -170,7 +181,15 @@ export function OpportunityProvider({ children }) {
         const decision = reconcile(localTsRef.current, cloud);
         if (decision === 'cloud' && cloud && cloud.data) {
           applyingRef.current = true;
-          dispatch({ type: 'REPLACE_DATA', payload: migrateData(cloud.data) });
+          const merged = migrateData(cloud.data);
+          // 保留本地已有的不可變交付快照（GD-09）：以 version 做 union，避免多裝置間遺失交付記錄。
+          // 註：projectMeta/toolAnalyses 仍為 last-write-wins（雲端較新者勝），屬已知同步取捨。
+          const seen = new Set(merged.longlistSnapshots.map((s) => s.version));
+          merged.longlistSnapshots = [
+            ...merged.longlistSnapshots,
+            ...(state.longlistSnapshots || []).filter((s) => !seen.has(s.version)),
+          ].sort((a, b) => a.version - b.version);
+          dispatch({ type: 'REPLACE_DATA', payload: merged });
           localTsRef.current = cloud.updatedAt;
           setTimeout(() => { applyingRef.current = false; }, 0);
         } else if (decision === 'upload') {

@@ -52,6 +52,7 @@ export function reconcile(localUpdatedAt, cloud) {
   }
   if (!cloud) return 'upload';
   if (cloud.updatedAt > localUpdatedAt) return 'cloud';
-  if (localUpdatedAt > cloud.updatedAt) return 'upload';
-  return 'same';
+  // 同毫秒碰撞時偏向保留本地（此處 localUpdatedAt>0 表示本地這次 session 確實有改動），
+  // 避免一筆與雲端寫入同毫秒的本地變更被當成 'same' 而靜默丟棄。
+  return 'upload';
 }

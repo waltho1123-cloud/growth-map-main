@@ -132,7 +132,8 @@ export default function ToolAnalysis() {
     }
   };
   const acceptAiInsights = () => {
-    setInsightList([...insights, ...(ai.insights || [])]);
+    // 防護：AI 可能回物件而非字串；存入持久化陣列前一律轉安全字串（否則 trim/filter 會 crash）
+    setInsightList([...insights, ...(ai.insights || []).map(aiText)]);
     setAi({ loading: false, insights: null, confidence: null, error: null });
     toast.success('已採納 AI 洞察');
   };

@@ -35,11 +35,12 @@ export function canShortlist(opp) {
 
 // 實際顯示狀態：人為旗標優先，否則自動推導
 export function effectiveStatus(opp) {
-  if (
-    opp.status === OPPORTUNITY_STATUS.SHORTLISTED ||
-    opp.status === OPPORTUNITY_STATUS.HANDED_OFF ||
-    opp.status === OPPORTUNITY_STATUS.ARCHIVED
-  ) {
+  // shortlisted 是人為旗標，但若機會已不再符合納入資格（評分被清空 / 營收歸零），
+  // 旗標即失效並回退自動推導，避免不合格機會仍留在長清單、CHK 與交付快照中。
+  if (opp.status === OPPORTUNITY_STATUS.SHORTLISTED) {
+    return canShortlist(opp) ? OPPORTUNITY_STATUS.SHORTLISTED : deriveBaseStatus(opp);
+  }
+  if (opp.status === OPPORTUNITY_STATUS.HANDED_OFF || opp.status === OPPORTUNITY_STATUS.ARCHIVED) {
     return opp.status;
   }
   return deriveBaseStatus(opp);

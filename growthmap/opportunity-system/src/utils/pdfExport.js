@@ -1,4 +1,5 @@
 import { BCG_TOOLS, GO_TO_MARKET_FACETS } from './constants';
+import { TOOL_NAME_BY_ID } from './toolLibrary';
 
 // A4 橫式 (landscape) 尺寸
 const PAGE_W = 297;
@@ -36,8 +37,8 @@ function registerFont(doc, base64) {
 }
 
 function getToolName(id) {
-  const tool = BCG_TOOLS.find((t) => t.id === id);
-  return tool ? `${id}. ${tool.name}` : String(id);
+  const name = TOOL_NAME_BY_ID[id];
+  return name ? `${id}. ${name}` : String(id);
 }
 
 // ---- Page break helper ----
@@ -197,7 +198,7 @@ export async function exportToPdf(opportunities) {
     y = checkPageBreak(doc, y, 30, 'Template 1', pn1);
     y = addSectionBar(doc, y, 'BCG 工具');
     y = checkPageBreak(doc, y, 16, 'Template 1', pn1);
-    y = addField(doc, y, '使用的 BCG Tools', opp.usedTools.map(getToolName).join(', '));
+    y = addField(doc, y, '使用的 BCG Tools', (opp.usedTools || []).map(getToolName).join(', '));
 
     y = checkPageBreak(doc, y, 30, 'Template 1', pn1);
     y = addSectionBar(doc, y, '企業定位');
@@ -330,7 +331,7 @@ export async function exportToPdf(opportunities) {
     doc.setTextColor(...DARK_TEXT);
     doc.setFontSize(11);
     doc.text(String(idx + 1), MARGIN + 6, y + 8);
-    doc.text(opp.usedTools.join(', ') || '—', MARGIN + 16, y + 8);
+    doc.text((opp.usedTools || []).join(', ') || '—', MARGIN + 16, y + 8);
     doc.text(
       doc.splitTextToSize(opp.opportunityName || '—', 85)[0],
       MARGIN + 70, y + 8

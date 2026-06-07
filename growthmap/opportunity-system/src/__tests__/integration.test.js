@@ -66,8 +66,14 @@ describe('opportunity status machine', () => {
     expect(canShortlist(base)).toBe(false);
   });
 
-  test('shortlisted 旗標被尊重', () => {
-    expect(isShortlisted({ ...createEmptyOpportunity(), status: 'shortlisted' })).toBe(true);
+  test('shortlisted 旗標在符合資格時被尊重', () => {
+    const base = createEmptyOpportunity();
+    const eligible = { ...base, status: 'shortlisted', estRevenue: 1000, template3: { ...base.template3, ratings: { size: 3, potential: 3, path: 3, rightToWin: 3 } } };
+    expect(isShortlisted(eligible)).toBe(true);
+  });
+
+  test('shortlisted 旗標在不符資格時失效（評分/營收不足即降級，避免不合格機會留在長清單）', () => {
+    expect(isShortlisted({ ...createEmptyOpportunity(), status: 'shortlisted' })).toBe(false);
   });
 });
 

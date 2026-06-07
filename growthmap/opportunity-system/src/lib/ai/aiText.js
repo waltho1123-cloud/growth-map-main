@@ -8,7 +8,7 @@ export function aiLines(v) {
   if (v == null) return [];
   if (typeof v === 'string') return v.trim() ? [v] : [];
   if (Array.isArray(v)) return v.map(aiText).filter(Boolean);
-  if (typeof v === 'object') return Object.values(v).filter((x) => typeof x === 'string' && x.trim());
+  if (typeof v === 'object') return Object.values(v).map(aiText).filter(Boolean);
   return [String(v)];
 }
 
@@ -18,6 +18,6 @@ export function aiText(v) {
   if (v == null) return '';
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-  if (typeof v === 'object') return v.text || v.insight || v.content || v.title || v.label || JSON.stringify(v);
+  if (typeof v === 'object') return v.text || v.insight || v.content || v.title || v.label || v.reason || v.message || v.note || v.detail || JSON.stringify(v);
   return String(v);
 }

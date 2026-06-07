@@ -77,11 +77,12 @@ export default function TabThree({ data, onChange }) {
     onChange({
       template3: {
         ...template3,
+        // 只在 AI 給出有效評分（>0）時覆寫；normalize 對缺漏象限補 0，視為「未評」，不應蓋掉既有評分
         ratings: {
-          size: r.size ?? ratings.size,
-          potential: r.potential ?? ratings.potential,
-          path: r.path ?? ratings.path,
-          rightToWin: r.rightToWin ?? ratings.rightToWin,
+          size: r.size > 0 ? r.size : ratings.size,
+          potential: r.potential > 0 ? r.potential : ratings.potential,
+          path: r.path > 0 ? r.path : ratings.path,
+          rightToWin: r.rightToWin > 0 ? r.rightToWin : ratings.rightToWin,
         },
         ebitBand: p.ebitBand || template3.ebitBand,
         cagrBand: p.cagrBand || template3.cagrBand,

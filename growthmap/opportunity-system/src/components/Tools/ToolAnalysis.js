@@ -8,6 +8,7 @@ import DynamicField from './DynamicField';
 import { IMETextarea } from '../IMEInput';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
 import AiSuggestionCard from '../ai/AiSuggestionCard';
+import { aiText } from '../../lib/ai/aiText';
 import toast from 'react-hot-toast';
 
 // 字串列表編輯器（主要洞察 / 機會）
@@ -199,7 +200,7 @@ export default function ToolAnalysis() {
                 onReject={clearAi}
               >
                 <ul className="list-disc pl-5 space-y-1">
-                  {(ai.insights || []).map((s, i) => <li key={i}>{s}</li>)}
+                  {(ai.insights || []).map((s, i) => <li key={i}>{aiText(s)}</li>)}
                 </ul>
               </AiSuggestionCard>
             )}

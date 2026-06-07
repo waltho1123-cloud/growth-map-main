@@ -3,6 +3,7 @@ import { useOpportunity } from '../../contexts/OpportunityContext';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
 import { isShortlisted } from '../../utils/opportunityStatus';
 import AiSuggestionCard from './AiSuggestionCard';
+import { aiText, aiLines } from '../../lib/ai/aiText';
 import toast from 'react-hot-toast';
 
 // AI-04 機會排序（人在迴路）：AI 建議長清單排序，採納後寫入各機會 rank。
@@ -54,9 +55,15 @@ export default function AiRankPanel() {
       {(ai.loading || ai.order || ai.error) && (
         <AiSuggestionCard loading={ai.loading} error={ai.error} title="長清單排序" onAccept={accept} onReject={clear}>
           <ol className="list-decimal pl-5 space-y-0.5">
-            {(ai.order || []).map((id) => <li key={id}>{byId[id] || id}</li>)}
+            {(ai.order || []).map((id, i) => <li key={i}>{byId[id] || aiText(id)}</li>)}
           </ol>
-          {ai.rationale && <p className="text-xs text-gray-600 mt-1">{ai.rationale}</p>}
+          {ai.rationale && (
+            <div className="text-xs text-gray-600 mt-1 space-y-0.5">
+              {aiLines(ai.rationale).map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+          )}
         </AiSuggestionCard>
       )}
     </div>

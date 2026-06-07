@@ -3,6 +3,7 @@ import { COMPETITIVE_ENVIRONMENTS, CAGR_OPTIONS, EBIT_OPTIONS, RATING_MAX, DEFAU
 import { IMEInput, IMETextarea } from '../IMEInput';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
 import AiSuggestionCard from '../ai/AiSuggestionCard';
+import { aiLines } from '../../lib/ai/aiText';
 import toast from 'react-hot-toast';
 
 const CURRENCIES = ['TWD', 'USD', 'CNY', 'EUR', 'JPY'];
@@ -124,10 +125,7 @@ export default function TabThree({ data, onChange }) {
               <div className="text-xs text-gray-500">EBIT {typeof ai.payload?.ebitBand === 'string' ? ai.payload.ebitBand : '—'} · CAGR {typeof ai.payload?.cagrBand === 'string' ? ai.payload.cagrBand : '—'}</div>
               {ai.payload?.rationale && (
                 <div className="text-xs mt-1 text-gray-600 space-y-0.5">
-                  {(typeof ai.payload.rationale === 'string'
-                    ? [ai.payload.rationale]
-                    : Object.values(ai.payload.rationale).filter((v) => typeof v === 'string' && v)
-                  ).map((line, i) => (
+                  {aiLines(ai.payload.rationale).map((line, i) => (
                     <div key={i}>{line}</div>
                   ))}
                 </div>

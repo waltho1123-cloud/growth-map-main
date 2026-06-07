@@ -1,6 +1,18 @@
 import React from 'react';
 import { useOpportunity } from '../../contexts/OpportunityContext';
-import { GROWTH_LEVERS, BCG_TOOLS } from '../../utils/constants';
+import { GROWTH_LEVERS, BCG_TOOLS, OPPORTUNITY_STATUS, OPPORTUNITY_STATUS_LABELS } from '../../utils/constants';
+import { effectiveStatus, canShortlist, isShortlisted } from '../../utils/opportunityStatus';
+import { computeScore, resolveArchetype, recommendedModesOf } from '../../utils/checkEngine';
+import toast from 'react-hot-toast';
+
+const STATUS_STYLE = {
+  draft: 'bg-gray-100 text-gray-500',
+  insight_linked: 'bg-blue-100 text-blue-700',
+  evaluated: 'bg-purple-100 text-purple-700',
+  shortlisted: 'bg-emerald-100 text-emerald-700',
+  handed_off: 'bg-emerald-600 text-white',
+  archived: 'bg-gray-200 text-gray-400',
+};
 
 export default function OpportunityTable() {
   const { state, dispatch } = useOpportunity();
@@ -14,8 +26,34 @@ export default function OpportunityTable() {
     }
   };
 
-  // 依據 usedTools 排序分群
+  const handleShortlist = (opp) => {
+    if (isShortlisted(opp)) {
+      dispatch({ type: 'UPDATE_OPPORTUNITY', payload: { id: opp.id, data: { status: OPPORTUNITY_STATUS.EVALUATED } } });
+      toast('已移出長清單', { icon: '↩️' });
+    } else {
+      if (!canShortlist(opp)) {
+        toast.error('需先完成模版三四象限評分與預估營收，才能納入長清單');
+        return;
+      }
+      dispatch({ type: 'UPDATE_OPPORTUNITY', payload: { id: opp.id, data: { status: OPPORTUNITY_STATUS.SHORTLISTED } } });
+      toast.success('已納入長清單');
+    }
+  };
+
+  // 排序分數（§4.4）：長清單優先，長清單內依分數高→低，其餘依來源工具編號
+  const recommendedModes = recommendedModesOf(resolveArchetype(state));
+  const scoreOf = (o) => computeScore(o, recommendedModes);
   const sorted = [...opportunities].sort((a, b) => {
+    const aS = isShortlisted(a) ? 0 : 1;
+    const bS = isShortlisted(b) ? 0 : 1;
+    if (aS !== bS) return aS - bS;
+    if (aS === 0) {
+      // 長清單內：已採納的 AI 排序（rank）優先，否則依分數
+      const ar = typeof a.rank === 'number' ? a.rank : 9999;
+      const br = typeof b.rank === 'number' ? b.rank : 9999;
+      if (ar !== br) return ar - br;
+      return scoreOf(b) - scoreOf(a);
+    }
     const aMin = a.usedTools.length ? Math.min(...a.usedTools) : 99;
     const bMin = b.usedTools.length ? Math.min(...b.usedTools) : 99;
     return aMin - bMin;
@@ -34,7 +72,6 @@ export default function OpportunityTable() {
     );
   }
 
-  // Collect unique tool IDs used across all opportunities
   const usedToolIds = [...new Set(opportunities.flatMap((o) => o.usedTools))].sort((a, b) => a - b);
 
   return (
@@ -43,84 +80,84 @@ export default function OpportunityTable() {
       <table className="min-w-full divide-y divide-gray-200/60">
         <thead>
           <tr className="bg-gray-50/80 text-gray-600">
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-              BCG 工具 No.
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-              增長機會名稱
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-              成長槓桿
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-              成長面向
-            </th>
-            <th className="pdf-hide px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-32">
-              操作
-            </th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">BCG 工具 No.</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">增長機會名稱</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">狀態</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">分數</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">成長槓桿</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">成長面向</th>
+            <th className="pdf-hide px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-48">操作</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100/60">
-          {sorted.map((opp, idx) => (
-            <tr
-              key={opp.id}
-              className={`hover:bg-white/40 transition-colors ${idx % 2 === 0 ? 'bg-transparent' : 'bg-white/20'}`}
-            >
-              <td className="px-4 py-3 text-sm">
-                <div className="flex flex-wrap gap-1">
-                  {opp.usedTools.length > 0
-                    ? opp.usedTools.map((toolId) => {
-                        const tool = BCG_TOOLS.find((t) => t.id === toolId);
-                        return (
-                          <span
-                            key={toolId}
-                            data-tip={tool ? `#${toolId} ${tool.name}` : String(toolId)}
-                            className="tool-badge inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100/80 text-gray-700 cursor-default relative"
-                          >
-                            {toolId}
-                          </span>
-                        );
-                      })
-                    : <span className="text-gray-300">—</span>}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                {opp.opportunityName || <span className="text-gray-300 italic">未命名</span>}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                {opp.template1.growthLever ? (
-                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    opp.template1.growthLever === GROWTH_LEVERS[0]
-                      ? 'bg-blue-100/80 text-blue-800'
-                      : opp.template1.growthLever === GROWTH_LEVERS[1]
-                      ? 'bg-emerald-100/80 text-emerald-800'
-                      : 'bg-purple-100/80 text-purple-800'
-                  }`}>
-                    {opp.template1.growthLever}
+          {sorted.map((opp, idx) => {
+            const status = effectiveStatus(opp);
+            const shortlisted = status === OPPORTUNITY_STATUS.SHORTLISTED;
+            return (
+              <tr
+                key={opp.id}
+                className={`hover:bg-white/40 transition-colors ${idx % 2 === 0 ? 'bg-transparent' : 'bg-white/20'}`}
+              >
+                <td className="px-4 py-3 text-sm">
+                  <div className="flex flex-wrap gap-1">
+                    {opp.usedTools.length > 0
+                      ? opp.usedTools.map((toolId) => {
+                          const tool = BCG_TOOLS.find((t) => t.id === toolId);
+                          return (
+                            <span
+                              key={toolId}
+                              data-tip={tool ? `#${toolId} ${tool.name}` : String(toolId)}
+                              className="tool-badge inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100/80 text-gray-700 cursor-default relative"
+                            >
+                              {toolId}
+                            </span>
+                          );
+                        })
+                      : <span className="text-gray-300">—</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm font-medium text-gray-800">
+                  {opp.opportunityName || <span className="text-gray-300 italic">未命名</span>}
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLE[status] || STATUS_STYLE.draft}`}>
+                    {OPPORTUNITY_STATUS_LABELS[status] || status}
                   </span>
-                ) : (
-                  <span className="text-gray-300">—</span>
-                )}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600">
-                {opp.template1.growthDimension || <span className="text-gray-300">—</span>}
-              </td>
-              <td className="pdf-hide px-4 py-3 text-center">
-                <button
-                  onClick={() => handleEdit(opp.id)}
-                  className="text-gray-600 hover:text-gray-900 mr-3 text-sm font-medium"
-                >
-                  編輯
-                </button>
-                <button
-                  onClick={() => handleDelete(opp.id)}
-                  className="text-red-400 hover:text-red-600 text-sm font-medium"
-                >
-                  刪除
-                </button>
-              </td>
-            </tr>
-          ))}
+                </td>
+                <td className="px-4 py-3 text-sm font-semibold text-gray-700">
+                  {scoreOf(opp)}
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {opp.template1.growthLever ? (
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      opp.template1.growthLever === GROWTH_LEVERS[0]
+                        ? 'bg-blue-100/80 text-blue-800'
+                        : opp.template1.growthLever === GROWTH_LEVERS[1]
+                        ? 'bg-emerald-100/80 text-emerald-800'
+                        : 'bg-purple-100/80 text-purple-800'
+                    }`}>
+                      {opp.template1.growthLever}
+                    </span>
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600">
+                  {opp.template1.growthDimension || <span className="text-gray-300">—</span>}
+                </td>
+                <td className="pdf-hide px-4 py-3 text-center whitespace-nowrap">
+                  <button
+                    onClick={() => handleShortlist(opp)}
+                    className={`mr-3 text-sm font-medium ${shortlisted ? 'text-amber-500 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-800'}`}
+                  >
+                    {shortlisted ? '移出' : '納入'}
+                  </button>
+                  <button onClick={() => handleEdit(opp.id)} className="text-gray-600 hover:text-gray-900 mr-3 text-sm font-medium">編輯</button>
+                  <button onClick={() => handleDelete(opp.id)} className="text-red-400 hover:text-red-600 text-sm font-medium">刪除</button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

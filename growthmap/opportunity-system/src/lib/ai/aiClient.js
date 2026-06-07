@@ -1,0 +1,70 @@
+// 前端 AI 客戶端：呼叫 ido-ai-service。AI 產出皆為 draft，需使用者採納才生效（ADR-004/GD-04）。
+// 未設定 REACT_APP_AI_BASE_URL 時 AI 功能停用（優雅降級，GD-06）。
+const AI_BASE = (process.env.REACT_APP_AI_BASE_URL || '').replace(/\/$/, '');
+
+export const isAiEnabled = () => Boolean(AI_BASE);
+
+async function authHeader() {
+  try {
+    const { getFirebase } = await import('../cloud/firebase');
+    const { auth } = await getFirebase();
+    if (auth?.currentUser) {
+      const token = await auth.currentUser.getIdToken();
+      return { Authorization: `Bearer ${token}` };
+    }
+  } catch {
+    /* 未登入或 Firebase 未配置：略過 token */
+  }
+  return {};
+}
+
+// AI-01 / AI-03 / AI-04 → 回 { taskCode, state:'draft', payload, confidence, model }
+export async function runAiTask(taskCode, input) {
+  if (!AI_BASE) throw new Error('AI 服務未設定');
+  const res = await fetch(`${AI_BASE}/api/ai/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ taskCode, input }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error?.message || `AI 任務失敗（${res.status}）`);
+  return data;
+}
+
+// AI-07 教練對話（SSE 串流）。onDelta(textChunk) 逐塊回呼。
+export async function streamCoach(messages, onDelta, signal) {
+  if (!AI_BASE) throw new Error('AI 服務未設定');
+  const res = await fetch(`${AI_BASE}/api/ai/coach`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ messages }),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error?.message || '教練服務連線失敗');
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+    for (const part of parts) {
+      let event = '';
+      let data = '';
+      for (const line of part.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) data = line.slice(5).trim();
+      }
+      if (event === 'coach.delta' && data) {
+        try { onDelta(JSON.parse(data).delta || ''); } catch {}
+      } else if (event === 'coach.error' && data) {
+        try { throw new Error(JSON.parse(data).message); } catch (e) { throw e; }
+      }
+    }
+  }
+}

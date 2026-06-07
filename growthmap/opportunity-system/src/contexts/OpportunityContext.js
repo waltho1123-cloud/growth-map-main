@@ -1,42 +1,22 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
-import { loadOpportunities, saveOpportunities } from '../utils/storage';
+import { loadAppData, saveAppData } from '../utils/storage';
+import { createEmptyOpportunity, migrateData } from '../utils/schema';
+import { SCHEMA_VERSION } from '../utils/constants';
 import { useAuth } from '../lib/cloud/auth';
 import { loadCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
 import { isFirebaseConfigured } from '../lib/cloud/firebase-config';
 
 const OpportunityContext = createContext();
 
-function createEmptyOpportunity() {
+// 從 state 萃取要持久化的完整 data（localStorage + 雲端共用）
+function extractData(state) {
   return {
-    id: crypto.randomUUID(),
-    opportunityName: '',
-    usedTools: [],
-    template1: {
-      companyType: '',
-      growthDimension: '',
-      growthLever: '',
-      growthType: [],
-      insights: '',
-    },
-    template2: {
-      targetCustomer: '',
-      usp: '',
-      goToMarketStrategy: '',
-      implementationSteps: '',
-    },
-    template3: {
-      marketSize: '',
-      unitPrice: '',
-      competitiveEnvironment: '',
-      topBrandsShare: '',
-      currentScale: '',
-      cagr: '',
-      ebitMargin: '',
-      requiredInvestment: '',
-      potentialHurdles: '',
-      successFactors: '',
-      coreCapabilities: '',
-    },
+    schemaVersion: SCHEMA_VERSION,
+    opportunities: state.opportunities,
+    projectMeta: state.projectMeta,
+    toolAnalyses: state.toolAnalyses,
+    lastCheckRun: state.lastCheckRun,
+    longlistSnapshots: state.longlistSnapshots,
   };
 }
 
@@ -65,19 +45,70 @@ function reducer(state, action) {
     case 'CLOSE_EDITOR': {
       return { ...state, editingId: null };
     }
-    case 'REPLACE_ALL': {
-      return { ...state, opportunities: action.payload };
+    // 套用完整 data（雲端 reconcile 用；取代舊 REPLACE_ALL）
+    case 'REPLACE_DATA': {
+      const d = action.payload;
+      return {
+        ...state,
+        opportunities: d.opportunities || [],
+        projectMeta: d.projectMeta,
+        toolAnalyses: d.toolAnalyses || {},
+        lastCheckRun: d.lastCheckRun || null,
+        longlistSnapshots: d.longlistSnapshots || [],
+      };
+    }
+    // 專案 meta（緩衝係數 / 快照 等）
+    case 'UPDATE_PROJECT_META': {
+      return { ...state, projectMeta: { ...state.projectMeta, ...action.payload } };
+    }
+    // 工具啟用切換（MOD-02）
+    case 'SET_TOOL_ACTIVATION': {
+      const { code, enabled } = action.payload;
+      return {
+        ...state,
+        projectMeta: {
+          ...state.projectMeta,
+          toolActivation: { ...state.projectMeta.toolActivation, [code]: enabled },
+        },
+      };
+    }
+    // 工具分析（MOD-02）
+    case 'SET_TOOL_ANALYSIS': {
+      const { code, analysis } = action.payload;
+      return { ...state, toolAnalyses: { ...state.toolAnalyses, [code]: analysis } };
+    }
+    // 綜合檢查結果（MOD-05）
+    case 'SET_CHECK_RUN': {
+      return { ...state, lastCheckRun: action.payload };
+    }
+    // 交付：附加不可變快照（MOD-04/08，GD-09），記錄最近交付
+    case 'ADD_SNAPSHOT': {
+      const snap = action.payload;
+      return {
+        ...state,
+        longlistSnapshots: [...state.longlistSnapshots, snap],
+        projectMeta: { ...state.projectMeta, lastHandoff: { version: snap.version, frozenAt: snap.frozenAt } },
+      };
     }
     default:
       return state;
   }
 }
 
-export function OpportunityProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, {
-    opportunities: loadOpportunities(),
+function initState() {
+  const data = loadAppData();
+  return {
+    opportunities: data.opportunities,
+    projectMeta: data.projectMeta,
+    toolAnalyses: data.toolAnalyses,
+    lastCheckRun: data.lastCheckRun,
+    longlistSnapshots: data.longlistSnapshots,
     editingId: null,
-  });
+  };
+}
+
+export function OpportunityProvider({ children }) {
+  const [state, dispatch] = useReducer(reducer, undefined, initState);
   const { user } = useAuth();
   const localTsRef = useRef(0);
   const applyingRef = useRef(false);
@@ -91,17 +122,26 @@ export function OpportunityProvider({ children }) {
   useEffect(() => {
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveOpportunities(state.opportunities);
+      // 內聯具名屬性建構（讓 exhaustive-deps 精確比對，避免傳整個 state）
+      const data = {
+        schemaVersion: SCHEMA_VERSION,
+        opportunities: state.opportunities,
+        projectMeta: state.projectMeta,
+        toolAnalyses: state.toolAnalyses,
+        lastCheckRun: state.lastCheckRun,
+        longlistSnapshots: state.longlistSnapshots,
+      };
+      saveAppData(data);
       if (applyingRef.current) return;
       localTsRef.current = Date.now();
       if (isFirebaseConfigured && user && reconciledRef.current) {
-        saveCloudDebounced(user.uid, 'opportunity', { opportunities: state.opportunities });
+        saveCloudDebounced(user.uid, 'opportunity', data);
       }
     }, 300);
     return () => clearTimeout(saveTimer.current);
-  }, [state.opportunities, user]);
+  }, [state.opportunities, state.projectMeta, state.toolAnalyses, state.lastCheckRun, state.longlistSnapshots, user]);
 
-  // 登入時：從雲端拉資料 + reconcile
+  // 登入時：從雲端拉資料 + reconcile（雲端舊資料經 migrateData 升級）
   useEffect(() => {
     reconciledRef.current = false;
     if (!isFirebaseConfigured || !user) return;
@@ -113,11 +153,11 @@ export function OpportunityProvider({ children }) {
         const decision = reconcile(localTsRef.current, cloud);
         if (decision === 'cloud' && cloud && cloud.data) {
           applyingRef.current = true;
-          dispatch({ type: 'REPLACE_ALL', payload: cloud.data.opportunities || [] });
+          dispatch({ type: 'REPLACE_DATA', payload: migrateData(cloud.data) });
           localTsRef.current = cloud.updatedAt;
           setTimeout(() => { applyingRef.current = false; }, 0);
         } else if (decision === 'upload') {
-          saveCloudDebounced(user.uid, 'opportunity', { opportunities: state.opportunities }, 0);
+          saveCloudDebounced(user.uid, 'opportunity', extractData(state), 0);
         }
         reconciledRef.current = true;
       } catch (e) {
@@ -125,7 +165,7 @@ export function OpportunityProvider({ children }) {
       }
     })();
     return () => { cancelled = true; };
-    // state.opportunities intentionally omitted — we only reconcile on user change
+    // state intentionally omitted — we only reconcile on user change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 

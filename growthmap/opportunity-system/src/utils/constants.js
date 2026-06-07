@@ -1,37 +1,8 @@
-// BCG 外部觀察 + 內部洞察工具 (1-24)
-export const BCG_TOOLS = [
-  // 二、外部觀察 — 產業面
-  { id: 1, name: '市場地圖' },
-  { id: 2, name: '價值鏈分析' },
-  { id: 3, name: '全球大趨勢' },
-  { id: 4, name: '情境分析與戰略推演' },
-  { id: 5, name: '國際市場篩選' },
-  { id: 6, name: '數位成長' },
-  // 二、外部觀察 — 競爭者面
-  { id: 7, name: '創新分析' },
-  { id: 8, name: '競爭者策略' },
-  { id: 9, name: '顛覆性變革' },
-  { id: 10, name: '併購' },
-  { id: 11, name: '產品上市模型' },
-  { id: 12, name: '商業模式類型' },
-  // 二、外部觀察 — 客戶面
-  { id: 13, name: '需求導向型成長' },
-  { id: 14, name: '客戶趨勢' },
-  { id: 15, name: '質性客戶洞察' },
-  { id: 16, name: '量化客戶洞察' },
-  // 三、內部洞察 — 成長槓桿診斷
-  { id: 17, name: '行銷、銷售與訂價診斷' },
-  { id: 18, name: '創新診斷' },
-  // 三、內部洞察 — 競爭優勢
-  { id: 19, name: '優勢盤點' },
-  // 三、內部洞察 — 業務組合分析
-  { id: 20, name: '異常分析' },
-  { id: 21, name: '與強者共贏' },
-  { id: 22, name: '業務組合X光' },
-  // 三、內部洞察 — 創意工具
-  { id: 23, name: '合作機會' },
-  { id: 24, name: '重構思維框架' },
-];
+import { BCG_TOOL_LIBRARY } from './toolLibrary';
+
+// 既有相容：BCG_TOOLS（{id, name}）自資料驅動工具庫衍生（ADR-007 / GD-08）。
+// 完整定義（category / observationType / fieldSchema）見 toolLibrary.js。
+export const BCG_TOOLS = BCG_TOOL_LIBRARY.map(({ id, name }) => ({ id, name }));
 
 export const COMPANY_TYPES = ['堡壘', '流動', '衰退'];
 
@@ -80,5 +51,74 @@ export const CAGR_OPTIONS = ['>15%', '10-15%', '5-10%', '<5%', '~2-5%', '<2%'];
 
 export const EBIT_OPTIONS = ['>5%', '~2-5%', '<2%'];
 
+// 進度（既有 ProgressBar 用；CHK-4 合格區間見下方 LONGLIST_*）
 export const PROGRESS_TARGET = 7;
 export const PROGRESS_MAX = 10;
+
+// ───────────────────────────────────────────────────────────────
+// 以下為 SDD 整合新增常數（資料驅動，GD-08）
+// ───────────────────────────────────────────────────────────────
+
+export const SCHEMA_VERSION = 2;
+
+export const DEFAULT_CURRENCY = 'TWD';
+
+// CHK-1 緩衝係數（ADR-010，可於設定頁調整）
+export const DEFAULT_BUFFER_RATIO = 1.2;
+
+// CHK-4 長清單合格數量區間（SDD §4.3）
+export const LONGLIST_MIN = 7;
+export const LONGLIST_MAX = 12;
+
+// 機會狀態機（SDD §4.1）
+export const OPPORTUNITY_STATUS = {
+  DRAFT: 'draft',
+  INSIGHT_LINKED: 'insight_linked',
+  EVALUATED: 'evaluated',
+  SHORTLISTED: 'shortlisted',
+  HANDED_OFF: 'handed_off',
+  ARCHIVED: 'archived',
+};
+
+export const OPPORTUNITY_STATUS_LABELS = {
+  draft: '草稿',
+  insight_linked: '已連結洞察',
+  evaluated: '已評估',
+  shortlisted: '納入長清單',
+  handed_off: '已交付',
+  archived: '已封存',
+};
+
+// 工具分析狀態機（SDD §4.2）
+export const TOOL_ANALYSIS_STATUS = {
+  EMPTY: 'empty',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+};
+
+// 評分上限（四象限 1–5 燈號）
+export const RATING_MAX = 5;
+
+// SDD 對齊的分級（模版三 / 燈號）
+export const EBIT_BANDS = ['5-10%', '10-15%', '>15%'];
+export const CAGR_BANDS = ['<2%', '~2-5%', '>5%'];
+
+// 機會排序權重（SDD §4.4，可於設定頁調整）
+export const SCORING_WEIGHTS = {
+  size: 0.30,
+  potential: 0.20,
+  path: 0.20,
+  right: 0.20,
+  alignment: 0.10,
+};
+
+// 進入策略七面向（模版二，SDD Template2.goToMarket）
+export const GO_TO_MARKET_FACETS = [
+  { key: 'rnd', label: '研發' },
+  { key: 'production', label: '生產' },
+  { key: 'pricing', label: '訂價' },
+  { key: 'marketing', label: '行銷' },
+  { key: 'channel', label: '通路' },
+  { key: 'logistics', label: '物流' },
+  { key: 'afterSales', label: '售後' },
+];

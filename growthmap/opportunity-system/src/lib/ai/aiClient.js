@@ -4,12 +4,14 @@ const AI_BASE = (process.env.REACT_APP_AI_BASE_URL || '').replace(/\/$/, '');
 
 export const isAiEnabled = () => Boolean(AI_BASE);
 
-async function authHeader() {
+// 取得 Firebase ID token header。forceRefresh=true 時強制向 Firebase 換新 token
+// （用於 token 過期導致後端回 401 時重試）。
+async function authHeader(forceRefresh = false) {
   try {
     const { getFirebase } = await import('../cloud/firebase');
     const { auth } = await getFirebase();
     if (auth?.currentUser) {
-      const token = await auth.currentUser.getIdToken();
+      const token = await auth.currentUser.getIdToken(forceRefresh);
       return { Authorization: `Bearer ${token}` };
     }
   } catch {
@@ -21,11 +23,16 @@ async function authHeader() {
 // AI-01 / AI-03 / AI-04 → 回 { taskCode, state:'draft', payload, confidence, model }
 export async function runAiTask(taskCode, input) {
   if (!AI_BASE) throw new Error('AI 服務未設定');
-  const res = await fetch(`${AI_BASE}/api/ai/tasks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-    body: JSON.stringify({ taskCode, input }),
-  });
+  const body = JSON.stringify({ taskCode, input });
+  const send = async (forceRefresh) =>
+    fetch(`${AI_BASE}/api/ai/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeader(forceRefresh)) },
+      body,
+    });
+  let res = await send(false);
+  // token 可能已過期：強制刷新後重試一次
+  if (res.status === 401) res = await send(true);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error?.message || `AI 任務失敗（${res.status}）`);
   return data;
@@ -34,12 +41,15 @@ export async function runAiTask(taskCode, input) {
 // AI-07 教練對話（SSE 串流）。onDelta(textChunk) 逐塊回呼。
 export async function streamCoach(messages, onDelta, signal) {
   if (!AI_BASE) throw new Error('AI 服務未設定');
-  const res = await fetch(`${AI_BASE}/api/ai/coach`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-    body: JSON.stringify({ messages }),
-    signal,
-  });
+  const send = async (forceRefresh) =>
+    fetch(`${AI_BASE}/api/ai/coach`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeader(forceRefresh)) },
+      body: JSON.stringify({ messages }),
+      signal,
+    });
+  let res = await send(false);
+  if (res.status === 401) res = await send(true);
   if (!res.ok || !res.body) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data?.error?.message || '教練服務連線失敗');

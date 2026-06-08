@@ -6,6 +6,7 @@ import { config, hasApiKey } from './config.js';
 import { callClaude, streamClaude } from './anthropic.js';
 import { sanitizeObject, sanitizeText } from './sanitize.js';
 import { TASKS } from './prompts.js';
+import { verifyFirebaseIdToken } from './firebase-auth.js';
 
 const app = new Hono();
 
@@ -18,12 +19,21 @@ app.use(
   })
 );
 
-// 簡易 auth：REQUIRE_AUTH=true 時要求 Authorization（完整 Firebase ID token 簽章驗證為部署強化項）
+// auth：REQUIRE_AUTH=true 時驗證 Firebase ID token（簽章 + claims）
 app.use('/api/*', async (c, next) => {
   if (config.requireAuth) {
+    if (c.req.method === 'OPTIONS') return next(); // 預檢不需 token
     const auth = c.req.header('Authorization');
     if (!auth || !auth.startsWith('Bearer ')) {
       return c.json({ error: { code: 'IDO_PERMISSION_DENIED', message: '需要登入' } }, 401);
+    }
+    const token = auth.slice('Bearer '.length).trim();
+    try {
+      const payload = await verifyFirebaseIdToken(token, config.firebaseProjectId);
+      c.set('user', { uid: payload.sub, email: payload.email || null });
+    } catch (e) {
+      console.warn('[auth]', e?.message);
+      return c.json({ error: { code: 'IDO_TOKEN_INVALID', message: '登入憑證無效或已過期' } }, 401);
     }
   }
   return next();

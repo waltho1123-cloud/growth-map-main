@@ -14,7 +14,8 @@ export async function loadCloud(uid, appKey) {
   };
 }
 
-export async function saveCloud(uid, appKey, data) {
+// writer = 寫入者的裝置 session 識別碼，供即時訂閱端辨識並略過「自己寫入回送」的快照。
+export async function saveCloud(uid, appKey, data, writer = null) {
   const { db } = await getFirebase();
   if (!db) return;
   const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
@@ -23,24 +24,53 @@ export async function saveCloud(uid, appKey, data) {
     updatedAtMs: Date.now(),
     updatedAt: serverTimestamp(),
     version: 1,
+    writer,
   });
 }
 
 const timers = new Map();
 
-export function saveCloudDebounced(uid, appKey, data, delay = 1000) {
+export function saveCloudDebounced(uid, appKey, data, delay = 1000, writer = null) {
   const key = `${uid}:${appKey}`;
   const prev = timers.get(key);
   if (prev) clearTimeout(prev);
   timers.set(
     key,
     setTimeout(() => {
-      saveCloud(uid, appKey, data).catch((e) => {
+      saveCloud(uid, appKey, data, writer).catch((e) => {
         console.error('[cloud sync] save failed:', e);
       });
       timers.delete(key);
     }, delay)
   );
+}
+
+// 即時訂閱雲端文件變更（多裝置即時同步）。回傳 unsubscribe 函式。
+// onChange(cloud, metadata)：cloud = { data, updatedAt, version, writer } 或 null（文件不存在）。
+export function subscribeCloud(uid, appKey, onChange) {
+  let unsub = () => {};
+  let cancelled = false;
+  (async () => {
+    const { db } = await getFirebase();
+    if (!db || cancelled) return;
+    const { doc, onSnapshot } = await import('firebase/firestore');
+    const ref = doc(db, 'users', uid, 'apps', appKey);
+    const stop = onSnapshot(
+      ref,
+      (snap) => {
+        if (!snap.exists()) { onChange(null, snap.metadata); return; }
+        const raw = snap.data();
+        onChange(
+          { data: raw.data, updatedAt: raw.updatedAtMs ?? 0, version: raw.version ?? 1, writer: raw.writer ?? null },
+          snap.metadata
+        );
+      },
+      (err) => { console.error('[cloud sync] subscribe failed:', err); }
+    );
+    if (cancelled) { stop(); return; }
+    unsub = stop;
+  })();
+  return () => { cancelled = true; unsub(); };
 }
 
 export function reconcile(localUpdatedAt, cloud) {

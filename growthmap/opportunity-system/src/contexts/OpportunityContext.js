@@ -3,7 +3,7 @@ import { loadAppData, saveAppData } from '../utils/storage';
 import { createEmptyOpportunity, migrateData } from '../utils/schema';
 import { SCHEMA_VERSION } from '../utils/constants';
 import { useAuth } from '../lib/cloud/auth';
-import { loadCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
+import { subscribeCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
 import { isFirebaseConfigured } from '../lib/cloud/firebase-config';
 
 const OpportunityContext = createContext();
@@ -18,6 +18,12 @@ function extractData(state) {
     lastCheckRun: state.lastCheckRun,
     longlistSnapshots: state.longlistSnapshots,
   };
+}
+
+// 內容簽章：用來分辨某次 state 變更是「使用者編輯」還是「套用雲端快照」，
+// 避免即時同步在多裝置間把收到的快照又回寫雲端而成迴圈。
+function dataSig(d) {
+  return JSON.stringify([d.opportunities, d.projectMeta, d.toolAnalyses, d.lastCheckRun, d.longlistSnapshots]);
 }
 
 // 這些 action 會改動被綜合檢查（CHK-1~5）評估的資料：機會、營收、shortlist、
@@ -139,11 +145,22 @@ export function OpportunityProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, initState);
   const { user } = useAuth();
   const localTsRef = useRef(0);
-  const applyingRef = useRef(false);
   // Gate the save effect until the initial cloud reconcile has finished,
   // otherwise a freshly-signed-in user can overwrite cloud with local data
   // before we've had a chance to load it.
   const reconciledRef = useRef(false);
+  // 最後一次與雲端同步（寫入或收到）的內容簽章，用來分辨使用者編輯與套用雲端快照。
+  const lastCloudSigRef = useRef('');
+  // 本裝置 session 識別碼：辨識並略過「自己寫入後由伺服器回送」的快照，避免回授。
+  const clientIdRef = useRef(null);
+  if (clientIdRef.current === null) {
+    clientIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `c-${Math.random().toString(36).slice(2)}`;
+  }
+  // 永遠指向最新 state，供 onSnapshot 回呼（訂閱建立於登入當下、之後才觸發）讀取。
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   // 自動儲存至 LocalStorage + 雲端 (debounced)
   const saveTimer = useRef(null);
@@ -160,48 +177,60 @@ export function OpportunityProvider({ children }) {
         longlistSnapshots: state.longlistSnapshots,
       };
       saveAppData(data);
-      if (applyingRef.current) return;
+      // 若這次變更其實是「剛套用雲端快照」，簽章會與 lastCloudSig 相同 →
+      // 不更新 localTs、也不回寫雲端（否則多裝置間會無限回授）。
+      const sig = (isFirebaseConfigured && user) ? dataSig(data) : null;
+      if (sig !== null && sig === lastCloudSigRef.current) return;
       localTsRef.current = Date.now();
       if (isFirebaseConfigured && user && reconciledRef.current) {
-        saveCloudDebounced(user.uid, 'opportunity', data);
+        lastCloudSigRef.current = sig;
+        saveCloudDebounced(user.uid, 'opportunity', data, 1000, clientIdRef.current);
       }
     }, 300);
     return () => clearTimeout(saveTimer.current);
   }, [state.opportunities, state.projectMeta, state.toolAnalyses, state.lastCheckRun, state.longlistSnapshots, user]);
 
-  // 登入時：從雲端拉資料 + reconcile（雲端舊資料經 migrateData 升級）
+  // 登入時：即時訂閱雲端文件（onSnapshot）。第一筆快照等同原本的一次性 reconcile；
+  // 之後其他裝置的變更會「即時」套用，無需重新整理或登出登入。
   useEffect(() => {
     reconciledRef.current = false;
     if (!isFirebaseConfigured || !user) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const cloud = await loadCloud(user.uid, 'opportunity');
-        if (cancelled) return;
-        const decision = reconcile(localTsRef.current, cloud);
-        if (decision === 'cloud' && cloud && cloud.data) {
-          applyingRef.current = true;
-          const merged = migrateData(cloud.data);
-          // 保留本地已有的不可變交付快照（GD-09）：以 version 做 union，避免多裝置間遺失交付記錄。
-          // 註：projectMeta/toolAnalyses 仍為 last-write-wins（雲端較新者勝），屬已知同步取捨。
-          const seen = new Set(merged.longlistSnapshots.map((s) => s.version));
-          merged.longlistSnapshots = [
-            ...merged.longlistSnapshots,
-            ...(state.longlistSnapshots || []).filter((s) => !seen.has(s.version)),
-          ].sort((a, b) => a.version - b.version);
-          dispatch({ type: 'REPLACE_DATA', payload: merged });
-          localTsRef.current = cloud.updatedAt;
-          setTimeout(() => { applyingRef.current = false; }, 0);
-        } else if (decision === 'upload') {
-          saveCloudDebounced(user.uid, 'opportunity', extractData(state), 0);
-        }
+
+    const applyCloud = (cloud) => {
+      const merged = migrateData(cloud.data);
+      // 保留本地已有的不可變交付快照（GD-09）：以 version 做 union，避免多裝置間遺失交付記錄。
+      // 註：projectMeta/toolAnalyses 仍為 last-write-wins（雲端較新者勝），屬已知同步取捨。
+      const seen = new Set(merged.longlistSnapshots.map((s) => s.version));
+      merged.longlistSnapshots = [
+        ...merged.longlistSnapshots,
+        ...(stateRef.current.longlistSnapshots || []).filter((s) => !seen.has(s.version)),
+      ].sort((a, b) => a.version - b.version);
+      lastCloudSigRef.current = dataSig(merged); // 標記為已同步，避免 save effect 回寫
+      localTsRef.current = cloud.updatedAt;
+      dispatch({ type: 'REPLACE_DATA', payload: merged });
+    };
+
+    const unsub = subscribeCloud(user.uid, 'opportunity', (cloud, meta) => {
+      // 略過自己尚未被伺服器確認的樂觀寫入
+      if (meta && meta.hasPendingWrites) return;
+      // 略過自己寫入後由伺服器回送的快照（避免回授）
+      if (cloud && cloud.writer === clientIdRef.current) {
+        if (cloud.updatedAt > localTsRef.current) localTsRef.current = cloud.updatedAt;
         reconciledRef.current = true;
-      } catch (e) {
-        console.error('[opportunity cloud sync] reconcile failed:', e);
+        return;
       }
-    })();
-    return () => { cancelled = true; };
-    // state intentionally omitted — we only reconcile on user change
+      const decision = reconcile(localTsRef.current, cloud);
+      if (decision === 'cloud' && cloud && cloud.data) {
+        applyCloud(cloud);
+      } else if (decision === 'upload') {
+        const data = extractData(stateRef.current);
+        lastCloudSigRef.current = dataSig(data);
+        saveCloudDebounced(user.uid, 'opportunity', data, 0, clientIdRef.current);
+      }
+      reconciledRef.current = true;
+    });
+
+    return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 

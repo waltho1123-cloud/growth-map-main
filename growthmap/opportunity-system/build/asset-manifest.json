@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/growthmap/opportunity-system/build/static/css/main.f7eb6bb5.css",
-    "main.js": "/growthmap/opportunity-system/build/static/js/main.8efc8ed8.js",
+    "main.js": "/growthmap/opportunity-system/build/static/js/main.d54b94ba.js",
     "static/js/984.d8e9e58e.chunk.js": "/growthmap/opportunity-system/build/static/js/984.d8e9e58e.chunk.js",
     "static/js/825.c46246a3.chunk.js": "/growthmap/opportunity-system/build/static/js/825.c46246a3.chunk.js",
     "static/js/815.5229096a.chunk.js": "/growthmap/opportunity-system/build/static/js/815.5229096a.chunk.js",
@@ -16,6 +16,6 @@
   },
   "entrypoints": [
     "static/css/main.f7eb6bb5.css",
-    "static/js/main.8efc8ed8.js"
+    "static/js/main.d54b94ba.js"
   ]
 }

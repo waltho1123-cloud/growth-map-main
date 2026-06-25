@@ -1,5 +1,6 @@
-import { BCG_TOOLS, GO_TO_MARKET_FACETS } from './constants';
+import { GO_TO_MARKET_FACETS, RATING_MAX, OPPORTUNITY_STATUS_LABELS } from './constants';
 import { TOOL_NAME_BY_ID } from './toolLibrary';
+import { aiText } from '../lib/ai/aiText';
 
 // A4 橫式 (landscape) 尺寸
 const PAGE_W = 297;
@@ -43,16 +44,27 @@ function getToolName(id) {
 
 // ---- Page break helper ----
 
-function checkPageBreak(doc, y, neededHeight, tabLabel, pn) {
+// ctx = { tab, pn }，pn = { val }（可變頁碼物件）。放不下 neededHeight 時換頁，回傳新頁頂端 y。
+function checkPageBreak(doc, y, neededHeight, ctx) {
   if (y + neededHeight > PAGE_H - MARGIN) {
-    addPageNumber(doc, pn.val);
+    addPageNumber(doc, ctx.pn.val);
     doc.addPage();
-    pn.val++;
+    ctx.pn.val++;
     addWatermark(doc);
-    addPageTab(doc, tabLabel);
+    addPageTab(doc, ctx.tab);
     return 26;
   }
   return y;
+}
+
+// 換頁並回到新頁頂端（供 addField 逐行跨頁續排用）。
+function nextPage(doc, ctx) {
+  addPageNumber(doc, ctx.pn.val);
+  doc.addPage();
+  ctx.pn.val++;
+  addWatermark(doc);
+  addPageTab(doc, ctx.tab);
+  return 26;
 }
 
 // ---- Page decorators ----
@@ -90,7 +102,17 @@ function addGreenTitle(doc, y, title) {
   return y + lines.length * 11 + 6;
 }
 
-function addSectionBar(doc, y, title) {
+// 量測欄位換行與高度（版面常數集中於此，供換頁預判與繪製共用，避免公式重複）。
+function measureField(doc, value, maxWidth) {
+  const w = maxWidth || CONTENT_W - 12;
+  const lines = doc.splitTextToSize(value || '—', w);
+  return { lines, height: 6 + lines.length * 6 + 4 };
+}
+
+// 區塊標題列；nextHeight = 緊接其後第一個欄位的高度，連同標題列一起預留，
+// 確保標題列不被孤立在頁底、不與內容拆到兩頁。
+function addSectionBar(doc, y, title, ctx, nextHeight = 0) {
+  if (ctx) y = checkPageBreak(doc, y, 16 + nextHeight, ctx);
   doc.setFillColor(...LIGHT_GRAY);
   doc.roundedRect(MARGIN, y, CONTENT_W, 12, 2, 2, 'F');
   // Green left accent
@@ -103,17 +125,73 @@ function addSectionBar(doc, y, title) {
   return y + 16;
 }
 
-function addField(doc, y, label, value, maxWidth) {
+// 繪製「標籤 + 多行值」；標籤與首行一起換頁；內容超過整頁時逐行跨頁續排（不裁切）。
+function addField(doc, y, label, value, ctx, maxWidth) {
+  const { lines } = measureField(doc, value, maxWidth);
+  y = checkPageBreak(doc, y, 16, ctx); // 標籤(10)+首行(6) 不被孤立在頁底
   doc.setFont('NotoSansTC');
   doc.setTextColor(...MID_GRAY);
   doc.setFontSize(10);
   doc.text(label, MARGIN + 6, y);
   doc.setTextColor(...DARK_TEXT);
   doc.setFontSize(14);
-  const w = maxWidth || CONTENT_W - 12;
-  const lines = doc.splitTextToSize(value || '—', w);
-  doc.text(lines, MARGIN + 6, y + 6);
-  return y + 6 + lines.length * 6 + 4;
+  let ty = y + 6;
+  for (const line of lines) {
+    if (ty > PAGE_H - MARGIN) {
+      ty = nextPage(doc, ctx);
+      doc.setFont('NotoSansTC');
+      doc.setTextColor(...DARK_TEXT);
+      doc.setFontSize(14);
+    }
+    doc.text(line, MARGIN + 6, ty);
+    ty += 6;
+  }
+  return ty + 4;
+}
+
+// 一個區塊：標題列 + 一到多個欄位。標題列與第一個欄位一起換頁（不孤立），
+// 後續欄位再依實際高度自動換頁/續排。fields: [{ label, value, w? }]
+function addBlock(doc, y, ctx, title, fields) {
+  const first = fields.length ? measureField(doc, fields[0].value, fields[0].w) : { height: 0 };
+  y = addSectionBar(doc, y, title, ctx, first.height);
+  for (const f of fields) {
+    y = addField(doc, y, f.label, f.value, ctx, f.w);
+  }
+  return y;
+}
+
+// 模板三四象限（1–5 評分）— PDF 視覺化，色彩呼應編輯器 RatingDots
+const RATING_QUADRANTS = [
+  { key: 'size', label: 'Size of the Prize｜市場規模與競爭', color: [55, 65, 81] },
+  { key: 'potential', label: 'Potential of Play｜操作潛力', color: GREEN },
+  { key: 'path', label: 'Path to Achieve｜達成路徑', color: [245, 158, 11] },
+  { key: 'rightToWin', label: 'Right to Win｜取勝之道', color: [147, 51, 234] },
+];
+
+// 一列四象限評分：左標籤，右側 RATING_MAX 個圓點（實心至 value），末端 n/5
+function addRatingRow(doc, y, label, value, color) {
+  const v = Math.max(0, Math.min(RATING_MAX, Number(value) || 0));
+  doc.setFont('NotoSansTC');
+  doc.setFontSize(12);
+  doc.setTextColor(...DARK_TEXT);
+  doc.text(label, MARGIN + 6, y + 4);
+  const gap = 7;
+  const startX = MARGIN + CONTENT_W - 16 - RATING_MAX * gap;
+  for (let i = 0; i < RATING_MAX; i++) {
+    const cx = startX + i * gap;
+    if (i < v) {
+      doc.setFillColor(...color);
+      doc.circle(cx, y + 2.6, 2.4, 'F');
+    } else {
+      doc.setDrawColor(...MID_GRAY);
+      doc.setFillColor(...WHITE);
+      doc.circle(cx, y + 2.6, 2.4, 'FD');
+    }
+  }
+  doc.setFontSize(10);
+  doc.setTextColor(...MID_GRAY);
+  doc.text(v ? `${v}/${RATING_MAX}` : '—', startX + RATING_MAX * gap + 1, y + 4);
+  return y + 8;
 }
 
 // 模板二「市場進入策略」新七面向（goToMarket 物件）→ 多行字串；
@@ -153,7 +231,7 @@ function drawDividerPage(doc, title) {
 
 // ---- Main export ----
 
-export async function exportToPdf(opportunities) {
+export async function exportToPdf(opportunities, toolAnalyses = {}) {
   const { default: jsPDF } = await import('jspdf');
   const fontBase64 = await loadCJKFont();
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -192,103 +270,154 @@ export async function exportToPdf(opportunities) {
     pageNum++;
     addWatermark(doc);
     addPageTab(doc, 'Template 1');
-    const pn1 = { val: pageNum };
+    const ctx1 = { tab: 'Template 1', pn: { val: pageNum } };
     let y = addGreenTitle(doc, 24, `#${num} ${oppTitle} — 起點與洞察`);
 
-    y = checkPageBreak(doc, y, 30, 'Template 1', pn1);
-    y = addSectionBar(doc, y, 'BCG 工具');
-    y = checkPageBreak(doc, y, 16, 'Template 1', pn1);
-    y = addField(doc, y, '使用的 BCG Tools', (opp.usedTools || []).map(getToolName).join(', '));
+    // 機會資訊（含 AI-04 排序、AI 評分、預估營收、狀態）
+    {
+      const metaParts = [];
+      if (opp.rank != null) metaParts.push(`AI 排序：#${opp.rank}`);
+      if (opp.aiScore != null) metaParts.push(`AI 評分：${opp.aiScore}`);
+      const rev = Number(opp.estRevenue) || 0;
+      if (rev) metaParts.push(`預估年營收：${rev.toLocaleString()} ${opp.currency || ''}`.trim());
+      const statusLabel = OPPORTUNITY_STATUS_LABELS[opp.status];
+      if (statusLabel) metaParts.push(`狀態：${statusLabel}`);
+      if (metaParts.length) {
+        y = addField(doc, y, '機會資訊', metaParts.join('　|　'), ctx1);
+      }
+    }
 
-    y = checkPageBreak(doc, y, 30, 'Template 1', pn1);
-    y = addSectionBar(doc, y, '企業定位');
-    y = checkPageBreak(doc, y, 16, 'Template 1', pn1);
-    y = addField(doc, y, '公司類型 Company Type', opp.template1.companyType);
-    y = checkPageBreak(doc, y, 16, 'Template 1', pn1);
-    y = addField(doc, y, '成長維度 Growth Dimension', opp.template1.growthDimension);
-    y = checkPageBreak(doc, y, 16, 'Template 1', pn1);
-    y = addField(doc, y, '成長槓桿 Growth Lever', opp.template1.growthLever);
-    y = checkPageBreak(doc, y, 16, 'Template 1', pn1);
-    y = addField(doc, y, '成長類型 Growth Type', (opp.template1.growthType || []).join(', '));
+    y = addBlock(doc, y, ctx1, 'BCG 工具', [
+      { label: '使用的 BCG Tools', value: (opp.usedTools || []).map(getToolName).join(', ') },
+    ]);
+    y = addBlock(doc, y, ctx1, '企業定位', [
+      { label: '公司類型 Company Type', value: opp.template1.companyType },
+      { label: '成長維度 Growth Dimension', value: opp.template1.growthDimension },
+      { label: '成長槓桿 Growth Lever', value: opp.template1.growthLever },
+      { label: '成長類型 Growth Type', value: (opp.template1.growthType || []).join(', ') },
+    ]);
+    y = addBlock(doc, y, ctx1, '關鍵洞察', [
+      { label: 'Key Insights', value: opp.template1.insights, w: CONTENT_W - 12 },
+    ]);
 
-    y = checkPageBreak(doc, y, 30, 'Template 1', pn1);
-    y = addSectionBar(doc, y, '關鍵洞察');
-    y = checkPageBreak(doc, y, 16, 'Template 1', pn1);
-    addField(doc, y, 'Key Insights', opp.template1.insights, CONTENT_W - 12);
-
-    addPageNumber(doc, pn1.val);
-    pageNum = pn1.val;
+    addPageNumber(doc, ctx1.pn.val);
+    pageNum = ctx1.pn.val;
 
     // --- Template 2: Opportunity Details ---
     doc.addPage();
     pageNum++;
     addWatermark(doc);
     addPageTab(doc, 'Template 2');
-    const pn2 = { val: pageNum };
+    const ctx2 = { tab: 'Template 2', pn: { val: pageNum } };
     y = addGreenTitle(doc, 24, `#${num} ${oppTitle} — 機會詳情`);
 
-    y = checkPageBreak(doc, y, 30, 'Template 2', pn2);
-    y = addSectionBar(doc, y, '目標客戶與價值主張');
-    y = checkPageBreak(doc, y, 16, 'Template 2', pn2);
-    y = addField(doc, y, '目標客群 Target Customer', opp.template2.targetCustomer, CONTENT_W - 12);
-    y = checkPageBreak(doc, y, 16, 'Template 2', pn2);
-    y = addField(doc, y, '獨特賣點 USP', opp.template2.usp, CONTENT_W - 12);
+    y = addBlock(doc, y, ctx2, '機會概念與做法', [
+      { label: '機會概念 Concept', value: opp.template2.concept, w: CONTENT_W - 12 },
+      { label: '實施方法 Method', value: opp.template2.method, w: CONTENT_W - 12 },
+    ]);
+    y = addBlock(doc, y, ctx2, '目標客戶與價值主張', [
+      { label: '目標客群 Target Customer', value: opp.template2.targetCustomer, w: CONTENT_W - 12 },
+      { label: '獨特賣點 USP', value: opp.template2.usp, w: CONTENT_W - 12 },
+    ]);
+    y = addBlock(doc, y, ctx2, '市場進入與實施', [
+      { label: '上市策略 Go-to-Market（七面向）', value: formatGoToMarket(opp.template2), w: CONTENT_W - 12 },
+      { label: '實施步驟 Implementation', value: opp.template2.steps || opp.template2.implementationSteps, w: CONTENT_W - 12 },
+    ]);
 
-    y = checkPageBreak(doc, y, 30, 'Template 2', pn2);
-    y = addSectionBar(doc, y, '市場進入與實施');
-    y = checkPageBreak(doc, y, 16, 'Template 2', pn2);
-    y = addField(doc, y, '上市策略 Go-to-Market（七面向）', formatGoToMarket(opp.template2), CONTENT_W - 12);
-    y = checkPageBreak(doc, y, 16, 'Template 2', pn2);
-    addField(doc, y, '實施步驟 Implementation', opp.template2.steps || opp.template2.implementationSteps, CONTENT_W - 12);
-
-    addPageNumber(doc, pn2.val);
-    pageNum = pn2.val;
+    addPageNumber(doc, ctx2.pn.val);
+    pageNum = ctx2.pn.val;
 
     // --- Template 3: Opportunity Assessment ---
     doc.addPage();
     pageNum++;
     addWatermark(doc);
     addPageTab(doc, 'Template 3');
-    const pn3 = { val: pageNum };
+    const ctx3 = { tab: 'Template 3', pn: { val: pageNum } };
     y = addGreenTitle(doc, 24, `#${num} ${oppTitle} — 機會評估`);
 
-    y = checkPageBreak(doc, y, 30, 'Template 3', pn3);
-    y = addSectionBar(doc, y, '1. Size of the Prize — 市場規模');
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '市場規模 Market Size', opp.template3.marketSize);
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '單價 Unit Price', opp.template3.unitPrice);
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '競爭環境', opp.template3.competitiveEnvironment);
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '前幾大品牌市佔', opp.template3.topBrandsShare);
+    // 四象限 1–5 評分（含 AI-03 採納結果）+ 分級 + 要點。
+    // 標題列連同四列評分一起預留（RATING_QUADRANTS.length*8），不被拆頁。
+    {
+      const ratings = opp.template3.ratings || {};
+      y = addSectionBar(doc, y, '四象限評分（1–5）', ctx3, RATING_QUADRANTS.length * 8);
+      for (const q of RATING_QUADRANTS) {
+        y = addRatingRow(doc, y, q.label, ratings[q.key], q.color);
+      }
+      y += 3;
+      if (opp.template3.ebitBand || opp.template3.cagrBand) {
+        y = addField(doc, y, 'EBIT / CAGR 分級',
+          [opp.template3.ebitBand && `EBIT：${opp.template3.ebitBand}`,
+           opp.template3.cagrBand && `CAGR：${opp.template3.cagrBand}`]
+            .filter(Boolean).join('　|　'), ctx3);
+      }
+      if (opp.template3.points) {
+        y = addField(doc, y, '評估要點 Points', opp.template3.points, ctx3, CONTENT_W - 12);
+      }
+    }
 
-    y = checkPageBreak(doc, y, 30, 'Template 3', pn3);
-    y = addSectionBar(doc, y, '2. Potential of Play — 發展潛力');
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '目前規模 Current Scale', opp.template3.currentScale);
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, 'CAGR', opp.template3.cagr);
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, 'EBIT Margin', opp.template3.ebitMargin);
+    y = addBlock(doc, y, ctx3, '1. Size of the Prize — 市場規模', [
+      { label: '市場規模 Market Size', value: opp.template3.marketSize },
+      { label: '單價 Unit Price', value: opp.template3.unitPrice },
+      { label: '競爭環境', value: opp.template3.competitiveEnvironment },
+      { label: '前幾大品牌市佔', value: opp.template3.topBrandsShare },
+    ]);
+    y = addBlock(doc, y, ctx3, '2. Potential of Play — 發展潛力', [
+      { label: '目前規模 Current Scale', value: opp.template3.currentScale },
+      { label: 'CAGR', value: opp.template3.cagr },
+      { label: 'EBIT Margin', value: opp.template3.ebitMargin },
+    ]);
+    y = addBlock(doc, y, ctx3, '3. Path to Achieve — 實現路徑', [
+      { label: '所需投入 Required Investment', value: opp.template3.requiredInvestment, w: CONTENT_W - 12 },
+      { label: '潛在障礙 Potential Hurdles', value: opp.template3.potentialHurdles, w: CONTENT_W - 12 },
+    ]);
+    y = addBlock(doc, y, ctx3, '4. Right to Win — 致勝優勢', [
+      { label: '關鍵成功因素 Success Factors', value: opp.template3.successFactors, w: CONTENT_W - 12 },
+      { label: '核心能力 Core Capabilities', value: opp.template3.coreCapabilities, w: CONTENT_W - 12 },
+    ]);
 
-    y = checkPageBreak(doc, y, 30, 'Template 3', pn3);
-    y = addSectionBar(doc, y, '3. Path to Achieve — 實現路徑');
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '所需投入 Required Investment', opp.template3.requiredInvestment, CONTENT_W - 12);
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '潛在障礙 Potential Hurdles', opp.template3.potentialHurdles, CONTENT_W - 12);
-
-    y = checkPageBreak(doc, y, 30, 'Template 3', pn3);
-    y = addSectionBar(doc, y, '4. Right to Win — 致勝優勢');
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    y = addField(doc, y, '關鍵成功因素 Success Factors', opp.template3.successFactors, CONTENT_W - 12);
-    y = checkPageBreak(doc, y, 16, 'Template 3', pn3);
-    addField(doc, y, '核心能力 Core Capabilities', opp.template3.coreCapabilities, CONTENT_W - 12);
-
-    addPageNumber(doc, pn3.val);
-    pageNum = pn3.val;
+    addPageNumber(doc, ctx3.pn.val);
+    pageNum = ctx3.pn.val;
   });
+
+  // ===== 工具分析洞察（AI-01 採納結果）=====
+  {
+    const codes = Object.keys(toolAnalyses || {})
+      .filter((c) => {
+        const a = toolAnalyses[c];
+        return a && (
+          (Array.isArray(a.insights) && a.insights.some(Boolean)) ||
+          (Array.isArray(a.opportunitiesNote) && a.opportunitiesNote.some(Boolean))
+        );
+      })
+      .sort((a, b) => Number(a) - Number(b));
+
+    if (codes.length) {
+      doc.addPage();
+      pageNum++;
+      addWatermark(doc);
+      addPageTab(doc, '工具洞察');
+      let y = addGreenTitle(doc, 24, '工具分析洞察 Tool Insights');
+      const ctx = { tab: '工具洞察', pn: { val: pageNum } };
+
+      for (const code of codes) {
+        const a = toolAnalyses[code];
+        const tid = Number(code);
+        const toolTitle = Number.isFinite(tid) ? getToolName(tid) : String(code);
+        const fields = [];
+        (a.insights || []).filter(Boolean).forEach((s, i) => {
+          fields.push({ label: `主要洞察 ${i + 1}`, value: aiText(s), w: CONTENT_W - 12 });
+        });
+        (a.opportunitiesNote || []).filter(Boolean).forEach((s, i) => {
+          fields.push({ label: `衍生機會 ${i + 1}`, value: aiText(s), w: CONTENT_W - 12 });
+        });
+        y = addBlock(doc, y, ctx, toolTitle, fields);
+        y += 3;
+      }
+
+      addPageNumber(doc, ctx.pn.val);
+      pageNum = ctx.pn.val;
+    }
+  }
 
   // ===== Long-list 總表 =====
   doc.addPage();
@@ -305,10 +434,11 @@ export async function exportToPdf(opportunities) {
   doc.setTextColor(...WHITE);
   doc.setFontSize(11);
   doc.text('#', MARGIN + 4, y + 9);
-  doc.text('BCG Tools', MARGIN + 16, y + 9);
-  doc.text('機會名稱', MARGIN + 70, y + 9);
-  doc.text('成長槓桿', MARGIN + 160, y + 9);
-  doc.text('成長維度', MARGIN + 215, y + 9);
+  doc.text('AI 排序', MARGIN + 13, y + 9);
+  doc.text('BCG Tools', MARGIN + 32, y + 9);
+  doc.text('機會名稱', MARGIN + 74, y + 9);
+  doc.text('成長槓桿', MARGIN + 166, y + 9);
+  doc.text('成長維度', MARGIN + 216, y + 9);
   y += 13;
 
   opportunities.forEach((opp, idx) => {
@@ -331,18 +461,22 @@ export async function exportToPdf(opportunities) {
     doc.setTextColor(...DARK_TEXT);
     doc.setFontSize(11);
     doc.text(String(idx + 1), MARGIN + 6, y + 8);
-    doc.text((opp.usedTools || []).join(', ') || '—', MARGIN + 16, y + 8);
+    doc.text(opp.rank != null ? `#${opp.rank}` : '—', MARGIN + 13, y + 8);
     doc.text(
-      doc.splitTextToSize(opp.opportunityName || '—', 85)[0],
-      MARGIN + 70, y + 8
+      doc.splitTextToSize((opp.usedTools || []).join(', ') || '—', 38)[0],
+      MARGIN + 32, y + 8
     );
     doc.text(
-      doc.splitTextToSize(opp.template1.growthLever || '—', 50)[0],
-      MARGIN + 160, y + 8
+      doc.splitTextToSize(opp.opportunityName || '—', 88)[0],
+      MARGIN + 74, y + 8
     );
     doc.text(
-      doc.splitTextToSize(opp.template1.growthDimension || '—', 50)[0],
-      MARGIN + 215, y + 8
+      doc.splitTextToSize(opp.template1.growthLever || '—', 48)[0],
+      MARGIN + 166, y + 8
+    );
+    doc.text(
+      doc.splitTextToSize(opp.template1.growthDimension || '—', 43)[0],
+      MARGIN + 216, y + 8
     );
     y += 12;
   });

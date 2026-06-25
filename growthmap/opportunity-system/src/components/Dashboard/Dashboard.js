@@ -83,7 +83,7 @@ export default function Dashboard() {
     setExporting(true);
     try {
       const { exportToPdf } = await import('../../utils/pdfExport');
-      await exportToPdf(opportunities);
+      await exportToPdf(opportunities, state.toolAnalyses);
     } finally {
       setExporting(false);
     }

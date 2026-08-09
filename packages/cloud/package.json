@@ -13,6 +13,7 @@
     "@growthmap/contracts": "*"
   },
   "peerDependencies": {
-    "firebase": "^12"
+    "firebase": "^12",
+    "react": "^19"
   }
 }

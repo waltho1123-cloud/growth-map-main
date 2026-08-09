@@ -6,6 +6,12 @@ export declare const APP_KEYS: Readonly<{
 
 export type AppKey = (typeof APP_KEYS)[keyof typeof APP_KEYS];
 
+export declare const RECOVERY_KEYS: Readonly<{
+  momentum: Readonly<{ reload: string; flushTs: string }>;
+  aspiration: Readonly<{ reload: string; flushTs: string }>;
+  opportunity: Readonly<{ reload: string; flushTs: string }>;
+}>;
+
 export declare const USERS_COLLECTION: 'users';
 export declare const APPS_SUBCOLLECTION: 'apps';
 

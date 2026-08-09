@@ -4,14 +4,14 @@ import { createEmptyOpportunity, migrateData } from '../utils/schema';
 import { SCHEMA_VERSION } from '../utils/constants';
 import { useAuth } from '../lib/cloud/auth';
 import { subscribeCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
-import { APP_KEYS } from '@growthmap/contracts';
+import { APP_KEYS, RECOVERY_KEYS } from '@growthmap/contracts';
 import { consumeFlushTs, registerLocalTsProvider } from '@growthmap/cloud';
 import { isFirebaseConfigured } from '../lib/cloud/firebase-config';
 
 const OpportunityContext = createContext();
 
 // index.jsx 的 vite:preloadError 自動重載前，flush 存檔時寫入的時間戳 key（per-tab）。
-const FLUSH_TS_KEY = 'bw-ceo-flush-ts';
+const FLUSH_TS_KEY = RECOVERY_KEYS.opportunity.flushTs;
 
 // 模組層一次性消耗（非 render 期）：React 併發模式可能丟棄並重播首次 render，
 // render 期的消耗性讀取會在重播時拿到 0 而遺失 priming。模組載入只執行一次。

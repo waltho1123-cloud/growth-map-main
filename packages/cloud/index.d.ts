@@ -56,3 +56,23 @@ export declare function installChunkReloadRecovery(options: ChunkReloadRecoveryO
 export declare function consumeFlushTs(flushTsKey: string, maxAgeMs?: number): number;
 
 export declare function reconcile(localUpdatedAt: number, cloud: CloudDoc<unknown> | null): ReconcileDecision;
+
+export interface CloudSyncBootstrapConfig<TSnapshot = unknown> {
+  appKey: AppKey;
+  flushTsKey: string;
+  /** 單元模組層以 consumeFlushTs(key) 取得後傳入 */
+  initialLocalTs?: number;
+  useAuth: () => { user: { uid: string } | null; loading: boolean };
+  isConfigured: boolean;
+  sync: Pick<CloudSync, 'subscribeCloud' | 'saveCloudDebounced'>;
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => TSnapshot;
+  applySnapshot: (data: TSnapshot) => void;
+  /** 上傳前守衛（如 dev 契約 assert）；拋出即中止該次上傳 */
+  guardSnapshot?: ((snap: TSnapshot) => void) | null;
+  pushDelayMs?: number;
+}
+
+export declare function createCloudSyncBootstrap<TSnapshot = unknown>(
+  config: CloudSyncBootstrapConfig<TSnapshot>
+): () => null;

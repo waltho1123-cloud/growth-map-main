@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   APP_KEYS,
+  RECOVERY_KEYS,
   userAppDocSegments,
   extractOrientSnapshot,
   assertOrientProducerShape,
@@ -109,6 +110,27 @@ test('critical/minor 分級：只缺 name（裝飾欄位）→ contractOk 仍為
 
 test('assertOrientProducerShape：完整形狀通過', () => {
   assert.doesNotThrow(() => assertOrientProducerShape(makeAspirationSnapshot()));
+});
+
+test('RECOVERY_KEYS：三單元 key 值凍結不可漂移（線上 session 依賴既有字串）', () => {
+  assert.deepEqual(RECOVERY_KEYS.momentum, { reload: 'mom_chunk_reload_at', flushTs: 'mom-flush-ts' });
+  assert.deepEqual(RECOVERY_KEYS.aspiration, { reload: 'asp_chunk_reload_at', flushTs: 'asp-flush-ts' });
+  assert.deepEqual(RECOVERY_KEYS.opportunity, { reload: 'bw_chunk_reload_at', flushTs: 'bw-ceo-flush-ts' });
+  assert.ok(Object.isFrozen(RECOVERY_KEYS) && Object.isFrozen(RECOVERY_KEYS.momentum));
+});
+
+test('assertOrientProducerShape：錯誤訊息列出全部違約而非只有第一項', () => {
+  const snap = makeAspirationSnapshot();
+  delete snap.companyInfo.naturalGrowth;
+  snap.partA = undefined;
+  try {
+    assertOrientProducerShape(snap);
+    assert.fail('應拋出');
+  } catch (e) {
+    assert.match(e.message, /naturalGrowth\.targetRevenue2028/);
+    assert.match(e.message, /partA/);
+    assert.match(e.message, /2 項/);
+  }
 });
 
 test('assertOrientProducerShape：契約欄位改名即炸出明確錯誤', () => {

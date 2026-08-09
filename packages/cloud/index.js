@@ -8,6 +8,7 @@
 //   users/{uid}/apps/{appKey} = { data, updatedAtMs, updatedAt: serverTimestamp, version: 1, writer }
 //   writer = 寫入者的裝置 session 識別碼（可為 null），供即時訂閱端略過「自己寫入的回送」。
 
+import { useEffect, useRef } from 'react';
 import { userAppDocSegments } from '@growthmap/contracts';
 
 // firestoreOverride：測試注入用的 firestore 模組替身（{doc,getDoc,setDoc,onSnapshot,serverTimestamp}）；
@@ -183,4 +184,113 @@ export function reconcile(localUpdatedAt, cloud) {
   if (!cloud) return 'upload';
   if (cloud.updatedAt > localUpdatedAt) return 'cloud';
   return 'upload';
+}
+
+// ── zustand 單元的同步控制器（單一正本）─────────────────────────────────────────
+// aspiration 與 momentum 的 CloudSyncBootstrap 曾是 ~95% 相同的兩份複製（第四層
+// dataSig 簽章也各一份）——收斂為此 factory，單元端只剩宣告式 config。
+// opportunity 的 OpportunityContext 因有 migrate／交付快照 union 等獨有層，刻意不併入。
+//
+// 防迴授四層：(1) metadata.hasPendingWrites (2) writer===clientId (3) applying 旗標
+// (4) 內容簽章（只在 onSaved 寫入成功後記錄）。
+// 效能：簽章比對在自有 debounce 視窗內做（每次鍵擊只 O(1) 記時間戳，不做全量序列化）。
+
+
+export function createCloudSyncBootstrap({
+  appKey,
+  flushTsKey,
+  initialLocalTs = 0,   // 單元模組層以 consumeFlushTs(key) 取得後傳入（模組層一次性，免 render 重播問題）
+  useAuth,              // @growthmap/firebase 的 useAuth（由單元傳入，維持本包對 firebase 的 DI 邊界）
+  isConfigured,
+  sync,                 // 單元綁定後的 { subscribeCloud, saveCloudDebounced }
+  subscribe,            // (listener) => unsubscribe —— zustand store.subscribe
+  getSnapshot,          // () => 要同步的純物件（純組裝，不做檢查）
+  applySnapshot,        // (data) => void —— 套用雲端快照到 store
+  guardSnapshot = null, // 選配：上傳前守衛（如 aspiration 的 dev 契約 assert）
+  pushDelayMs = 1000,
+}) {
+  return function CloudSyncBootstrap() {
+    const { user } = useAuth();
+    const localTsRef = useRef(initialLocalTs);
+    const applyingRef = useRef(false);
+    const reconciledRef = useRef(false);
+    const lastCloudSigRef = useRef('');
+    const pushTimerRef = useRef(null);
+    const clientIdRef = useRef(null);
+    if (clientIdRef.current === null) {
+      clientIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `c-${Math.random().toString(36).slice(2)}`;
+    }
+
+    // 恢復機制的時間戳來源＝真實最後編輯時間；未編輯（0）不寫（雲端優先不被破壞）
+    useEffect(() => registerLocalTsProvider(flushTsKey, () => localTsRef.current), []);
+
+    // 本地最後改動時間（套用雲端快照時不算改動）——每次變更僅 O(1)
+    useEffect(() => {
+      return subscribe(() => {
+        if (applyingRef.current) return;
+        localTsRef.current = Date.now();
+      });
+    }, []);
+
+    // 登入時：即時訂閱雲端文件；第一筆快照等同一次性 reconcile
+    useEffect(() => {
+      reconciledRef.current = false;
+      if (!isConfigured || !user) return;
+      const unsub = sync.subscribeCloud(user.uid, appKey, (cloud, meta) => {
+        if (meta && meta.hasPendingWrites) return;
+        if (cloud && cloud.writer === clientIdRef.current) {
+          if (cloud.updatedAt > localTsRef.current) localTsRef.current = cloud.updatedAt;
+          reconciledRef.current = true;
+          return;
+        }
+        const decision = reconcile(localTsRef.current, cloud);
+        if (decision === 'cloud' && cloud && cloud.data) {
+          applyingRef.current = true;
+          try {
+            applySnapshot(cloud.data);
+            lastCloudSigRef.current = JSON.stringify(getSnapshot()); // 內容來自雲端，可直接記
+            localTsRef.current = cloud.updatedAt;
+          } finally {
+            applyingRef.current = false; // 拋出也不得讓旗標卡死
+          }
+        } else if (decision === 'upload') {
+          const snap = getSnapshot();
+          if (guardSnapshot) guardSnapshot(snap);
+          const sig = JSON.stringify(snap);
+          sync.saveCloudDebounced(user.uid, appKey, snap, 0, clientIdRef.current, {
+            onSaved: () => { lastCloudSigRef.current = sig; },
+          });
+        }
+        reconciledRef.current = true;
+      });
+      return () => unsub();
+    }, [user]);
+
+    // 變更推送：訂閱端只排程；快照組裝＋簽章比對延後到 debounce 觸發時做一次
+    useEffect(() => {
+      if (!isConfigured || !user) return;
+      const unsub = subscribe(() => {
+        if (applyingRef.current) return;
+        if (!reconciledRef.current) return;
+        clearTimeout(pushTimerRef.current);
+        pushTimerRef.current = setTimeout(() => {
+          const snap = getSnapshot();
+          if (guardSnapshot) guardSnapshot(snap);
+          const sig = JSON.stringify(snap);
+          if (sig === lastCloudSigRef.current) return; // 快照回放而非新編輯
+          sync.saveCloudDebounced(user.uid, appKey, snap, 0, clientIdRef.current, {
+            onSaved: () => { lastCloudSigRef.current = sig; },
+          });
+        }, pushDelayMs);
+      });
+      return () => {
+        clearTimeout(pushTimerRef.current);
+        unsub();
+      };
+    }, [user]);
+
+    return null;
+  };
 }

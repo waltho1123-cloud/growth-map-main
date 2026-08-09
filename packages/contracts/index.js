@@ -11,6 +11,14 @@ export const APP_KEYS = Object.freeze({
   opportunity: 'opportunity',
 });
 
+// 部署切換恢復機制的 sessionStorage keys（@growthmap/cloud 的 installChunkReloadRecovery／
+// consumeFlushTs 使用）。字串值不可改——線上使用者的進行中 session 依賴既有 key。
+export const RECOVERY_KEYS = Object.freeze({
+  momentum: Object.freeze({ reload: 'mom_chunk_reload_at', flushTs: 'mom-flush-ts' }),
+  aspiration: Object.freeze({ reload: 'asp_chunk_reload_at', flushTs: 'asp-flush-ts' }),
+  opportunity: Object.freeze({ reload: 'bw_chunk_reload_at', flushTs: 'bw-ceo-flush-ts' }),
+});
+
 export const USERS_COLLECTION = 'users';
 export const APPS_SUBCOLLECTION = 'apps';
 
@@ -104,9 +112,9 @@ export function assertOrientProducerShape(snapshot) {
   const violations = listOrientContractViolations(snapshot);
   if (violations.length > 0) {
     throw new Error(
-      `[@growthmap/contracts] aspiration 上傳的 snapshot 缺少 orient 契約欄位「${violations[0]}」——` +
-      '第三堂（opportunity-system）依賴此欄位計算成長差距。若是刻意改名，請同步更新 ' +
-      'packages/contracts 與 opportunity-system 的消費端。'
+      `[@growthmap/contracts] aspiration 上傳的 snapshot 違反 orient 契約（${violations.length} 項）：` +
+      `${violations.join('、')}——第三堂（opportunity-system）依賴這些欄位計算成長差距。` +
+      '若是刻意改名，請同步更新 packages/contracts 與 opportunity-system 的消費端。'
     );
   }
 }

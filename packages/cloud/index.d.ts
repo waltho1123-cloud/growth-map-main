@@ -96,8 +96,10 @@ export interface CloudSyncBootstrapConfig<TSnapshot = unknown> {
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => TSnapshot;
   applySnapshot: (data: TSnapshot) => void;
-  /** 上傳前守衛（如 dev 契約 assert）；拋出即中止該次上傳 */
+  /** 上傳前守衛（如 dev 契約 assert）；拋出＝console.error 並跳過該次上傳（不炸同步） */
   guardSnapshot?: ((snap: TSnapshot) => void) | null;
+  /** 把 store 重置為空白初始態；同分頁換帳號時呼叫（防跨帳號資料汙染，強烈建議提供） */
+  clearSnapshot?: (() => void) | null;
   pushDelayMs?: number;
 }
 

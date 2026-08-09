@@ -130,6 +130,26 @@ test('stableStringify：key 順序不同的等值物件序列化相同（Firesto
   assert.equal(stableStringify(local), stableStringify(fromFirestore), '穩定序列化必須相等');
   assert.notEqual(stableStringify({ a: 1 }), stableStringify({ a: 2 }));
   assert.equal(stableStringify([{ b: 1, a: 2 }]), stableStringify([{ a: 2, b: 1 }]), '陣列內物件也要排序');
+  // 與 JSON/Firestore 回讀語意一致：undefined key 略過、Date 走 toJSON、陣列洞=null
+  assert.equal(stableStringify({ a: 1, b: undefined }), stableStringify({ a: 1 }), 'undefined key 必須略過');
+  assert.equal(stableStringify(new Date(0)), JSON.stringify(new Date(0)), 'Date 不得退化成 {}');
+  assert.equal(stableStringify([undefined]), '[null]');
+});
+
+test('mergeBySection：tie 破對稱只 +1ms——晚送達的 tie 快照不得蓋掉 tie 之後的真編輯', () => {
+  const T = 1000;
+  // A 在 tie 裁決時 bump；B 已在 T+50 真編輯過同 section
+  const a = mergeBySection(
+    { k: 'A-content' }, { k: T }, 0,
+    { data: { k: 'B-old' }, updatedAt: T, version: 1, sectionTs: { k: T } }
+  );
+  assert.equal(a.mergedSectionTs.k, T + 1, 'bump 必須是最小擾動 +1，不得跳到 Date.now()');
+  // B 的 T+50 編輯收到 A 的 bump(T+1) → B 較新 → B 贏（曾用 Date.now() bump 時 B 會被回滾）
+  const b = mergeBySection(
+    { k: 'B-new' }, { k: T + 50 }, 0,
+    { data: { k: 'A-content' }, updatedAt: T + 1, version: 1, sectionTs: { k: T + 1 } }
+  );
+  assert.equal(b.merged.k, 'B-new', 'tie 裁決不得贏過毫秒級之後的真編輯');
 });
 
 test('mergeBySection：Firestore 排序回讀的等值內容在 tie 時不得觸發上傳（防 ping-pong 對原生 stringify 的迴歸）', () => {

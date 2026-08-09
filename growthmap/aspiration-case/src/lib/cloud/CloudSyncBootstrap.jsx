@@ -23,6 +23,9 @@ export const CloudSyncBootstrap = createCloudSyncBootstrap({
     return { companyInfo: s.companyInfo, partA: s.partA, partB: s.partB, partC: s.partC };
   },
   applySnapshot: (data) => useAspirationStore.getState().applySnapshot(data),
-  // dev 守衛：本單元是 orient 契約的生產端——store 改掉契約欄位名時上傳前立即炸錯
+  // 同分頁換帳號時清空殘留（防跨帳號資料汙染）
+  clearSnapshot: () => useAspirationStore.getState().resetSynced(),
+  // dev 守衛：本單元是 orient 契約的生產端——store 改掉契約欄位名時
+  // dev console 立即報錯並擋下該次上傳
   guardSnapshot: import.meta.env.DEV ? assertOrientProducerShape : null,
 });

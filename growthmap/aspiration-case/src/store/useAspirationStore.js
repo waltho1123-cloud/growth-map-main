@@ -15,22 +15,31 @@ const INITIAL_PART_C = [
   { categoryId: 'newModel', bottlenecks: { procurement: false, manufacturing: false, logistics: false, tech: false }, breakthrough: '' },
 ];
 
+const INITIAL_COMPANY_INFO = {
+  name: '',
+  revenue2025: 0,
+  naturalGrowth: { targetRevenue2028: 0, cagr: 0 },
+  aspirationGrowth: { targetRevenue2028: 0, cagr: 0 },
+};
+
+const INITIAL_PART_B = {
+  targetTsr3Years: 0,
+  contributions: { revenueGrowth: 0, ebitGrowth: 0, ebitMultiple: 0 },
+  targets2028: { revenue: 0, ebitMargin: 0, ebitMultiple: 0 },
+};
+
 export const useAspirationStore = create(
   persist(
     (set, get) => ({
-      companyInfo: {
-        name: '',
-        revenue2025: 0,
-        naturalGrowth: { targetRevenue2028: 0, cagr: 0 },
-        aspirationGrowth: { targetRevenue2028: 0, cagr: 0 },
-      },
+      companyInfo: INITIAL_COMPANY_INFO,
       partA: INITIAL_PART_A,
-      partB: {
-        targetTsr3Years: 0,
-        contributions: { revenueGrowth: 0, ebitGrowth: 0, ebitMultiple: 0 },
-        targets2028: { revenue: 0, ebitMargin: 0, ebitMultiple: 0 },
-      },
+      partB: INITIAL_PART_B,
       partC: INITIAL_PART_C,
+
+      // 同分頁換帳號時由 CloudSyncBootstrap 呼叫：清空前一位使用者的殘留資料
+      //（防跨帳號汙染——不清的話新帳號第一次編輯會把整份殘留上傳）
+      resetSynced: () =>
+        set({ companyInfo: INITIAL_COMPANY_INFO, partA: INITIAL_PART_A, partB: INITIAL_PART_B, partC: INITIAL_PART_C }),
 
       updateCompany: (field, value) => {
         const next = { ...get().companyInfo };

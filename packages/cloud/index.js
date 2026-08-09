@@ -202,8 +202,11 @@ export function reconcile(localUpdatedAt, cloud) {
 // 讓 needUpload 的防 ping-pong 短路永遠不生效（2026-08-10 max 審查 finding）。
 export function stableStringify(value) {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  const keys = Object.keys(value).sort();
+  if (typeof value.toJSON === 'function') return JSON.stringify(value); // Date 等：與 JSON 一致（不可退化成 '{}'）
+  if (Array.isArray(value)) return `[${value.map((v) => (v === undefined ? 'null' : stableStringify(v))).join(',')}]`;
+  // undefined 值的 key 略過——與 JSON.stringify／Firestore 回讀一致；否則
+  // 本地 {a:undefined} 與雲端 {} 永遠比不相等，tie 防 ping-pong 短路失效。
+  const keys = Object.keys(value).filter((k) => value[k] !== undefined).sort();
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(value[k])}`).join(',')}}`;
 }
 
@@ -276,13 +279,15 @@ export function mergeBySection(localData, localSectionTs, localFallbackTs, cloud
     needUpload = true;
     // tie 破對稱：同毫秒且內容真的不同時，凍結的 ts 會讓兩台裝置各自
     // 保留己方版本並以相同 ts 無限互傳（審查 finder 模擬 12 hops 不收斂）。
-    // 把該 section 的上傳 ts 提到「現在」——雙方時鐘毫秒級一致的機率隨
-    // 每一輪遞減，先寫者勝出（同毫秒碰撞本就是任意裁決，LWW 語意不變）。
+    // 只 +1ms（最小擾動）：曾用 Date.now() 提升，但快照晚送達時 bump 值會
+    // 大於「tie 之後的真編輯」的 ts，把較新編輯回滾到全網（審查 finding）；
+    // +1 讓 tie 裁決永遠輸給任何毫秒級之後的真編輯。若雙方同輪對稱 +1，
+    // 下一輪由「內容相同不上傳」或再 +1 收斂（機率逐輪遞減，非死鎖）。
     const cloudTs = (cloud && cloud.sectionTs && cloud.sectionTs[key] != null)
       ? cloud.sectionTs[key]
       : (cloud ? cloud.updatedAt : 0);
     if (mergedSectionTs[key] === cloudTs) {
-      mergedSectionTs[key] = Math.max(mergedSectionTs[key] + 1, Date.now());
+      mergedSectionTs[key] = mergedSectionTs[key] + 1;
     }
   }
   return { merged, mergedSectionTs, usedCloud, keptLocal, needUpload };
@@ -315,12 +320,17 @@ export function createCloudSyncBootstrap({
   getSnapshot,          // () => 要同步的純物件（純組裝，不做檢查）
   applySnapshot,        // (data) => void —— 套用雲端快照到 store
   guardSnapshot = null, // 選配：上傳前守衛（如 aspiration 的 dev 契約 assert）
+  clearSnapshot = null, // 選配：把 store 重置為空白初始態——同分頁換帳號時呼叫，
+                        // 不提供則前一位使用者的資料會留在畫面上（時間戳歸零仍擋住自動上傳，
+                        // 但新帳號的第一次編輯會把整份殘留快照上傳——強烈建議提供）
   pushDelayMs = 1000,
 }) {
   return function CloudSyncBootstrap() {
     const { user } = useAuth();
     const localTsRef = useRef(initialLocalTs);
-    const sectionTsRef = useRef({}); // 各 section 的本地最後編輯毫秒；缺席 key 以 initialLocalTs 為底線
+    const initialTsRef = useRef(initialLocalTs); // flush-ts fallback；換帳號時必須可歸零（模組常數摸不到）
+    const sectionTsRef = useRef({}); // 各 section 的本地最後編輯毫秒；缺席 key 以 initialTsRef 為底線
+    const cloudOnlyRef = useRef({ data: {}, ts: {} }); // 雲端有、單元 getSnapshot 沒有的 sections（新舊版本並存時保住新版欄位）
     const prevSnapRef = useRef(null); // 引用比較基準（偵測哪個 section 變了）
     const applyingRef = useRef(false);
     const reconciledRef = useRef(false);
@@ -335,10 +345,10 @@ export function createCloudSyncBootstrap({
     }
 
     // 部署恢復（flush-ts）語意：重載前不知道哪個 section 改過（粒度遺失），
-    // 全部 section 以 initialLocalTs（= flush-ts，正常開機為 0）為底線——
+    // 全部 section 以 initialTsRef（= flush-ts，正常開機為 0）為底線——
     // 與重載前的 whole-doc 行為一致，不更差。
     const localSectionTsOf = (key) =>
-      sectionTsRef.current[key] != null ? sectionTsRef.current[key] : initialLocalTs;
+      sectionTsRef.current[key] != null ? sectionTsRef.current[key] : initialTsRef.current;
 
     // 上傳用：對 snap 的每個 key 取本地 section 時間
     const sectionTsViewOf = (snap) => {
@@ -347,22 +357,27 @@ export function createCloudSyncBootstrap({
       return view;
     };
 
-    // guard 拋出（dev 契約 assert）只擋掉該次上傳並 console 可見，不炸整個
-    // onSnapshot callback——否則會跳過 reconciledRef 設定，push 路徑整個 session 停用。
+    // guard 拋出（dev 契約 assert）只擋掉該次上傳並 console.error 可見，不炸整個
+    // onSnapshot callback——否則會跳過 reconciledRef 設定，push 路徑整個 session 停用
+    //（文件對 guard 的承諾同步改為「dev console 立即報錯並擋上傳」）。
     // 上傳前把 sectionTs cap 在「現在」：時鐘偏快裝置寫出的未來 ts 若被原樣轉發，
     // 會讓真正較新的編輯永遠判輸（審查 finding：偏移 ts 被無辜裝置永久再斷言）。
+    // 兩條上傳路徑都自動帶上 cloudOnlyRef（雲端獨有 sections）——單元 getSnapshot
+    // 只組固定 keys，直接上傳會把新版 client 寫入的額外 section 整份蓋掉。
     const uploadSnapshot = (snap, sectionTs, precomputedSig = null) => {
+      const fullSnap = { ...cloudOnlyRef.current.data, ...snap };
+      const fullTs = { ...cloudOnlyRef.current.ts, ...sectionTs };
       try {
-        if (guardSnapshot) guardSnapshot(snap);
+        if (guardSnapshot) guardSnapshot(fullSnap);
       } catch (e) {
         console.error('[cloud sync] guardSnapshot rejected upload:', e);
         return;
       }
       const now = Date.now();
       const cappedTs = {};
-      for (const key of Object.keys(sectionTs || {})) cappedTs[key] = Math.min(sectionTs[key], now);
+      for (const key of Object.keys(fullTs)) cappedTs[key] = Math.min(fullTs[key], now);
       const sig = precomputedSig ?? JSON.stringify(snap);
-      sync.saveCloudDebounced(user.uid, appKey, snap, 0, clientIdRef.current, {
+      sync.saveCloudDebounced(user.uid, appKey, fullSnap, 0, clientIdRef.current, {
         onSaved: () => { lastCloudSigRef.current = sig; },
       }, { sectionTs: cappedTs });
     };
@@ -393,13 +408,25 @@ export function createCloudSyncBootstrap({
     useEffect(() => {
       reconciledRef.current = false;
       if (!isConfigured || !user) return;
-      // 同分頁換帳號：前一位使用者的殘留編輯時間若不歸零，會把上一個帳號的
-      // 本地資料當「較新編輯」寫進新帳號的雲端文件（跨帳號汙染——工作坊共用
-      // 電腦情境）。歸零後 cloud-first 不變式接手：新帳號雲端有資料→全套用；
-      // 沒資料→零編輯不上傳。同帳號登出再登入不重置（本地編輯仍有效）。
+      // 同分頁換帳號：前一位使用者的殘留資料與編輯時間若不清除，會被寫進
+      // 新帳號的雲端文件（跨帳號汙染——工作坊共用電腦情境）。四件事缺一不可：
+      // (1) clearSnapshot 清空 store（不清的話殘留資料還在畫面上，新帳號一編輯
+      //     整份就上傳）；(2) initialTsRef 歸零（flush-ts fallback 是模組常數傳入，
+      //     不歸零則部署恢復後換帳號，前一位的 flush-ts 讓全部殘留 section 判
+      //     「本地較新」→ 零編輯也整份蓋掉新帳號雲端——審查以真 mergeBySection 證實）；
+      // (3) 各時間戳/簽章歸零；(4) 清空以 applyingRef 包住（不算編輯）。
+      // 歸零後 cloud-first 不變式接手：新帳號雲端有資料→全套用；沒資料→零編輯不上傳。
+      // 同帳號登出再登入不重置（本地編輯仍有效）。
       if (prevUidRef.current !== null && prevUidRef.current !== user.uid) {
+        if (clearSnapshot) {
+          applyingRef.current = true;
+          try { clearSnapshot(); } catch (e) { console.error('[cloud sync] clearSnapshot failed:', e); }
+          finally { applyingRef.current = false; }
+        }
         localTsRef.current = 0;
+        initialTsRef.current = 0;
         sectionTsRef.current = {};
+        cloudOnlyRef.current = { data: {}, ts: {} };
         lastCloudSigRef.current = '';
         prevSnapRef.current = getSnapshot();
       }
@@ -418,24 +445,56 @@ export function createCloudSyncBootstrap({
           const { merged, mergedSectionTs, usedCloud, needUpload } = mergeBySection(
             localSnap, sectionTsViewOf(localSnap), localTsRef.current, cloud
           );
+          // 記下雲端獨有 sections（單元固定 keys 之外的）——上傳路徑會 spread 回去，
+          // 舊版 client 才不會把新版寫入的欄位整份蓋掉。每輪以雲端現況重算（不累積），
+          // 雲端刪掉的 key 自然消失。
+          const nextCloudOnly = { data: {}, ts: {} };
+          for (const key of Object.keys(merged)) {
+            if (!Object.prototype.hasOwnProperty.call(localSnap, key)) {
+              nextCloudOnly.data[key] = merged[key];
+              nextCloudOnly.ts[key] = mergedSectionTs[key];
+            }
+          }
+          let applied = !(usedCloud.length > 0); // 無雲端內容要套時視為「已就緒」
           if (usedCloud.length > 0) {
             applyingRef.current = true;
             try {
               applySnapshot(merged);
-              // 簽章只在「不需回傳」時記（此時本地內容=雲端已知內容）。
-              // needUpload 時交給 onSaved——先記會讓上傳失敗被誤判已同步（onSaved-gate 不變式）。
-              if (!needUpload) lastCloudSigRef.current = JSON.stringify(getSnapshot());
-              prevSnapRef.current = getSnapshot(); // 引用基準跟上，避免雲端套用被誤判為本地編輯
-              // 具體化各 section 的權威時間（含 usedCloud 的 cloudTs），後續裁決不再依賴 fallback
-              sectionTsRef.current = { ...mergedSectionTs };
-              if (cloud.updatedAt > localTsRef.current) localTsRef.current = cloud.updatedAt;
+              applied = true;
+            } catch (e) {
+              // zustand subscriber（如 persist 配額滿）拋出時 state 可能已半套用——
+              // 不 rethrow（會炸 onSnapshot callback），bookkeeping 以實況為準（見下）。
+              console.error('[cloud sync] applySnapshot failed:', e);
             } finally {
+              // 引用基準無條件跟上實況（getSnapshot 讀的是 store 現狀，套用成功
+              // 與否都正確）——否則下一鍵擊會把所有 section 誤標為「現在編輯過」。
+              prevSnapRef.current = getSnapshot();
               applyingRef.current = false; // 拋出也不得讓旗標卡死
             }
           }
-          if (needUpload) {
-            // 上傳套用後的實況（store 可能 normalize）；sectionTs 用 merge 裁決結果
-            uploadSnapshot(getSnapshot(), mergedSectionTs);
+          if (applied) {
+            cloudOnlyRef.current = nextCloudOnly;
+            if (usedCloud.length > 0) {
+              // 簽章只在「不需回傳」時記（此時本地內容=雲端已知內容）。
+              // needUpload 時交給 onSaved——先記會讓上傳失敗被誤判已同步（onSaved-gate 不變式）。
+              if (!needUpload) lastCloudSigRef.current = JSON.stringify(getSnapshot());
+              // 具體化各 section 的權威時間（含 usedCloud 的 cloudTs），後續裁決不再依賴
+              // fallback。逐 key cap 在「現在」：偏快時鐘寫出的未來 ts 一旦被採納為本地
+              // 權威時間，之後所有誠實時鐘裝置的真編輯都會被本裝置回蓋（審查 finding）。
+              const now = Date.now();
+              const materialized = {};
+              for (const key of Object.keys(mergedSectionTs)) {
+                materialized[key] = Math.min(mergedSectionTs[key], now);
+              }
+              sectionTsRef.current = materialized;
+              if (cloud.updatedAt > localTsRef.current) localTsRef.current = cloud.updatedAt;
+            }
+            if (needUpload) {
+              // 上傳套用後的實況（store 可能 normalize）；sectionTs 用 merge 裁決結果。
+              // apply 失敗時不上傳（本地實況≠merge 意圖，蓋上 mergedSectionTs 會以
+              // 舊內容配新時間戳汙染雲端），留待下一筆快照重試。
+              uploadSnapshot(getSnapshot(), mergedSectionTs);
+            }
           }
         } else if (reconcile(localTsRef.current, cloud) === 'upload') {
           // 雲端文件不存在：本 session 有編輯才上傳（零編輯不寫雲端）

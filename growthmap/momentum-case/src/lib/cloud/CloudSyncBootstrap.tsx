@@ -4,6 +4,7 @@ import { subscribeCloud, saveCloudDebounced } from './sync';
 import { useAuth } from './auth';
 import { isFirebaseConfigured } from './firebase-config';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
+import { defaultTree, generateDriversFromTree, defaultWickedChallenges } from '@/lib/mockData';
 
 type SyncedSnapshot = {
   tree: unknown;
@@ -31,4 +32,12 @@ export const CloudSyncBootstrap = createCloudSyncBootstrap<SyncedSnapshot>({
   },
   applySnapshot: (data) =>
     useAssignmentStore.setState(data as Partial<ReturnType<typeof useAssignmentStore.getState>>),
+  // 同分頁換帳號時清空殘留（防跨帳號資料汙染）
+  clearSnapshot: () =>
+    useAssignmentStore.setState({
+      tree: defaultTree,
+      drivers: generateDriversFromTree(defaultTree),
+      wickedChallenges: defaultWickedChallenges,
+      currentStep: 0,
+    }),
 });

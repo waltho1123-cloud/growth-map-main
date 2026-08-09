@@ -138,18 +138,23 @@ app.post('/api/ai/coach', async (c) => {
     try {
       const s = streamClaude({ tier: task.model, system: task.system, messages });
       let deltaCount = 0;
+      let stopReason = null;
       for await (const event of s) {
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
           deltaCount += 1;
           await stream.writeSSE({ event: 'coach.delta', data: JSON.stringify({ delta: event.delta.text }) });
+        } else if (event.type === 'message_delta' && event.delta?.stop_reason) {
+          stopReason = event.delta.stop_reason;
         }
       }
-      // Claude 5 分類器拒絕時串流正常結束但零文字——不能發 done 讓前端顯示空白回覆
-      if (deltaCount === 0) {
-        await stream.writeSSE({ event: 'coach.error', data: JSON.stringify({ message: 'AI 未產生回覆（可能被安全機制拒絕），請調整訊息後重試' }) });
+      // Claude 5 分類器可在串流開始前或中途拒絕（HTTP 200＋stop_reason refusal）——
+      // 兩者都不能以 done 收尾，否則前端把空白／被退回的部分回覆當成完整答案。
+      if (stopReason === 'refusal' || deltaCount === 0) {
+        await stream.writeSSE({ event: 'coach.error', data: JSON.stringify({ message: 'AI 未完成回覆（可能被安全機制拒絕），請調整訊息後重試' }) });
         return;
       }
-      await stream.writeSSE({ event: 'coach.done', data: JSON.stringify({ ok: true }) });
+      if (stopReason === 'max_tokens') console.warn('[ai/coach] reply truncated at max_tokens');
+      await stream.writeSSE({ event: 'coach.done', data: JSON.stringify({ ok: true, ...(stopReason === 'max_tokens' ? { truncated: true } : {}) }) });
     } catch (e) {
       console.error('[ai/coach]', e?.status, e?.message);
       await stream.writeSSE({ event: 'coach.error', data: JSON.stringify({ message: String(e?.message || e) }) });

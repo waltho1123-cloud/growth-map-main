@@ -11,11 +11,12 @@ function modelFor(tier) {
 }
 
 // 非串流：回完整文字（AI-01/03/04）。
-// maxTokens 8000：Claude 5 系列 adaptive thinking 預設開啟且與回覆共用此上限，
-// 加上新 tokenizer 用量較高，4000 會有截斷（→ JSON 解析失敗）風險。
+// maxTokens 16000（非串流的 SDK timeout 安全上限）：Claude 5 系列 adaptive thinking
+// 預設開啟且與回覆共用此上限、新 tokenizer 用量較高——長輸入的 AI-03 曾在 8000
+// 上限下有截斷風險；上限放大不影響費用（輸出計費按實際產出）。
 // stopReason 必須回傳給呼叫端分流：Claude 5 的安全分類器會以 HTTP 200 +
 // stop_reason 'refusal' + 空 content 拒絕請求，不檢查會被誤判成 JSON 解析錯誤。
-export async function callClaude({ tier, system, user, maxTokens = 8000 }) {
+export async function callClaude({ tier, system, user, maxTokens = 16000 }) {
   const msg = await client.messages.create({
     model: modelFor(tier),
     max_tokens: maxTokens,

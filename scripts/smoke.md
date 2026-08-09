@@ -28,17 +28,15 @@ playwright-cli console error   # 每頁檢查一次
 playwright-cli close
 ```
 
-通過標準：三頁 skeleton 移除、console 零 error（站台根 favicon 404 為既知裝飾性例外）、
-兩個 PDF 下載事件回報正確檔名。
+通過標準：三頁 skeleton 移除、console 零 error（**含 favicon——7e355f4 起全站有
+favicon.ico，404 即部署迴歸，不再是可忽略例外**）、兩個 PDF 下載事件回報正確檔名。
 
 另有結構性防復發：`npm run check:react`（禁止巢狀 React 副本）已納入 `npm run preflight`。
 
 ## 雙裝置 section 級 merge（動到 packages/cloud 同步邏輯時必跑，需線上環境＋登入）
 
 模擬兩台裝置並行編輯**不同 section**，驗證互不覆蓋（whole-doc LWW 年代會後寫全蓋）。
-用兩個獨立 Playwright session 模擬兩裝置（各自的 storage/登入態）：
 
-```bash
 > ⚠️ **Google OAuth 擋所有 CDP 控制的瀏覽器**（chromium 與 --browser=chrome 都會
 > signin/rejected，2026-08-10 實測）——本程序**必須由真人以真瀏覽器手動執行**，
 > Playwright 只能用於無登入的驗證。

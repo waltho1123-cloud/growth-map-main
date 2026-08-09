@@ -12,15 +12,12 @@ const STATUS_META = {
 
 function ToolCard({ tool, enabled, status, onToggle, onOpen }) {
   const meta = STATUS_META[status] || STATUS_META[TOOL_ANALYSIS_STATUS.EMPTY];
+  // a11y：卡片不掛 role="button"——容器 button role 會把內層啟用切換鈕標為
+  // presentational，螢幕閱讀器整張卡只剩一顆按鈕、切換功能消失（nested-interactive）。
+  // 鍵盤/AT 的「開啟」入口是工具名稱那顆真 button；卡片 onClick 只是滑鼠大目標便利。
   return (
     <div
       onClick={enabled ? onOpen : undefined}
-      role={enabled ? 'button' : undefined}
-      tabIndex={enabled ? 0 : undefined}
-      onKeyDown={enabled ? (e) => {
-        if (e.target !== e.currentTarget) return; // 內層啟用切換按鈕的 Enter/Space 交還給按鈕本身
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); }
-      } : undefined}
       className={`glass-card rounded-xl p-4 border transition-all ${
         enabled
           ? 'border-emerald-200/70 cursor-pointer hover:shadow-md hover:border-emerald-400'
@@ -32,7 +29,17 @@ function ToolCard({ tool, enabled, status, onToggle, onOpen }) {
           <span className="shrink-0 w-7 h-7 rounded-lg bg-gray-700 text-white text-xs font-bold flex items-center justify-center">
             {tool.id}
           </span>
-          <span className="font-semibold text-gray-800 text-sm truncate">{tool.name}</span>
+          {enabled ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onOpen(); }}
+              className="font-semibold text-gray-800 text-sm truncate text-left hover:text-emerald-700"
+            >
+              {tool.name}
+            </button>
+          ) : (
+            <span className="font-semibold text-gray-800 text-sm truncate">{tool.name}</span>
+          )}
         </div>
         {/* 啟用切換 */}
         <button

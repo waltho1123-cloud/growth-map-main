@@ -3,6 +3,7 @@ COPY Caddyfile /etc/caddy/Caddyfile
 
 # Root landing page
 COPY index.html /srv/index.html
+COPY favicon.ico /srv/favicon.ico
 COPY css /srv/css
 COPY js /srv/js
 COPY data /srv/data

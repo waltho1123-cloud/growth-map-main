@@ -1,6 +1,8 @@
 import { GO_TO_MARKET_FACETS, RATING_MAX, OPPORTUNITY_STATUS_LABELS } from './constants';
 import { TOOL_NAME_BY_ID } from './toolLibrary';
 import { aiText } from '../lib/ai/aiText';
+// 以 asset import 取得字型 URL：dev、build、任意掛載子路徑下皆正確解析（勝過手拼 BASE_URL）
+import fontAssetUrl from '../assets/NotoSansTC.ttf';
 
 // A4 橫式 (landscape) 尺寸
 const PAGE_W = 297;
@@ -16,7 +18,7 @@ const MID_GRAY = [148, 163, 184];
 const DARK_TEXT = [36, 59, 83];
 const WHITE = [255, 255, 255];
 
-const FONT_URL = import.meta.env.BASE_URL + 'fonts/NotoSansTC.ttf';
+const FONT_URL = fontAssetUrl;
 let cachedFontBase64 = null;
 
 async function loadCJKFont() {

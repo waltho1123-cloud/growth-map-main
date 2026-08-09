@@ -231,7 +231,6 @@ export function OpportunityProvider({ children }) {
     });
 
     return () => unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   return (

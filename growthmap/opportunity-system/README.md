@@ -1,70 +1,23 @@
-# Getting Started with Create React App
+# 識別機會（Opportunity System）
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+商周成長藍圖工作坊第三堂的實作單元。**Vite 8 + React 19 + Tailwind**，測試用 **Vitest**（2026-08 自 CRA 遷移）。
 
-## Available Scripts
+## 指令
 
-In the project directory, you can run:
+```bash
+npm start          # Vite dev server（http://localhost:5173）
+npm test           # Vitest watch；跑一次用 npm test -- run
+npm run lint       # eslint（react + react-hooks 經典規則）
+VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（漏設則 AI 功能停用）
+npm run preview    # 本機預覽 build 產物
+```
 
-### `npm start`
+## 關鍵事實
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Node >= 22.22**（`engines`；jsdom 30 與 Vite 8 的地板）。
+- **瀏覽器支援下限明訂於 `vite.config.mjs` 的 `build.target`**（chrome87 / edge88 / firefox78 / safari14），刻意不用 Vite 8 預設的 Baseline 2026。`browserslist` 僅供 autoprefixer 決定 CSS 前綴。
+- 建置輸出 `build/` **要 commit 進 git**（「GitHub = 線上」慣例），部署是手動 Zeabur direct deploy。
+- 部署切換時舊分頁的 lazy chunk 404 由 `src/index.jsx` 的 `vite:preloadError` 監聽自動整頁重載（60 秒防迴圈）。
+- PDF 中文字型走 asset import（`src/assets/NotoSansTC.ttf`），不要改回手拼 URL。
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+架構、資料模型、AI 任務、跨單元資料流、部署細節：見 repo 根 `CLAUDE.md`。

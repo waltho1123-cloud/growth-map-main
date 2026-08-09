@@ -23,7 +23,8 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "eslint src"
   },
   "browserslist": {
     "production": [
@@ -38,9 +39,17 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@vitejs/plugin-react": "^6.0.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.9.0",
     "jsdom": "^30.0.1",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.22"
   }
 }

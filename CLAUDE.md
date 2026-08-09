@@ -33,7 +33,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm start                                    # Vite dev server :5173
 npm test                                     # Vitest watch 模式（測試在 src/__tests__/）
 npm test -- run                              # 跑一次就結束（CI 模式）
+npm run lint                                 # eslint（0 error 為基線）
 VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（見下方「關鍵」）
+# 瀏覽器支援下限明訂於 vite.config.mjs 的 build.target；Node >= 22.22（engines）
 
 # ido-ai-service（在 growthmap/ido-ai-service/）
 npm run dev                                  # --watch + 讀 .env（需 ANTHROPIC_API_KEY）

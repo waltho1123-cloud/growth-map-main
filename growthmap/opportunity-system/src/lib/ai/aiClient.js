@@ -71,9 +71,11 @@ export async function streamCoach(messages, onDelta, signal) {
         else if (line.startsWith('data:')) data = line.slice(5).trim();
       }
       if (event === 'coach.delta' && data) {
-        try { onDelta(JSON.parse(data).delta || ''); } catch {}
+        try { onDelta(JSON.parse(data).delta || ''); } catch { /* 畸形 SSE 分塊直接略過，等下一塊 */ }
       } else if (event === 'coach.error' && data) {
-        try { throw new Error(JSON.parse(data).message); } catch (e) { throw e; }
+        let message = '教練服務回報錯誤';
+        try { message = JSON.parse(data).message || message; } catch { /* error payload 非 JSON 時用預設訊息 */ }
+        throw new Error(message);
       }
     }
   }

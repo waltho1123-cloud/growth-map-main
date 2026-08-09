@@ -8,6 +8,9 @@ import { isFirebaseConfigured } from '../lib/cloud/firebase-config';
 
 const OpportunityContext = createContext();
 
+// index.jsx 的 vite:preloadError 自動重載前，flush 存檔時寫入的時間戳 key（per-tab）。
+const FLUSH_TS_KEY = 'bw-ceo-flush-ts';
+
 // 從 state 萃取要持久化的完整 data（localStorage + 雲端共用）
 function extractData(state) {
   return {
@@ -162,6 +165,19 @@ export function OpportunityProvider({ children }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // 重載恢復：若本分頁剛因 chunk 失敗自動重載（index.jsx 會先觸發 bw:flush-save），
+  // 以 flush 時間戳作為本 session 的 localTs——否則 localTs=0 會被 reconcile 視為
+  // 「本 session 未動」，讓雲端較舊的資料蓋回剛救下來的編輯。
+  const flushTsInitRef = useRef(false);
+  if (!flushTsInitRef.current) {
+    flushTsInitRef.current = true;
+    try {
+      const t = Number(sessionStorage.getItem(FLUSH_TS_KEY) || 0);
+      sessionStorage.removeItem(FLUSH_TS_KEY);
+      if (t && Date.now() - t < 5 * 60 * 1000) localTsRef.current = t;
+    } catch { /* storage 不可用：維持雲端優先的預設 */ }
+  }
+
   // 自動儲存至 LocalStorage + 雲端 (debounced)
   const saveTimer = useRef(null);
   useEffect(() => {
@@ -189,6 +205,19 @@ export function OpportunityProvider({ children }) {
     }, 300);
     return () => clearTimeout(saveTimer.current);
   }, [state.opportunities, state.projectMeta, state.toolAnalyses, state.lastCheckRun, state.longlistSnapshots, user]);
+
+  // 部署切換自動重載前的同步存檔（index.jsx 於 vite:preloadError 時觸發）：
+  // 立即以最新 state 寫入 localStorage（跳過 300ms debounce），並留下 flush 時間戳
+  // 供重載後的 localTs 初始化使用；雲端由重載後的 reconcile 依 localTs 補上傳。
+  useEffect(() => {
+    const flush = () => {
+      clearTimeout(saveTimer.current);
+      saveAppData(extractData(stateRef.current));
+      try { sessionStorage.setItem(FLUSH_TS_KEY, String(Date.now())); } catch { /* storage 不可用則重載後回到雲端優先 */ }
+    };
+    window.addEventListener('bw:flush-save', flush);
+    return () => window.removeEventListener('bw:flush-save', flush);
+  }, []);
 
   // 登入時：即時訂閱雲端文件（onSnapshot）。第一筆快照等同原本的一次性 reconcile；
   // 之後其他裝置的變更會「即時」套用，無需重新整理或登出登入。

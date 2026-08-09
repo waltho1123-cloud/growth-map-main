@@ -35,7 +35,8 @@ npm test                                     # Vitest watch 模式（測試在 s
 npm test -- run                              # 跑一次就結束（CI 模式）
 npm run lint                                 # eslint（0 error 為基線）
 VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（見下方「關鍵」）
-# 瀏覽器支援下限明訂於 vite.config.mjs 的 build.target；Node >= 22.22（engines）
+# 瀏覽器支援下限明訂於 vite.config.mjs 的 build.target；Node ^22.22.2 || ^24.15.0 || >=26（engines）
+# build 內建 eslint gate（0 error 才建置）；PDF 字型走 public/fonts 穩定路徑（部署相容契約，勿改 hashed）
 
 # ido-ai-service（在 growthmap/ido-ai-service/）
 npm run dev                                  # --watch + 讀 .env（需 ANTHROPIC_API_KEY）

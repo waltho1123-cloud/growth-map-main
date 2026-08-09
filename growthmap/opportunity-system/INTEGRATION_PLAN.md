@@ -143,5 +143,5 @@ GD-02 鎖技術棧（不引入 PostgreSQL/Redis）；GD-04 AI 皆 draft 經人�
 - **待辦**：本地端到端測試（`VITE_AI_BASE_URL=http://localhost:8787 npm start` + 後端 `node --env-file=.env src/index.js`）；Zeabur 第二服務部署。
 - **⚠️ key 安全**：使用者曾將 key 貼於對話，需撤銷換新；正式環境用 Zeabur 環境變數。
 
-Phase 0–4、6 全綠 + **16/16 整合測試通過**。新版 `build/` 已產生但**尚未 commit/部署**（且 AI 在無 `REACT_APP_AI_BASE_URL` 的 build 中停用）。〔2026-08-09 更新：已遷移 Vite，環境變數改名 `VITE_AI_BASE_URL`〕
+Phase 0–4、6 全綠 + **17/17 整合測試通過**（2026-08-09，Vite 8 遷移後）。`build/` 已 commit 進 repo（「GitHub = 線上」慣例）。AI 在無 `VITE_AI_BASE_URL` 的 build 中停用（GD-06）。
 

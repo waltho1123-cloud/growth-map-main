@@ -71,7 +71,10 @@ export async function streamCoach(messages, onDelta, signal) {
         else if (line.startsWith('data:')) data = line.slice(5).trim();
       }
       if (event === 'coach.delta' && data) {
-        try { onDelta(JSON.parse(data).delta || ''); } catch { /* 畸形 SSE 分塊直接略過，等下一塊 */ }
+        let delta = null;
+        try { delta = JSON.parse(data).delta || ''; } catch { /* 畸形 SSE 分塊直接略過，等下一塊 */ }
+        // onDelta 放在 try 外：回呼自身的例外要往上傳，不可被當成畸形分塊吞掉
+        if (delta !== null) onDelta(delta);
       } else if (event === 'coach.error' && data) {
         let message = '教練服務回報錯誤';
         try { message = JSON.parse(data).message || message; } catch { /* error payload 非 JSON 時用預設訊息 */ }

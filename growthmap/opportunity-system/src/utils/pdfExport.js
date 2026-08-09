@@ -1,8 +1,6 @@
 import { GO_TO_MARKET_FACETS, RATING_MAX, OPPORTUNITY_STATUS_LABELS } from './constants';
 import { TOOL_NAME_BY_ID } from './toolLibrary';
 import { aiText } from '../lib/ai/aiText';
-// 以 asset import 取得字型 URL：dev、build、任意掛載子路徑下皆正確解析（勝過手拼 BASE_URL）
-import fontAssetUrl from '../assets/NotoSansTC.ttf';
 
 // A4 橫式 (landscape) 尺寸
 const PAGE_W = 297;
@@ -18,7 +16,10 @@ const MID_GRAY = [148, 163, 184];
 const DARK_TEXT = [36, 59, 83];
 const WHITE = [255, 255, 255];
 
-const FONT_URL = fontAssetUrl;
+// 字型走 public/ 的「穩定路徑」而非 hashed asset——這是刻意的部署相容契約：
+// 部署切換後，仍開著舊版頁面的分頁載入的是舊 bundle 裡的舊字型 URL，
+// 穩定路徑保證新舊版本都抓得到同一份字型（hashed 檔名會讓舊分頁 404）。
+const FONT_URL = import.meta.env.BASE_URL + 'fonts/NotoSansTC.ttf';
 let cachedFontBase64 = null;
 
 async function loadCJKFont() {

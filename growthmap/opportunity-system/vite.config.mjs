@@ -7,6 +7,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: './',
+  // host: true 恢復 CRA 時代綁 0.0.0.0 的行為——跨裝置即時同步要用手機連 LAN IP 測試
+  server: { host: true },
+  preview: { host: true },
   build: {
     outDir: 'build',
     target: ['chrome87', 'edge88', 'firefox78', 'safari14'],

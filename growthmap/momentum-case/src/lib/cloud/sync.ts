@@ -1,67 +1,16 @@
+// 同步協定正本在 @growthmap/cloud（三單元共用單一實作）；
+// 此檔僅把協定綁定到本單元的 firebase 實例，保持既有 import 路徑與型別匯出不變。
+import { createCloudSync, reconcile } from '@growthmap/cloud';
+import type { CloudDoc } from '@growthmap/cloud';
+import type { AppKey } from '@growthmap/contracts';
 import { getFirebase } from './firebase';
 
-export type CloudDoc<T> = {
-  data: T;
-  updatedAt: number; // client ms timestamp for easy compare
-  version: number;
-};
+export type { AppKey, CloudDoc };
 
-// AppKey 契約正本移至 @growthmap/contracts（type-only import，不增加 runtime 依賴）；
-// 保留 re-export 讓既有 `import { AppKey } from './sync'` 呼叫端不變。
-import type { AppKey } from '@growthmap/contracts';
-export type { AppKey };
+const sync = createCloudSync(getFirebase);
 
-export async function loadCloud<T>(uid: string, appKey: AppKey): Promise<CloudDoc<T> | null> {
-  const { db } = await getFirebase();
-  if (!db) return null;
-  const { doc, getDoc } = await import('firebase/firestore');
-  const snap = await getDoc(doc(db, 'users', uid, 'apps', appKey));
-  if (!snap.exists()) return null;
-  const raw = snap.data();
-  return {
-    data: raw.data as T,
-    updatedAt: raw.updatedAtMs ?? 0,
-    version: raw.version ?? 1,
-  };
-}
-
-export async function saveCloud<T>(uid: string, appKey: AppKey, data: T): Promise<void> {
-  const { db } = await getFirebase();
-  if (!db) return;
-  const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-  await setDoc(doc(db, 'users', uid, 'apps', appKey), {
-    data,
-    updatedAtMs: Date.now(),
-    updatedAt: serverTimestamp(),
-    version: 1,
-  });
-}
-
-// Simple debouncer keyed by (uid, appKey)
-const timers = new Map<string, ReturnType<typeof setTimeout>>();
-
-export function saveCloudDebounced<T>(uid: string, appKey: AppKey, data: T, delay = 1000): void {
-  const key = `${uid}:${appKey}`;
-  const prev = timers.get(key);
-  if (prev) clearTimeout(prev);
-  timers.set(
-    key,
-    setTimeout(() => {
-      saveCloud(uid, appKey, data).catch((e) => {
-        console.error('[cloud sync] save failed:', e);
-      });
-      timers.delete(key);
-    }, delay)
-  );
-}
-
-// Reconcile decision: "cloud" = download cloud to local; "upload" = upload local to cloud; "same" = no-op
-export function reconcile(localUpdatedAt: number, cloud: CloudDoc<unknown> | null): 'cloud' | 'upload' | 'same' {
-  if (localUpdatedAt === 0) {
-    return cloud ? 'cloud' : 'same';
-  }
-  if (!cloud) return 'upload';
-  if (cloud.updatedAt > localUpdatedAt) return 'cloud';
-  if (localUpdatedAt > cloud.updatedAt) return 'upload';
-  return 'same';
-}
+export const loadCloud = sync.loadCloud;
+export const saveCloud = sync.saveCloud;
+export const saveCloudDebounced = sync.saveCloudDebounced;
+export const subscribeCloud = sync.subscribeCloud;
+export { reconcile };

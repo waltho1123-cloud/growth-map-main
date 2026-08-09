@@ -15,7 +15,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `growthmap/aspiration-case/` | 願景 | Vite 8 + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Vite 8 + React + TS | `out/`（要 commit） |
 | `growthmap/ido-ai-service/` | AI/BFF 後端 | Node + Hono + Anthropic SDK | 無建置，直接跑 `src/` |
-| `packages/contracts/` | 跨單元資料契約包 `@growthmap/contracts` | 純 ESM JS + .d.ts | 無建置（`node --test`） |
+| `packages/contracts/` | 跨單元資料契約 `@growthmap/contracts` | 純 ESM JS + .d.ts | 無建置（`node --test`） |
+| `packages/cloud/` | 共用同步協定 `@growthmap/cloud`（load/save/subscribe/reconcile） | 純 ESM JS + .d.ts | 無建置（`node --test`） |
+| `packages/pdf/` | 共用 PDF 匯出管線 `@growthmap/pdf`（DOM→多頁 PDF） | 純 ESM JS + .d.ts | 無建置 |
 
 ### 跨單元資料流（改資料欄位前必讀）
 
@@ -25,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. **opportunity-system 跨單元讀 `apps/aspiration`**（`src/lib/cloud/orient.js`）：取 `data.companyInfo.naturalGrowth.targetRevenue2028`（自然增長）、`data.companyInfo.aspirationGrowth.targetRevenue2028`（加速增長）、`data.partA`（營收拆解），算出成長差距餵給 `GrowthGapDashboard` 與 CHK-1。
 3. opportunity-system 的 `HandoffPanel` 快照凍結後交付第四堂。
 
-**風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：三單元各有一份 `lib/cloud/sync`（momentum 是 TS，其餘 JS），實作有差異、修 bug 不會自動同步到其他單元；**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名立即炸錯）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
+**風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：同步協定（load/save/subscribe/reconcile）唯一正本在 `@growthmap/cloud`——各單元的 `lib/cloud/sync` 只是綁定自家 firebase 實例的薄轉接層，**修同步 bug 一律改共用包**；三單元現皆為 onSnapshot 即時同步＋防迴授三層（hasPendingWrites／writer=clientId／applying 旗標）。**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名立即炸錯）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
 
 ## 常用指令
 

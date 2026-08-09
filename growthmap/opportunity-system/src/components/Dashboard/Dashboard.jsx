@@ -26,7 +26,8 @@ export default function Dashboard() {
     const innerSaved = inner ? inner.style.cssText : '';
 
     try {
-      const { default: html2canvas } = await import('html2canvas');
+      // html2canvas-pro：與其他單元統一的維護分支（API 相容，另支援 oklch 等新色彩格式）
+      const { default: html2canvas } = await import('html2canvas-pro');
       const { jsPDF } = await import('jspdf');
 
       // Force overflow visible inline (overrides Tailwind regardless of specificity)

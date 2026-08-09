@@ -9,7 +9,9 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@growthmap/cloud": "*",
     "@growthmap/contracts": "*",
+    "@growthmap/pdf": "*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",

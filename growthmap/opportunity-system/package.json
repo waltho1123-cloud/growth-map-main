@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@growthmap/cloud": "*",
     "@growthmap/contracts": "*",
     "firebase": "^12.12.0",
-    "html2canvas": "^1.4.1",
+    "html2canvas-pro": "^2.0.2",
     "jspdf": "^4.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

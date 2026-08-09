@@ -1,54 +1,12 @@
+// 同步協定正本在 @growthmap/cloud（三單元共用單一實作）；
+// 此檔僅把協定綁定到本單元的 firebase 實例，保持既有 import 路徑不變。
+import { createCloudSync, reconcile } from '@growthmap/cloud';
 import { getFirebase } from './firebase';
 
-export async function loadCloud(uid, appKey) {
-  const { db } = await getFirebase();
-  if (!db) return null;
-  const { doc, getDoc } = await import('firebase/firestore');
-  const snap = await getDoc(doc(db, 'users', uid, 'apps', appKey));
-  if (!snap.exists()) return null;
-  const raw = snap.data();
-  return {
-    data: raw.data,
-    updatedAt: raw.updatedAtMs ?? 0,
-    version: raw.version ?? 1,
-  };
-}
+const sync = createCloudSync(getFirebase);
 
-export async function saveCloud(uid, appKey, data) {
-  const { db } = await getFirebase();
-  if (!db) return;
-  const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-  await setDoc(doc(db, 'users', uid, 'apps', appKey), {
-    data,
-    updatedAtMs: Date.now(),
-    updatedAt: serverTimestamp(),
-    version: 1,
-  });
-}
-
-const timers = new Map();
-
-export function saveCloudDebounced(uid, appKey, data, delay = 1000) {
-  const key = `${uid}:${appKey}`;
-  const prev = timers.get(key);
-  if (prev) clearTimeout(prev);
-  timers.set(
-    key,
-    setTimeout(() => {
-      saveCloud(uid, appKey, data).catch((e) => {
-        console.error('[cloud sync] save failed:', e);
-      });
-      timers.delete(key);
-    }, delay)
-  );
-}
-
-export function reconcile(localUpdatedAt, cloud) {
-  if (localUpdatedAt === 0) {
-    return cloud ? 'cloud' : 'same';
-  }
-  if (!cloud) return 'upload';
-  if (cloud.updatedAt > localUpdatedAt) return 'cloud';
-  if (localUpdatedAt > cloud.updatedAt) return 'upload';
-  return 'same';
-}
+export const loadCloud = sync.loadCloud;
+export const saveCloud = sync.saveCloud;
+export const saveCloudDebounced = sync.saveCloudDebounced;
+export const subscribeCloud = sync.subscribeCloud;
+export { reconcile };

@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@growthmap/cloud": "*",
     "@growthmap/contracts": "*",
+    "@growthmap/pdf": "*",
     "firebase": "^12.12.0",
     "html2canvas-pro": "^2.0.2",
     "jspdf": "^4.2.0",

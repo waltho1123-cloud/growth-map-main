@@ -1,0 +1,13 @@
+{
+  "name": "@growthmap/pdf",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "共用的「DOM 區塊 → 多頁 PDF」匯出管線（html2canvas-pro + jsPDF）",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "peerDependencies": {
+    "html2canvas-pro": "^2",
+    "jspdf": "^4"
+  }
+}

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **成長藍圖實作平台（Growth Blueprint Platform）** — 商周百億 CEO 工作坊的線上實作平台。
 
-一個 repo 內含五個獨立部分，**各單元框架不同，指令互不通用**：
+一個 repo 內含五個部分。三個前端單元是**同一工作坊的階段性課程（第一～三堂），資料互相關聯**（見下方「跨單元資料流」），只是各自獨立建置部署；**各單元框架不同，指令互不通用**：
 
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
@@ -15,6 +15,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `growthmap/aspiration-case/` | 願景 | Vite + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Next.js static export | `out/`（要 commit） |
 | `growthmap/ido-ai-service/` | AI/BFF 後端 | Node + Hono + Anthropic SDK | 無建置，直接跑 `src/` |
+
+### 跨單元資料流（改資料欄位前必讀）
+
+三單元共用 Firestore 資料契約 `users/{uid}/apps/{appKey}`，appKey＝`momentum`（第一堂）/ `aspiration`（第二堂）/ `opportunity`（第三堂），資料串成一條管線：
+
+1. momentum-case 寫 `apps/momentum`；aspiration-case 寫 `apps/aspiration`。
+2. **opportunity-system 跨單元讀 `apps/aspiration`**（`src/lib/cloud/orient.js`）：取 `data.companyInfo.naturalGrowth.targetRevenue2028`（自然增長）、`data.companyInfo.aspirationGrowth.targetRevenue2028`（加速增長）、`data.partA`（營收拆解），算出成長差距餵給 `GrowthGapDashboard` 與 CHK-1。
+3. opportunity-system 的 `HandoffPanel` 快照凍結後交付第四堂。
+
+**風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：三單元各有一份 `lib/cloud/sync`（momentum 是 TS，其餘 JS），實作有差異、修 bug 不會自動同步到其他單元；`momentum-case/src/lib/cloud/sync.ts` 的 `AppKey` union type 是目前唯一明文寫下這個契約的地方。
 
 ## 常用指令
 

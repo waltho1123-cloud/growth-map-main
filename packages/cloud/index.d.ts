@@ -25,6 +25,24 @@ export interface CloudSync {
   ): () => void;
 }
 
-export declare function createCloudSync(getFirebase: () => Promise<{ db: unknown }>): CloudSync;
+export declare function createCloudSync(
+  getFirebase: () => Promise<{ db: unknown }>,
+  firestoreOverride?: object | null
+): CloudSync;
+
+export interface ChunkReloadRecoveryOptions {
+  /** sessionStorage key：重載防迴圈標記 */
+  reloadKey: string;
+  /** sessionStorage key：flush 時間戳（consumeFlushTs 讀取端） */
+  flushTsKey?: string;
+  /** 冷卻毫秒數，預設 60000 */
+  cooldownMs?: number;
+  /** 重載前的同步 flush 回呼（本地持久化非同步的單元使用） */
+  onBeforeReload?: (() => void) | null;
+}
+
+export declare function installChunkReloadRecovery(options: ChunkReloadRecoveryOptions): void;
+
+export declare function consumeFlushTs(flushTsKey: string, maxAgeMs?: number): number;
 
 export declare function reconcile(localUpdatedAt: number, cloud: CloudDoc<unknown> | null): ReconcileDecision;

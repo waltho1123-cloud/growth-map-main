@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - heading "BW 成長藍圖實作平台" [level=1] [ref=e7]
+        - paragraph [ref=e8]: 建立自然增長情境 (Momentum Case)
+    - navigation [ref=e9]
+    - main [ref=e17]:
+      - paragraph [ref=e20]: 載入中…
+  - generic [ref=e21]:
+    - generic [ref=e25]:
+      - generic [ref=e26]: BW 成長藍圖實作平台
+      - generic [ref=e27]: 建立自然增長情境（Momentum Case）
+    - generic [ref=e40]: 載入中…

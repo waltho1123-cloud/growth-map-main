@@ -1,0 +1,12 @@
+{
+  "name": "@growthmap/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "跨單元共用的極小 UI 元件（AppErrorBoundary）；以 createElement 撰寫，免 JSX transform",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "peerDependencies": {
+    "react": "^19"
+  }
+}

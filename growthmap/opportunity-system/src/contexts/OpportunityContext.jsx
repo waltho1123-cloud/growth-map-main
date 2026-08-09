@@ -5,6 +5,7 @@ import { SCHEMA_VERSION } from '../utils/constants';
 import { useAuth } from '../lib/cloud/auth';
 import { subscribeCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
 import { APP_KEYS } from '@growthmap/contracts';
+import { consumeFlushTs } from '@growthmap/cloud';
 import { isFirebaseConfigured } from '../lib/cloud/firebase-config';
 
 const OpportunityContext = createContext();
@@ -172,11 +173,8 @@ export function OpportunityProvider({ children }) {
   const flushTsInitRef = useRef(false);
   if (!flushTsInitRef.current) {
     flushTsInitRef.current = true;
-    try {
-      const t = Number(sessionStorage.getItem(FLUSH_TS_KEY) || 0);
-      sessionStorage.removeItem(FLUSH_TS_KEY);
-      if (t && Date.now() - t < 5 * 60 * 1000) localTsRef.current = t;
-    } catch { /* storage 不可用：維持雲端優先的預設 */ }
+    const t = consumeFlushTs(FLUSH_TS_KEY); // storage 不可用時回 0：維持雲端優先的預設
+    if (t) localTsRef.current = t;
   }
 
   // 自動儲存至 LocalStorage + 雲端 (debounced)
@@ -214,7 +212,7 @@ export function OpportunityProvider({ children }) {
     const flush = () => {
       clearTimeout(saveTimer.current);
       saveAppData(extractData(stateRef.current));
-      try { sessionStorage.setItem(FLUSH_TS_KEY, String(Date.now())); } catch { /* storage 不可用則重載後回到雲端優先 */ }
+      // flush 時間戳由 installChunkReloadRecovery（@growthmap/cloud）寫入，此處只負責同步存檔
     };
     window.addEventListener('bw:flush-save', flush);
     return () => window.removeEventListener('bw:flush-save', flush);

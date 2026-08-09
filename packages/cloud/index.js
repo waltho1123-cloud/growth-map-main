@@ -10,11 +10,14 @@
 
 import { userAppDocSegments } from '@growthmap/contracts';
 
-export function createCloudSync(getFirebase) {
+// firestoreOverride：測試注入用的 firestore 模組替身（{doc,getDoc,setDoc,onSnapshot,serverTimestamp}）；
+// 生產一律省略、走動態 import。
+export function createCloudSync(getFirebase, firestoreOverride = null) {
+  const fs = () => firestoreOverride ?? import('firebase/firestore');
   async function loadCloud(uid, appKey) {
     const { db } = await getFirebase();
     if (!db) return null;
-    const { doc, getDoc } = await import('firebase/firestore');
+    const { doc, getDoc } = await fs();
     const snap = await getDoc(doc(db, ...userAppDocSegments(uid, appKey)));
     if (!snap.exists()) return null;
     const raw = snap.data();
@@ -29,7 +32,7 @@ export function createCloudSync(getFirebase) {
   async function saveCloud(uid, appKey, data, writer = null) {
     const { db } = await getFirebase();
     if (!db) return;
-    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+    const { doc, setDoc, serverTimestamp } = await fs();
     await setDoc(doc(db, ...userAppDocSegments(uid, appKey)), {
       data,
       updatedAtMs: Date.now(),
@@ -66,7 +69,7 @@ export function createCloudSync(getFirebase) {
     (async () => {
       const { db } = await getFirebase();
       if (!db || cancelled) return;
-      const { doc, onSnapshot } = await import('firebase/firestore');
+      const { doc, onSnapshot } = await fs();
       const ref = doc(db, ...userAppDocSegments(uid, appKey));
       const stop = onSnapshot(
         ref,
@@ -87,6 +90,59 @@ export function createCloudSync(getFirebase) {
   }
 
   return { loadCloud, saveCloud, saveCloudDebounced, subscribeCloud };
+}
+
+// ── 部署切換恢復（三單元共用；Vite SPA 專用）──────────────────────────────────
+// 部署後停留在舊版頁面的分頁載入 lazy chunk 會 404（雜湊已換、舊檔不保留）。
+// Vite 在 preload 失敗時發 vite:preloadError：自動整頁重載一次換取新版。
+// 重載前寫入 flushTsKey 時間戳，開機端以 consumeFlushTs() 讀取並作為 localTs——
+// 否則 localTs=0 會被 reconcile 視為「本 session 未動」，讓較舊的雲端資料蓋回本地。
+// sessionStorage 被封鎖時改用 URL 參數當防迴圈標記，恢復機制在無 storage 環境仍運作。
+
+export function installChunkReloadRecovery({
+  reloadKey,
+  flushTsKey,
+  cooldownMs = 60000,
+  onBeforeReload = null, // 本地持久化非同步的單元（如 debounced localStorage）在此 flush；zustand persist 單元可省略
+} = {}) {
+  const readLast = () => {
+    try {
+      return { at: Number(sessionStorage.getItem(reloadKey) || 0), persistable: true };
+    } catch {
+      return { at: Number(new URLSearchParams(window.location.search).get('bwreload') || 0), persistable: false };
+    }
+  };
+  window.addEventListener('vite:preloadError', (event) => {
+    const now = Date.now();
+    const { at, persistable } = readLast();
+    if (now - at < cooldownMs) return; // 冷卻期內第二次失敗：放行預設拋錯（交給 ErrorBoundary）
+    event.preventDefault();
+    if (onBeforeReload) {
+      try { onBeforeReload(); } catch (e) { console.error('[chunk recovery] onBeforeReload failed:', e); }
+    }
+    try {
+      sessionStorage.setItem(reloadKey, String(now));
+      if (flushTsKey) sessionStorage.setItem(flushTsKey, String(now));
+    } catch { /* storage 不可用：靠 URL 參數防迴圈；flush-ts 缺席時開機端回到雲端優先 */ }
+    if (persistable) {
+      window.location.reload();
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set('bwreload', String(now));
+      window.location.replace(url.toString());
+    }
+  });
+}
+
+// 開機時讀取並清除 flush 時間戳（單次有效、預設 5 分鐘內）；供 bootstrap 初始化 localTs。
+export function consumeFlushTs(flushTsKey, maxAgeMs = 5 * 60 * 1000) {
+  try {
+    const t = Number(sessionStorage.getItem(flushTsKey) || 0);
+    sessionStorage.removeItem(flushTsKey);
+    return t && Date.now() - t < maxAgeMs ? t : 0;
+  } catch {
+    return 0;
+  }
 }
 
 // 純函式，不需 firebase 實例。採 opportunity 的修正版：

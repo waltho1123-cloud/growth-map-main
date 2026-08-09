@@ -5,6 +5,7 @@ import {
   userAppDocSegments,
   extractOrientSnapshot,
   assertOrientProducerShape,
+  listOrientContractViolations,
 } from './index.js';
 
 // 與 aspiration-case useAspirationStore 初始形狀對齊的 fixture（生產端契約樣本）
@@ -40,6 +41,8 @@ test('extractOrientSnapshot 依契約萃取成長差距核心值', () => {
     revenue2025: 100,
     companyName: '測試公司',
     revenueBreakdown: [{ segment: '主力產品', revenue: 100 }],
+    contractOk: true,
+    violations: [],
   });
 });
 
@@ -49,10 +52,23 @@ test('extractOrientSnapshot：加速 ≤ 自然時 growthGap 鉗在 0', () => {
   assert.equal(extractOrientSnapshot(snap).growthGap, 0);
 });
 
-test('extractOrientSnapshot：欄位缺失優雅退為 0/空（消費端降級）', () => {
+test('extractOrientSnapshot：無資料回 null（非違約）；形狀違約標記 contractOk=false（prod 可觀測）', () => {
   assert.equal(extractOrientSnapshot(null), null);
   const core = extractOrientSnapshot({});
-  assert.deepEqual(core, { aspiration: 0, momentum: 0, growthGap: 0, revenue2025: 0, companyName: '', revenueBreakdown: [] });
+  assert.equal(core.contractOk, false);
+  assert.ok(core.violations.includes('companyInfo'));
+  assert.ok(core.violations.includes('partA'));
+  assert.deepEqual(
+    { aspiration: core.aspiration, momentum: core.momentum, growthGap: core.growthGap },
+    { aspiration: 0, momentum: 0, growthGap: 0 }
+  );
+});
+
+test('listOrientContractViolations：完整形狀回空陣列、缺欄逐一列名', () => {
+  assert.deepEqual(listOrientContractViolations(makeAspirationSnapshot()), []);
+  const snap = makeAspirationSnapshot();
+  delete snap.companyInfo.aspirationGrowth;
+  assert.deepEqual(listOrientContractViolations(snap), ['companyInfo.aspirationGrowth.targetRevenue2028']);
 });
 
 test('assertOrientProducerShape：完整形狀通過', () => {

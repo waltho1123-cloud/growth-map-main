@@ -37,6 +37,11 @@ export default function GrowthGapDashboard() {
         toast.error('找不到第二堂資料，請先於「加速增長情境」填寫並登入同步');
         return;
       }
+      if (orient.contractOk === false) {
+        // 契約違約：數值不可信，停止套用（prod 不靜默——詳細缺欄已由契約包 console.error）
+        toast.error('第二堂資料格式與契約不符，已停止同步。請重新開啟「加速增長情境」儲存一次，或聯繫維護者。');
+        return;
+      }
       dispatch({ type: 'UPDATE_PROJECT_META', payload: { targetSnapshot: orient } });
       toast.success('已從第二堂同步成長差距');
     } catch (e) {

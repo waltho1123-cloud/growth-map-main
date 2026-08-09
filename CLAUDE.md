@@ -29,14 +29,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：同步協定（load/save/subscribe/reconcile）唯一正本在 `@growthmap/cloud`——各單元的 `lib/cloud/sync` 只是綁定自家 firebase 實例的薄轉接層，**修同步 bug 一律改共用包**；三單元現皆為 onSnapshot 即時同步＋防迴授三層（hasPendingWrites／writer=clientId／applying 旗標）。**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名立即炸錯）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
 
+**ADR（2026-08-09）：firebase 初始化／auth／config 暫維持各單元一份**——三者與各單元的登入 UI 與 bundle 切分耦合，且為純複製（無行為分歧）；同步協定（會演化、曾發生修 bug 不同步）已合一於 `@growthmap/cloud`。若未來 auth 行為需要分歧修正，屆時再抽 `@growthmap/firebase`（Phase 2d）。
+
 ## 常用指令
 
 ```bash
 # Workspace 根（repo 根執行）
 npm install                                  # 一次裝全部 workspace（唯一的安裝入口）
 VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 三單元全建
-npm test                                     # contracts + opportunity 全測試
+npm test                                     # 全 workspace 測試（contracts/cloud/opportunity）
 npm run lint                                 # 三單元 lint（基線全綠）
+VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run preflight   # 部署前必跑：test+lint+build 全綠才准 deploy
 
 # opportunity-system（在 growthmap/opportunity-system/）
 npm start                                    # Vite dev server :5173
@@ -71,7 +74,9 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 69e2
 npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a2591b7f1be9943f1f9d17b
 ```
 
-**改前端 `src` 後的完整流程（三步缺一不可）**：
+**改前端 `src` 後的完整流程（四步缺一不可）**：
+
+0. **root `npm run preflight` 全綠**（帶 `VITE_AI_BASE_URL`）；行為級變更另跑 Playwright smoke（見 `scripts/smoke.md`）。
 
 1. 重 build，且**必須帶 `VITE_AI_BASE_URL`**（Vite 是建置時注入；漏設則線上 AI 功能整組停用——GD-06 優雅降級，不會報錯，容易漏察覺）。
 2. 重新部署前端服務（`.zeaburignore` 只打包 build 輸出，排除 `src/`、`node_modules`、`.map`、`*.md`）。

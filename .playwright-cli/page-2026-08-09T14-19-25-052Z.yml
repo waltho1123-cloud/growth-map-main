@@ -1,0 +1,262 @@
+- generic [ref=e3]:
+  - button "以 Google 登入" [ref=e4]:
+    - img [ref=e5]
+    - text: 以 Google 登入
+  - banner [ref=e10]:
+    - generic [ref=e11]:
+      - link "← 返回藍圖" [ref=e13] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e14]: ←
+        - generic [ref=e15]: 返回藍圖
+      - heading "BW 成長藍圖實作平台" [level=1] [ref=e16]
+      - paragraph [ref=e17]: 建立加速增長情境 (Aspiration Case)
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: "0"
+        - heading "基本資訊與總目標設定" [level=2] [ref=e22]
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: 公司名稱
+            - textbox "請輸入公司名稱" [ref=e28]
+          - generic [ref=e29]:
+            - generic [ref=e30]: 2025 年營收（基準）
+            - generic [ref=e31]:
+              - textbox "0" [ref=e32]
+              - generic [ref=e33]: 億
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - heading "自然增長情境 (Momentum Case)" [level=3] [ref=e36]
+            - generic [ref=e37]:
+              - generic [ref=e38]: 2028 目標營收
+              - generic [ref=e39]:
+                - textbox "0" [ref=e40]
+                - generic [ref=e41]: 億
+            - generic [ref=e43]:
+              - generic [ref=e44]: CAGR
+              - generic [ref=e45]: —
+          - generic [ref=e46]:
+            - heading "加速增長情境 (Aspiration Case)" [level=3] [ref=e47]:
+              - img [ref=e48]
+              - text: 加速增長情境 (Aspiration Case)
+            - generic [ref=e50]:
+              - generic [ref=e51]: 2028 最終拍板營收目標
+              - generic [ref=e52]:
+                - textbox "0" [ref=e53]
+                - generic [ref=e54]: 億
+            - generic [ref=e56]:
+              - generic [ref=e57]: CAGR
+              - generic [ref=e58]: —
+    - generic [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e61]: A
+        - heading "A. 客戶/競爭面向 (安索夫矩陣)" [level=2] [ref=e62]
+      - generic [ref=e63]:
+        - table [ref=e65]:
+          - rowgroup [ref=e66]:
+            - row "增長維度 2028 市場規模 (億) 2028 市佔率 (%) 2028 營業收入 (億) 說明" [ref=e67]:
+              - columnheader "增長維度" [ref=e68]
+              - columnheader "2028 市場規模 (億)" [ref=e69]
+              - columnheader "2028 市佔率 (%)" [ref=e70]
+              - columnheader "2028 營業收入 (億)" [ref=e71]
+              - columnheader "說明" [ref=e72]
+          - rowgroup [ref=e73]:
+            - row "📊既有市場/產品 % —" [ref=e74]:
+              - cell "📊既有市場/產品" [ref=e75]
+              - cell [ref=e76]:
+                - textbox "0" [ref=e77]
+              - cell "%" [ref=e78]:
+                - generic [ref=e79]:
+                  - textbox "0" [ref=e80]
+                  - generic: "%"
+              - cell "—" [ref=e81]:
+                - generic [ref=e82]: —
+              - cell [ref=e83]:
+                - textbox "策略說明..." [ref=e84]
+            - row "🚀新產品/服務 % —" [ref=e85]:
+              - cell "🚀新產品/服務" [ref=e86]
+              - cell [ref=e87]:
+                - textbox "0" [ref=e88]
+              - cell "%" [ref=e89]:
+                - generic [ref=e90]:
+                  - textbox "0" [ref=e91]
+                  - generic: "%"
+              - cell "—" [ref=e92]:
+                - generic [ref=e93]: —
+              - cell [ref=e94]:
+                - textbox "策略說明..." [ref=e95]
+            - row "🌍新市場/客戶 % —" [ref=e96]:
+              - cell "🌍新市場/客戶" [ref=e97]
+              - cell [ref=e98]:
+                - textbox "0" [ref=e99]
+              - cell "%" [ref=e100]:
+                - generic [ref=e101]:
+                  - textbox "0" [ref=e102]
+                  - generic: "%"
+              - cell "—" [ref=e103]:
+                - generic [ref=e104]: —
+              - cell [ref=e105]:
+                - textbox "策略說明..." [ref=e106]
+            - row "💡新商業模式 % —" [ref=e107]:
+              - cell "💡新商業模式" [ref=e108]
+              - cell [ref=e109]:
+                - textbox "0" [ref=e110]
+              - cell "%" [ref=e111]:
+                - generic [ref=e112]:
+                  - textbox "0" [ref=e113]
+                  - generic: "%"
+              - cell "—" [ref=e114]:
+                - generic [ref=e115]: —
+              - cell [ref=e116]:
+                - textbox "策略說明..." [ref=e117]
+        - generic [ref=e118]:
+          - generic [ref=e119]: 客戶視角營收總計
+          - generic [ref=e120]: 0 億
+    - generic [ref=e121]:
+      - generic [ref=e122]:
+        - generic [ref=e123]: B
+        - heading "B. 股東面向 (TSR 架構)" [level=2] [ref=e124]
+      - generic [ref=e126]:
+        - generic [ref=e127]:
+          - img [ref=e128]
+          - text: 假設未來三年不發股利
+        - generic [ref=e131]:
+          - generic [ref=e132]: 股東要求三年 TSR (%)
+          - generic [ref=e133]:
+            - textbox "0" [ref=e134]
+            - generic: "%"
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - heading "TSR 貢獻度拆解" [level=4] [ref=e137]
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - generic [ref=e140]: 營收增長 (%)
+                - generic [ref=e141]:
+                  - textbox "0" [ref=e142]
+                  - generic: "%"
+              - generic [ref=e143]:
+                - generic [ref=e144]: EBIT 增長 (%)
+                - generic [ref=e145]:
+                  - textbox "0" [ref=e146]
+                  - generic: "%"
+              - generic [ref=e147]:
+                - generic [ref=e148]: EBIT 倍數提升
+                - generic [ref=e149]:
+                  - textbox "0" [ref=e150]
+                  - generic: +X.X
+          - generic [ref=e151]:
+            - heading "2028 財務目標" [level=4] [ref=e152]
+            - generic [ref=e153]:
+              - generic [ref=e154]:
+                - generic [ref=e155]: 2028 營收 (億)
+                - generic [ref=e156]:
+                  - textbox "0" [ref=e157]
+                  - generic: 億
+              - generic [ref=e158]:
+                - generic [ref=e159]: 2028 EBIT 利潤率 (%)
+                - generic [ref=e160]:
+                  - textbox "0" [ref=e161]
+                  - generic: "%"
+              - generic [ref=e162]:
+                - generic [ref=e163]: 2028 EBIT 倍數
+                - generic [ref=e164]:
+                  - textbox "0" [ref=e165]
+                  - generic: X
+    - generic [ref=e166]:
+      - generic [ref=e167]:
+        - img [ref=e168]
+        - heading "CEO 最終拍板：加速增長目標" [level=2] [ref=e170]
+      - generic [ref=e171]:
+        - paragraph [ref=e172]: 綜合「客戶/市場視角」與「股東視角」兩大參考數字，請決定最終的 2028 加速增長營收目標。
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: A. 客戶視角營收加總
+            - generic [ref=e176]: —
+            - generic [ref=e177]: 億 (Market View)
+          - generic [ref=e178]:
+            - generic [ref=e179]: B. 股東視角 2028 營收
+            - generic [ref=e180]: —
+            - generic [ref=e181]: 億 (Shareholder View)
+          - generic [ref=e182]:
+            - generic [ref=e183]: 最終拍板目標
+            - textbox "0" [ref=e184]
+            - generic [ref=e185]: 億 (Final Decision)
+    - generic [ref=e186]:
+      - generic [ref=e187]:
+        - generic [ref=e188]: C
+        - heading "供應鏈面向瓶頸評估" [level=2] [ref=e189]
+      - generic [ref=e191]:
+        - generic [ref=e192]:
+          - generic [ref=e193]:
+            - heading "既有市場/產品" [level=4] [ref=e194]
+            - generic [ref=e195]: 尚無預估營收
+          - generic [ref=e196]:
+            - generic [ref=e197] [cursor=pointer]:
+              - checkbox "採購" [ref=e198]
+              - text: 採購
+            - generic [ref=e199] [cursor=pointer]:
+              - checkbox "製造" [ref=e200]
+              - text: 製造
+            - generic [ref=e201] [cursor=pointer]:
+              - checkbox "物流" [ref=e202]
+              - text: 物流
+            - generic [ref=e203] [cursor=pointer]:
+              - checkbox "技術" [ref=e204]
+              - text: 技術
+          - textbox "如何突破瓶頸？請描述解決方案..." [ref=e205]
+        - generic [ref=e206]:
+          - generic [ref=e207]:
+            - heading "新產品/服務" [level=4] [ref=e208]
+            - generic [ref=e209]: 尚無預估營收
+          - generic [ref=e210]:
+            - generic [ref=e211] [cursor=pointer]:
+              - checkbox "採購" [ref=e212]
+              - text: 採購
+            - generic [ref=e213] [cursor=pointer]:
+              - checkbox "製造" [ref=e214]
+              - text: 製造
+            - generic [ref=e215] [cursor=pointer]:
+              - checkbox "物流" [ref=e216]
+              - text: 物流
+            - generic [ref=e217] [cursor=pointer]:
+              - checkbox "技術" [ref=e218]
+              - text: 技術
+          - textbox "如何突破瓶頸？請描述解決方案..." [ref=e219]
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - heading "新市場/客戶" [level=4] [ref=e222]
+            - generic [ref=e223]: 尚無預估營收
+          - generic [ref=e224]:
+            - generic [ref=e225] [cursor=pointer]:
+              - checkbox "採購" [ref=e226]
+              - text: 採購
+            - generic [ref=e227] [cursor=pointer]:
+              - checkbox "製造" [ref=e228]
+              - text: 製造
+            - generic [ref=e229] [cursor=pointer]:
+              - checkbox "物流" [ref=e230]
+              - text: 物流
+            - generic [ref=e231] [cursor=pointer]:
+              - checkbox "技術" [ref=e232]
+              - text: 技術
+          - textbox "如何突破瓶頸？請描述解決方案..." [ref=e233]
+        - generic [ref=e234]:
+          - generic [ref=e235]:
+            - heading "新商業模式" [level=4] [ref=e236]
+            - generic [ref=e237]: 尚無預估營收
+          - generic [ref=e238]:
+            - generic [ref=e239] [cursor=pointer]:
+              - checkbox "採購" [ref=e240]
+              - text: 採購
+            - generic [ref=e241] [cursor=pointer]:
+              - checkbox "製造" [ref=e242]
+              - text: 製造
+            - generic [ref=e243] [cursor=pointer]:
+              - checkbox "物流" [ref=e244]
+              - text: 物流
+            - generic [ref=e245] [cursor=pointer]:
+              - checkbox "技術" [ref=e246]
+              - text: 技術
+          - textbox "如何突破瓶頸？請描述解決方案..." [ref=e247]
+  - generic [ref=e250]: 載入匯出…

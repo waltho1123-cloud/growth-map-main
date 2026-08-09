@@ -47,7 +47,7 @@ export default function CoachDrawer() {
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/20" onClick={toggleCoach} />
+      <button type="button" tabIndex={-1} aria-label="關閉 AI 教練" className="absolute inset-0 bg-black/20 cursor-default" onClick={toggleCoach} />
       <div className="absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-xl flex flex-col animate-slide-in">
         <div className="glass-header px-4 py-3 flex items-center justify-between shrink-0">
           <div>

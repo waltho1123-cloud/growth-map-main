@@ -77,7 +77,7 @@ export default function OpportunityEditor() {
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={handleClose} />
+      <button type="button" tabIndex={-1} aria-label="關閉編輯器" className="absolute inset-0 bg-black/20 backdrop-blur-sm cursor-default" onClick={handleClose} />
 
       {/* Editor Panel */}
       <div className="absolute inset-y-0 right-0 w-full max-w-4xl glass-card flex flex-col animate-slide-in" style={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', background: 'rgba(255,255,255,0.72)' }}>

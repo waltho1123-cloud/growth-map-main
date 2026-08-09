@@ -38,10 +38,10 @@ export default function TabOne({ data, onChange }) {
     <div className="space-y-6">
       {/* 機會點名稱 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-1">
+        <label htmlFor="t1-f1" className="block text-sm font-semibold text-gray-600 mb-1">
           增長機會名稱 <span className="text-red-500">*</span>
         </label>
-        <IMEInput
+        <IMEInput id="t1-f1"
           type="text"
           value={opportunityName}
           onValueChange={(v) => onChange({ opportunityName: v })}
@@ -52,9 +52,9 @@ export default function TabOne({ data, onChange }) {
 
       {/* 使用的 BCG 外部工具 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">
+        <div className="block text-sm font-semibold text-gray-600 mb-2">
           使用的 BCG 外部分析工具 (可複選)
-        </label>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {BCG_TOOLS.map((tool) => (
             <label
@@ -80,9 +80,9 @@ export default function TabOne({ data, onChange }) {
 
       {/* 起點評估 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">
+        <div className="block text-sm font-semibold text-gray-600 mb-2">
           起點評估 (companyType)
-        </label>
+        </div>
         <div className="flex gap-4">
           {COMPANY_TYPES.map((type) => (
             <label
@@ -109,9 +109,9 @@ export default function TabOne({ data, onChange }) {
 
       {/* 成長面向 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">
+        <div className="block text-sm font-semibold text-gray-600 mb-2">
           成長面向 (growthDimension)
-        </label>
+        </div>
         <div className="flex flex-wrap gap-3">
           {GROWTH_DIMENSIONS.map((dim) => (
             <label
@@ -138,9 +138,9 @@ export default function TabOne({ data, onChange }) {
 
       {/* 成長槓桿 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">
+        <div className="block text-sm font-semibold text-gray-600 mb-2">
           成長槓桿 (growthLever)
-        </label>
+        </div>
         <div className="flex flex-wrap gap-3">
           {GROWTH_LEVERS.map((lever) => (
             <label
@@ -172,9 +172,9 @@ export default function TabOne({ data, onChange }) {
       {/* 成長類型 */}
       {growthTypeOptions.length > 0 && (
         <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-2">
+          <div className="block text-sm font-semibold text-gray-600 mb-2">
             成長類型 (growthType，可複選)
-          </label>
+          </div>
           <div className="flex flex-wrap gap-2">
             {growthTypeOptions.map((type) => (
               <label
@@ -200,10 +200,10 @@ export default function TabOne({ data, onChange }) {
 
       {/* 主要洞察 */}
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-1">
+        <label htmlFor="t1-f7" className="block text-sm font-semibold text-gray-600 mb-1">
           主要洞察 (insights)
         </label>
-        <IMETextarea
+        <IMETextarea id="t1-f7"
           value={template1.insights}
           onValueChange={(v) => updateField('insights', v)}
           rows={4}

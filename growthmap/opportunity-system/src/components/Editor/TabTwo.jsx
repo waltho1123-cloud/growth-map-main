@@ -49,7 +49,7 @@ export default function TabTwo({ data, onChange }) {
 
       {/* 市場進入策略 — 七面向（SDD Template2.goToMarket） */}
       <div>
-        <label className="block text-sm font-semibold text-gray-600 mb-2">市場進入策略（七面向）</label>
+        <div className="block text-sm font-semibold text-gray-600 mb-2">市場進入策略（七面向）</div>
         {template2.goToMarketStrategy ? (
           <div className="mb-3 bg-amber-50/70 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
             <span className="font-semibold">舊版進入策略內容（供參考，可搬移至下方各面向）：</span>
@@ -59,8 +59,8 @@ export default function TabTwo({ data, onChange }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {GO_TO_MARKET_FACETS.map((f) => (
             <div key={f.key}>
-              <label className="block text-xs font-medium text-gray-600 mb-1">{f.label}</label>
-              <IMETextarea value={gtm[f.key] || ''} onValueChange={(v) => updateGtm(f.key, v)} rows={2} className={textareaCls} />
+              <label htmlFor={`t2-gtm-${f.key}`} className="block text-xs font-medium text-gray-600 mb-1">{f.label}</label>
+              <IMETextarea id={`t2-gtm-${f.key}`} value={gtm[f.key] || ''} onValueChange={(v) => updateGtm(f.key, v)} rows={2} className={textareaCls} />
             </div>
           ))}
         </div>

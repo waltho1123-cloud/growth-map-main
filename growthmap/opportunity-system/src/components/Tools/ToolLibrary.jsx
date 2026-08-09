@@ -15,6 +15,12 @@ function ToolCard({ tool, enabled, status, onToggle, onOpen }) {
   return (
     <div
       onClick={enabled ? onOpen : undefined}
+      role={enabled ? 'button' : undefined}
+      tabIndex={enabled ? 0 : undefined}
+      onKeyDown={enabled ? (e) => {
+        if (e.target !== e.currentTarget) return; // 內層啟用切換按鈕的 Enter/Space 交還給按鈕本身
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); }
+      } : undefined}
       className={`glass-card rounded-xl p-4 border transition-all ${
         enabled
           ? 'border-emerald-200/70 cursor-pointer hover:shadow-md hover:border-emerald-400'

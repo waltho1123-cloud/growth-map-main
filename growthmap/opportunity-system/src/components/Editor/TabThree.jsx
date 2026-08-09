@@ -141,8 +141,8 @@ export default function TabThree({ data, onChange }) {
         <h3 className="text-sm font-bold text-gray-800 mb-3">預估營收貢獻 <span className="text-xs font-normal text-gray-400">（供綜合檢查 CHK-1：機會營收總和 ≥ 成長差距 × 緩衝係數）</span></h3>
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">預估年營收</label>
-            <input
+            <label htmlFor="t3-f1" className="block text-xs font-medium text-gray-600 mb-1">預估年營收</label>
+            <input id="t3-f1"
               type="number"
               min="0"
               inputMode="numeric"
@@ -156,8 +156,8 @@ export default function TabThree({ data, onChange }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">幣別</label>
-            <select
+            <label htmlFor="t3-f2" className="block text-xs font-medium text-gray-600 mb-1">幣別</label>
+            <select id="t3-f2"
               value={data.currency || DEFAULT_CURRENCY}
               onChange={(e) => onChange({ currency: e.target.value })}
               className="rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
@@ -174,23 +174,23 @@ export default function TabThree({ data, onChange }) {
           <QuadrantHeader num={1} color="bg-gray-700" title="Size of the Prize — 市場規模與競爭" rating={ratings.size} onRating={(v) => updateRating('size', v)} />
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">市場規模 (marketSize)</label>
-              <IMEInput type="text" value={template3.marketSize} onValueChange={(v) => updateField('marketSize', v)} placeholder="例如：USD 50B (2025)" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f3" className="block text-xs font-medium text-gray-600 mb-1">市場規模 (marketSize)</label>
+              <IMEInput id="t3-f3" type="text" value={template3.marketSize} onValueChange={(v) => updateField('marketSize', v)} placeholder="例如：USD 50B (2025)" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">單位價格 (unitPrice)</label>
-              <IMEInput type="text" value={template3.unitPrice} onValueChange={(v) => updateField('unitPrice', v)} placeholder="例如：NT$ 150/unit" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f4" className="block text-xs font-medium text-gray-600 mb-1">單位價格 (unitPrice)</label>
+              <IMEInput id="t3-f4" type="text" value={template3.unitPrice} onValueChange={(v) => updateField('unitPrice', v)} placeholder="例如：NT$ 150/unit" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">競爭環境 (competitiveEnvironment)</label>
-              <select value={template3.competitiveEnvironment} onChange={(e) => updateField('competitiveEnvironment', e.target.value)} className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm">
+              <label htmlFor="t3-f5" className="block text-xs font-medium text-gray-600 mb-1">競爭環境 (competitiveEnvironment)</label>
+              <select id="t3-f5" value={template3.competitiveEnvironment} onChange={(e) => updateField('competitiveEnvironment', e.target.value)} className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm">
                 <option value="">請選擇</option>
                 {COMPETITIVE_ENVIRONMENTS.map((env) => <option key={env} value={env}>{env}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">前大品牌市佔率 (topBrandsShare)</label>
-              <IMEInput type="text" value={template3.topBrandsShare} onValueChange={(v) => updateField('topBrandsShare', v)} placeholder="例如：前3大品牌佔 65%" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f6" className="block text-xs font-medium text-gray-600 mb-1">前大品牌市佔率 (topBrandsShare)</label>
+              <IMEInput id="t3-f6" type="text" value={template3.topBrandsShare} onValueChange={(v) => updateField('topBrandsShare', v)} placeholder="例如：前3大品牌佔 65%" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
           </div>
         </div>
@@ -200,11 +200,11 @@ export default function TabThree({ data, onChange }) {
           <QuadrantHeader num={2} color="bg-emerald-600" title="Potential of Play — 操作潛力" rating={ratings.potential} onRating={(v) => updateRating('potential', v)} />
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">現有規模 (currentScale)</label>
-              <IMEInput type="text" value={template3.currentScale} onValueChange={(v) => updateField('currentScale', v)} placeholder="例如：年營收 NT$ 2B" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f7" className="block text-xs font-medium text-gray-600 mb-1">現有規模 (currentScale)</label>
+              <IMEInput id="t3-f7" type="text" value={template3.currentScale} onValueChange={(v) => updateField('currentScale', v)} placeholder="例如：年營收 NT$ 2B" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">成長潛力 CAGR (cagr)</label>
+              <div className="block text-xs font-medium text-gray-600 mb-2">成長潛力 CAGR (cagr)</div>
               <div className="flex flex-wrap gap-2">
                 {CAGR_OPTIONS.map((opt) => (
                   <label key={opt} className={`px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs ${template3.cagr === opt ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white/30 border-gray-200/60 text-gray-600 hover:border-gray-400'}`}>
@@ -215,7 +215,7 @@ export default function TabThree({ data, onChange }) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">EBIT 利潤率 (ebitMargin)</label>
+              <div className="block text-xs font-medium text-gray-600 mb-2">EBIT 利潤率 (ebitMargin)</div>
               <div className="flex flex-wrap gap-2">
                 {EBIT_OPTIONS.map((opt) => (
                   <label key={opt} className={`px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs ${template3.ebitMargin === opt ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white/30 border-gray-200/60 text-gray-600 hover:border-gray-400'}`}>
@@ -233,12 +233,12 @@ export default function TabThree({ data, onChange }) {
           <QuadrantHeader num={3} color="bg-amber-500" title="Path to Achieve — 達成路徑" rating={ratings.path} onRating={(v) => updateRating('path', v)} />
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">必要投資 (requiredInvestment)</label>
-              <IMETextarea value={template3.requiredInvestment} onValueChange={(v) => updateField('requiredInvestment', v)} rows={3} placeholder="所需投入的資金、人力、時間等..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f10" className="block text-xs font-medium text-gray-600 mb-1">必要投資 (requiredInvestment)</label>
+              <IMETextarea id="t3-f10" value={template3.requiredInvestment} onValueChange={(v) => updateField('requiredInvestment', v)} rows={3} placeholder="所需投入的資金、人力、時間等..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">潛在障礙 (potentialHurdles)</label>
-              <IMETextarea value={template3.potentialHurdles} onValueChange={(v) => updateField('potentialHurdles', v)} rows={3} placeholder="可能遭遇的挑戰與風險..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f11" className="block text-xs font-medium text-gray-600 mb-1">潛在障礙 (potentialHurdles)</label>
+              <IMETextarea id="t3-f11" value={template3.potentialHurdles} onValueChange={(v) => updateField('potentialHurdles', v)} rows={3} placeholder="可能遭遇的挑戰與風險..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
           </div>
         </div>
@@ -248,12 +248,12 @@ export default function TabThree({ data, onChange }) {
           <QuadrantHeader num={4} color="bg-purple-600" title="Right to Win — 取勝之道" rating={ratings.rightToWin} onRating={(v) => updateRating('rightToWin', v)} />
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">成功因子 (successFactors)</label>
-              <IMETextarea value={template3.successFactors} onValueChange={(v) => updateField('successFactors', v)} rows={3} placeholder="在此機會中勝出的關鍵成功因素..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f12" className="block text-xs font-medium text-gray-600 mb-1">成功因子 (successFactors)</label>
+              <IMETextarea id="t3-f12" value={template3.successFactors} onValueChange={(v) => updateField('successFactors', v)} rows={3} placeholder="在此機會中勝出的關鍵成功因素..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">核心能力 (coreCapabilities)</label>
-              <IMETextarea value={template3.coreCapabilities} onValueChange={(v) => updateField('coreCapabilities', v)} rows={3} placeholder="公司為何能前進該機會的內部支撐理由..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+              <label htmlFor="t3-f13" className="block text-xs font-medium text-gray-600 mb-1">核心能力 (coreCapabilities)</label>
+              <IMETextarea id="t3-f13" value={template3.coreCapabilities} onValueChange={(v) => updateField('coreCapabilities', v)} rows={3} placeholder="公司為何能前進該機會的內部支撐理由..." className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
             </div>
           </div>
         </div>

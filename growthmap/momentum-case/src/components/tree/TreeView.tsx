@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { TreeNodeData } from '@/types';
 import { useAssignmentStore } from '@/store/useAssignmentStore';

@@ -1,10 +1,9 @@
-'use client';
-
 import { useEffect, useRef } from 'react';
 import { useAuth } from './auth';
 import { loadCloud, saveCloudDebounced, reconcile } from './sync';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 import { isFirebaseConfigured } from './firebase-config';
+import { APP_KEYS } from '@growthmap/contracts';
 
 type SyncedSnapshot = {
   tree: unknown;
@@ -48,7 +47,7 @@ export function CloudSyncBootstrap() {
     let cancelled = false;
     (async () => {
       try {
-        const cloud = await loadCloud<SyncedSnapshot>(user.uid, 'momentum');
+        const cloud = await loadCloud<SyncedSnapshot>(user.uid, APP_KEYS.momentum);
         if (cancelled) return;
         const decision = reconcile(localTsRef.current, cloud);
         if (decision === 'cloud' && cloud) {
@@ -57,7 +56,7 @@ export function CloudSyncBootstrap() {
           localTsRef.current = cloud.updatedAt;
           applyingRef.current = false;
         } else if (decision === 'upload') {
-          saveCloudDebounced(user.uid, 'momentum', snapshot(), 0);
+          saveCloudDebounced(user.uid, APP_KEYS.momentum, snapshot(), 0);
         }
         reconciledRef.current = true;
       } catch (e) {
@@ -75,7 +74,7 @@ export function CloudSyncBootstrap() {
     const unsub = useAssignmentStore.subscribe(() => {
       if (applyingRef.current) return;
       if (!reconciledRef.current) return;
-      saveCloudDebounced(user.uid, 'momentum', snapshot());
+      saveCloudDebounced(user.uid, APP_KEYS.momentum, snapshot());
     });
     return unsub;
   }, [user]);

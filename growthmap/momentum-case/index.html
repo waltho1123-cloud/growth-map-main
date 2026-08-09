@@ -25,9 +25,6 @@
       @keyframes al-s{to{transform:rotate(360deg)}}
       @keyframes al-p{0%,100%{opacity:.6}50%{opacity:1}}
     </style>
-    <script type="module" crossorigin src="./assets/index-DGJ_2LZu.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-B0Z9INg1.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-DWsqZ1rz.css">
   </head>
   <body class="antialiased min-h-screen">
     <div id="root"></div>
@@ -60,5 +57,6 @@
       </div>
     </div>
     <script>(function(){var b=document.getElementById('al-bar');if(!b)return;var p=0,i=setInterval(function(){if(!document.contains(b)){clearInterval(i);return}p+=p<60?6:p<85?2:0.3;if(p>95){p=95;clearInterval(i)}b.style.width=p+'%'},1000)})()</script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

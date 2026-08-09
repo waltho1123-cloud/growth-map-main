@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { useAuth, signInWithGoogle, signOut } from '@/lib/cloud/auth';
 import { isFirebaseConfigured } from '@/lib/cloud/firebase-config';
@@ -47,7 +45,6 @@ export function AuthWidget() {
         className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/80 backdrop-blur border border-gray-200 shadow-sm hover:bg-white transition"
       >
         {user.photoURL ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full" />
         ) : (
           <span className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-semibold">

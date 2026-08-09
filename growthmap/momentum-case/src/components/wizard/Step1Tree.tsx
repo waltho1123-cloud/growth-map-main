@@ -1,5 +1,3 @@
-'use client';
-
 import TreeView from '@/components/tree/TreeView';
 
 export default function Step1Tree() {

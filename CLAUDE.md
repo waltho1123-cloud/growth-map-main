@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **成長藍圖實作平台（Growth Blueprint Platform）** — 商周百億 CEO 工作坊的線上實作平台。
 
-一個 repo 內含五個部分。三個前端單元是**同一工作坊的階段性課程（第一～三堂），資料互相關聯**（見下方「跨單元資料流」），只是各自獨立建置部署。各單元框架不同，但 2026-08 起以 **npm workspaces** 統一管理：root 一次 `npm install`（單一 lockfile，單元不再各自安裝），批次指令見下：
+一個 repo 內含五個部分。三個前端單元是**同一工作坊的階段性課程（第一～三堂），資料互相關聯**（見下方「跨單元資料流」），只是各自獨立建置部署。三個前端單元已統一為 **Vite 8**（momentum 為 TypeScript），以 **npm workspaces** 統一管理：root 一次 `npm install`（單一 lockfile，單元不再各自安裝），批次指令見下：
 
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
 | repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站 | 純靜態，Caddy 提供 | 無需建置 |
 | `growthmap/opportunity-system/` | 識別機會（第三堂，**開發主力**） | Vite 8 + React + Tailwind | `build/`（**要 commit**） |
 | `growthmap/aspiration-case/` | 願景 | Vite 8 + React + zustand | `dist/`（要 commit） |
-| `growthmap/momentum-case/` | 動能 | Next.js static export | `out/`（要 commit） |
+| `growthmap/momentum-case/` | 動能 | Vite 8 + React + TS | `out/`（要 commit） |
 | `growthmap/ido-ai-service/` | AI/BFF 後端 | Node + Hono + Anthropic SDK | 無建置，直接跑 `src/` |
 | `packages/contracts/` | 跨單元資料契約包 `@growthmap/contracts` | 純 ESM JS + .d.ts | 無建置（`node --test`） |
 
@@ -49,7 +49,7 @@ VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置�
 npm run dev                                  # --watch + 讀 .env（需 ANTHROPIC_API_KEY）
 
 # aspiration-case：npm run dev / npm run build / npm run lint（eslint）
-# momentum-case：npm run dev / npm run build / npm run lint
+# momentum-case：npm run dev / npm run build（tsc → eslint → vite 三重 gate）/ npm run lint
 # portal 本機預覽（repo 根）：python3 -m http.server 8000
 ```
 

@@ -1,5 +1,3 @@
-'use client';
-
 import { useMemo } from 'react';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import * as echarts from 'echarts/core';

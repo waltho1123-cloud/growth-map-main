@@ -1,5 +1,3 @@
-'use client';
-
 interface ExportButtonProps {
   stepLabel?: string;
   className?: string;

@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useRef, useState, InputHTMLAttributes } from 'react';
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'type'> & {
@@ -10,7 +8,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'type'> & {
 // Sanitize typed input: allow digits, single leading minus, single decimal point.
 // Strip leading zeros while preserving "0", "0.X", "-0", "-0.X".
 function sanitize(raw: string): string {
-  let s = raw.replace(/[^\d.\-]/g, '');
+  let s = raw.replace(/[^\d.-]/g, '');
   const leadingMinus = s.startsWith('-');
   s = s.replace(/-/g, '');
   if (leadingMinus) s = '-' + s;

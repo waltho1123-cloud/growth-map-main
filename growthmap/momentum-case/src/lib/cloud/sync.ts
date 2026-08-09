@@ -1,5 +1,3 @@
-'use client';
-
 import { getFirebase } from './firebase';
 
 export type CloudDoc<T> = {

@@ -1,5 +1,3 @@
-'use client';
-
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 
 const TASKS = [

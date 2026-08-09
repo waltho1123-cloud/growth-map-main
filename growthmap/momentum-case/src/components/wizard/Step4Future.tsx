@@ -1,5 +1,3 @@
-'use client';
-
 import { useRef, useCallback } from 'react';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 import WaterfallChart from '@/components/charts/WaterfallChart';

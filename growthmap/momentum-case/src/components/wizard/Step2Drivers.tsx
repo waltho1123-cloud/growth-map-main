@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect } from 'react';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 import { NumericInput } from '@/components/NumericInput';

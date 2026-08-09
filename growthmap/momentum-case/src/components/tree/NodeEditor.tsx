@@ -1,5 +1,3 @@
-'use client';
-
 import { TreeNodeData } from '@/types';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 import { IMEInput } from '@/components/IMEInput';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect, useRef, InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 type IMEInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {

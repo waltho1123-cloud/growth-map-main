@@ -39,14 +39,15 @@ playwright-cli close
 用兩個獨立 Playwright session 模擬兩裝置（各自的 storage/登入態）：
 
 ```bash
-U=https://growth-map-staging.zeabur.app/growthmap/aspiration-case/dist/   # staging 先驗；無 staging 時用 prod
-playwright-cli -s=devA open "$U" --persistent   # 手動完成 Google 登入（同一帳號）
-playwright-cli -s=devB open "$U" --persistent   # 第二個 session、同帳號
+> ⚠️ **Google OAuth 擋所有 CDP 控制的瀏覽器**（chromium 與 --browser=chrome 都會
+> signin/rejected，2026-08-10 實測）——本程序**必須由真人以真瀏覽器手動執行**，
+> Playwright 只能用於無登入的驗證。
 
-# devA 改 Part A 的欄位、devB 同一分鐘內改 Part B 的欄位（各自 snapshot 找 ref 後 fill）
-# 等待 >2 秒（debounce+回寫），然後兩邊 reload：
-playwright-cli -s=devA reload && playwright-cli -s=devB reload
-# 驗收：devA 看得到 devB 的 Part B 新值，devB 看得到 devA 的 Part A 新值，
-# 且雙方自己的編輯仍在（四個值全存活）。console 零 error、無持續互寫（Network 面板
-# firestore write 應在幾秒內停止——防 ping-pong 不變式）。
-```
+1. Chrome **一般視窗**開 staging 單元頁（aspiration 或 momentum）→ Google 登入。
+2. **無痕視窗**開同一網址 → 登入同一帳號（兩環境的 storage 完全隔離＝兩台裝置）。
+3. 視窗 A 改一個欄位；30 秒內視窗 B 改**另一個 section** 的欄位
+   （aspiration：Part A vs Part B；momentum：驅動因子 vs 棘手挑戰——同 section
+   的不同列驗的是即時同步，跨 section 才驗 merge 裁決）。
+4. 等 5 秒（debounce＋雲端確認），兩邊都重新整理。
+5. 驗收:兩邊同時看得到雙方的新值（四值俱存）、右上「已同步」穩定、
+   無持續互寫（DevTools Network 的 firestore write 幾秒內停止——防 ping-pong 不變式）。

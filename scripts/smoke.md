@@ -32,3 +32,21 @@ playwright-cli close
 兩個 PDF 下載事件回報正確檔名。
 
 另有結構性防復發：`npm run check:react`（禁止巢狀 React 副本）已納入 `npm run preflight`。
+
+## 雙裝置 section 級 merge（動到 packages/cloud 同步邏輯時必跑，需線上環境＋登入）
+
+模擬兩台裝置並行編輯**不同 section**，驗證互不覆蓋（whole-doc LWW 年代會後寫全蓋）。
+用兩個獨立 Playwright session 模擬兩裝置（各自的 storage/登入態）：
+
+```bash
+U=https://growth-map-staging.zeabur.app/growthmap/aspiration-case/dist/   # staging 先驗；無 staging 時用 prod
+playwright-cli -s=devA open "$U" --persistent   # 手動完成 Google 登入（同一帳號）
+playwright-cli -s=devB open "$U" --persistent   # 第二個 session、同帳號
+
+# devA 改 Part A 的欄位、devB 同一分鐘內改 Part B 的欄位（各自 snapshot 找 ref 後 fill）
+# 等待 >2 秒（debounce+回寫），然後兩邊 reload：
+playwright-cli -s=devA reload && playwright-cli -s=devB reload
+# 驗收：devA 看得到 devB 的 Part B 新值，devB 看得到 devA 的 Part A 新值，
+# 且雙方自己的編輯仍在（四個值全存活）。console 零 error、無持續互寫（Network 面板
+# firestore write 應在幾秒內停止——防 ping-pong 不變式）。
+```

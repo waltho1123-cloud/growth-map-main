@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. **opportunity-system 跨單元讀 `apps/aspiration`**（`src/lib/cloud/orient.js`）：取 `data.companyInfo.naturalGrowth.targetRevenue2028`（自然增長）、`data.companyInfo.aspirationGrowth.targetRevenue2028`（加速增長）、`data.partA`（營收拆解），算出成長差距餵給 `GrowthGapDashboard` 與 CHK-1。
 3. opportunity-system 的 `HandoffPanel` 快照凍結後交付第四堂。
 
-**風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：同步協定（load/save/subscribe/reconcile）唯一正本在 `@growthmap/cloud`——各單元的 `lib/cloud/sync` 只是綁定自家 firebase 實例的薄轉接層，**修同步 bug 一律改共用包**；三單元現皆為 onSnapshot 即時同步＋防迴授三層（hasPendingWrites／writer=clientId／applying 旗標）。**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名立即炸錯）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
+**風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：同步協定（load/save/subscribe/reconcile）唯一正本在 `@growthmap/cloud`——各單元的 `lib/cloud/sync` 只是綁定自家 firebase 實例的薄轉接層，**修同步 bug 一律改共用包**；三單元現皆為 onSnapshot 即時同步＋防迴授四層（hasPendingWrites／writer=clientId／applying 旗標／內容簽章 onSaved 後記錄）。**momentum 與 aspiration（走 `createCloudSyncBootstrap` factory）另有 section 級 merge**：雲端文件 additive `sectionTs` 記各 top-level section 最後編輯毫秒，兩台裝置並行編輯不同 section 互不覆蓋（`mergeBySection` 純函式，tie 偏本地＋內容比較用 stableStringify 防 Firestore key 排序誤判＋tie-with-diff 破對稱防 ping-pong）；opportunity 仍為 whole-doc reconcile（有 migrate／交付快照 union 獨有層，刻意不併入——不同 appKey 不同文件，兩種語意各自一致）。**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名立即炸錯）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
 
 **ADR 更新（2026-08-09 Phase 2d 完成）**：firebase config／lazy init／auth hook 已合一於 `@growthmap/firebase`（盤點確認三份純複製、零行為分歧，單元檔為薄 re-export 保持 import 路徑）；**AuthWidget（登入按鈕 UI）刻意留在各單元**——樣式與版位屬單元自主範圍，僅邏輯層共用。
 
@@ -66,23 +66,29 @@ Zeabur 專案 `growth-map-main`：project-id `69a70ecee10515e35593d1c2`、env `6
 
 | 服務 | service-id | URL | 內容 |
 | --- | --- | --- | --- |
-| 前端站 | `69e22e6fe3efc3fd3558607b` | https://growth-map-main.zeabur.app | 根 `Dockerfile`（Caddy :8080）+ portal + 三單元 build 輸出 |
+| 前端站（prod） | `69e22e6fe3efc3fd3558607b` | https://growth-map-main.zeabur.app | 根 `Dockerfile`（Caddy :8080）+ portal + 三單元 build 輸出 |
+| 前端站（staging） | `6a78b194e4a69d66638d7cb4` | https://growthmap-staging.zeabur.app | 同一份 Dockerfile／build 輸出，先驗後上 |
 | 後端 | `6a2591b7f1be9943f1f9d17b` | https://growthmap-ai.zeabur.app | Node/Hono AI/BFF |
 
 ```bash
-# 前端站（repo 根執行）
+# 前端站 staging（repo 根執行）
+npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a78b194e4a69d66638d7cb4
+# 前端站 prod（repo 根執行）
 npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 69e22e6fe3efc3fd3558607b
 # 後端（在 growthmap/ido-ai-service 執行）
 npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a2591b7f1be9943f1f9d17b
 ```
 
-**改前端 `src` 後的完整流程（四步缺一不可）**：
+**改前端 `src` 後的完整流程（五步缺一不可，staging 先行）**：
 
 0. **root `npm run preflight` 全綠**（帶 `VITE_AI_BASE_URL`）；行為級變更另跑 Playwright smoke（見 `scripts/smoke.md`）。
 
 1. 重 build，且**必須帶 `VITE_AI_BASE_URL`**（Vite 是建置時注入；漏設則線上 AI 功能整組停用——GD-06 優雅降級，不會報錯，容易漏察覺）。
-2. 重新部署前端服務（`.zeaburignore` 只打包 build 輸出，排除 `src/`、`node_modules`、`.map`、`*.md`）。
-3. **commit `build/` 進 git**——本 repo 刻意把建置產物入版控，維持「GitHub = 線上」的同步慣例。
+2. **先部 staging**，在 staging 網址跑 Playwright 線上 smoke（登入需 Firebase Console 已收錄 staging 網域——見下方備註）。
+3. smoke 綠了才部 prod 服務（`.zeaburignore` 只打包 build 輸出，排除 `src/`、`node_modules`、`.map`、`*.md`）。
+4. **commit `build/` 進 git**——本 repo 刻意把建置產物入版控，維持「GitHub = 線上」的同步慣例。
+
+> staging 備註：後端 `ALLOWED_ORIGINS` 已含 staging origin（`https://growthmap-staging.zeabur.app`）；Google 登入要在 Firebase Console → Authentication → Settings → Authorized domains 手動加 `growthmap-staging.zeabur.app`（一次性，無 API 可自動化）。純 UI/資產類變更在 staging 可不登入驗證，跳過此需求。
 
 前端站線上路徑：opportunity-system 於 `/growthmap/opportunity-system/build/`。
 
@@ -92,8 +98,8 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 | --- | --- |
 | `ANTHROPIC_API_KEY` | 必填，否則 AI 端點回 503 |
 | `ANTHROPIC_BASE_URL` | 選填（自訂上游/代理） |
-| `MODEL_OPUS` / `MODEL_SONNET` / `MODEL_HAIKU` | 模型字串，預設 `claude-opus-4-7` / `claude-sonnet-4-6` / `claude-haiku-4-5` |
-| `ALLOWED_ORIGINS` | CORS 白名單 CSV（fail-closed）。線上＝`https://growth-map-main.zeabur.app` |
+| `MODEL_OPUS` / `MODEL_SONNET` / `MODEL_HAIKU` | 模型字串，預設 `claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5` |
+| `ALLOWED_ORIGINS` | CORS 白名單 CSV（fail-closed）。線上＝`https://growth-map-main.zeabur.app`（staging 建立後追加其 origin） |
 | `REQUIRE_AUTH` | `true` 時強制 Firebase 登入 |
 | `FIREBASE_PROJECT_ID` | 驗 token aud/iss 用 |
 | `PORT` | 預設 8787（線上由平台給 8080） |
@@ -130,6 +136,8 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | `IDO_RATE_LIMIT` | 429 | 超過 20/min |
 | `IDO_AI_NO_KEY` | 503 | 伺服器未設 `ANTHROPIC_API_KEY` |
 | `IDO_VALIDATION` / `IDO_VALIDATION_TASK` | 400 | JSON 解析失敗 / 未知任務 |
+| `IDO_AI_REFUSAL` | 400 | Claude 5 安全分類器拒絕（HTTP 200＋stop_reason refusal＋空 content，非上游錯誤） |
+| `IDO_AI_TRUNCATED` | 502 | 輸出達 max_tokens 截斷（adaptive thinking 與回覆共用上限） |
 | `IDO_AI_PARSE_ERROR` | 502 | AI 輸出非合法 JSON |
 | `IDO_AI_ERROR` | 502 | 上游 Anthropic 錯誤 |
 

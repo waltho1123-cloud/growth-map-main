@@ -1,4 +1,4 @@
-export default function ExportButton({ companyName }) {
+export default function ExportButton() {
   const handleExport = async () => {
     try {
       const { default: html2canvas } = await import('html2canvas-pro')

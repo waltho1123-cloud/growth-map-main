@@ -4,6 +4,7 @@ import { createEmptyOpportunity, migrateData } from '../utils/schema';
 import { SCHEMA_VERSION } from '../utils/constants';
 import { useAuth } from '../lib/cloud/auth';
 import { subscribeCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
+import { APP_KEYS } from '@growthmap/contracts';
 import { isFirebaseConfigured } from '../lib/cloud/firebase-config';
 
 const OpportunityContext = createContext();
@@ -200,7 +201,7 @@ export function OpportunityProvider({ children }) {
       localTsRef.current = Date.now();
       if (isFirebaseConfigured && user && reconciledRef.current) {
         lastCloudSigRef.current = sig;
-        saveCloudDebounced(user.uid, 'opportunity', data, 1000, clientIdRef.current);
+        saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 1000, clientIdRef.current);
       }
     }, 300);
     return () => clearTimeout(saveTimer.current);
@@ -239,7 +240,7 @@ export function OpportunityProvider({ children }) {
       dispatch({ type: 'REPLACE_DATA', payload: merged });
     };
 
-    const unsub = subscribeCloud(user.uid, 'opportunity', (cloud, meta) => {
+    const unsub = subscribeCloud(user.uid, APP_KEYS.opportunity, (cloud, meta) => {
       // 略過自己尚未被伺服器確認的樂觀寫入
       if (meta && meta.hasPendingWrites) return;
       // 略過自己寫入後由伺服器回送的快照（避免回授）
@@ -254,7 +255,7 @@ export function OpportunityProvider({ children }) {
       } else if (decision === 'upload') {
         const data = extractData(stateRef.current);
         lastCloudSigRef.current = dataSig(data);
-        saveCloudDebounced(user.uid, 'opportunity', data, 0, clientIdRef.current);
+        saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 0, clientIdRef.current);
       }
       reconciledRef.current = true;
     });

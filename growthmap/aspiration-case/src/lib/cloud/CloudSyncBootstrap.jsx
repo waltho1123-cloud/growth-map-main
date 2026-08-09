@@ -3,15 +3,20 @@ import { useAuth } from './auth';
 import { loadCloud, saveCloudDebounced, reconcile } from './sync';
 import { useAspirationStore } from '../../store/useAspirationStore';
 import { isFirebaseConfigured } from './firebase-config';
+import { APP_KEYS, assertOrientProducerShape } from '@growthmap/contracts';
 
 function snapshot() {
   const s = useAspirationStore.getState();
-  return {
+  const snap = {
     companyInfo: s.companyInfo,
     partA: s.partA,
     partB: s.partB,
     partC: s.partC,
   };
+  // dev 守衛：第三堂（opportunity-system）跨單元讀這份文件的 orient 契約欄位。
+  // store 改掉契約欄位名時在開發期立即炸出明確錯誤，而非等下游儀表靜默歸零。
+  if (import.meta.env.DEV) assertOrientProducerShape(snap);
+  return snap;
 }
 
 export function CloudSyncBootstrap() {
@@ -34,7 +39,7 @@ export function CloudSyncBootstrap() {
     let cancelled = false;
     (async () => {
       try {
-        const cloud = await loadCloud(user.uid, 'aspiration');
+        const cloud = await loadCloud(user.uid, APP_KEYS.aspiration);
         if (cancelled) return;
         const decision = reconcile(localTsRef.current, cloud);
         if (decision === 'cloud' && cloud) {
@@ -43,7 +48,7 @@ export function CloudSyncBootstrap() {
           localTsRef.current = cloud.updatedAt;
           applyingRef.current = false;
         } else if (decision === 'upload') {
-          saveCloudDebounced(user.uid, 'aspiration', snapshot(), 0);
+          saveCloudDebounced(user.uid, APP_KEYS.aspiration, snapshot(), 0);
         }
         reconciledRef.current = true;
       } catch (e) {
@@ -60,7 +65,7 @@ export function CloudSyncBootstrap() {
     const unsub = useAspirationStore.subscribe(() => {
       if (applyingRef.current) return;
       if (!reconciledRef.current) return;
-      saveCloudDebounced(user.uid, 'aspiration', snapshot());
+      saveCloudDebounced(user.uid, APP_KEYS.aspiration, snapshot());
     });
     return unsub;
   }, [user]);

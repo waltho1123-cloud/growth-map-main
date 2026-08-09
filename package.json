@@ -1,0 +1,19 @@
+{
+  "name": "growth-map-workspace",
+  "private": true,
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26"
+  },
+  "workspaces": [
+    "packages/contracts",
+    "growthmap/opportunity-system",
+    "growthmap/aspiration-case",
+    "growthmap/momentum-case",
+    "growthmap/ido-ai-service"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  }
+}

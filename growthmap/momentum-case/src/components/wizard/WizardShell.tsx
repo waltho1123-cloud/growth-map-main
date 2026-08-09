@@ -45,6 +45,9 @@ export default function WizardShell() {
       <header className="glass-header px-4 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-4">
+            {/* 刻意用 <a> 硬導向跳出 Next app 回 portal 首頁——<Link> 會被 basePath
+                前綴成 /growthmap/momentum-case/out/，到不了站台根 */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/"
               onClick={(e) => { e.preventDefault(); window.location.href = '/'; }}

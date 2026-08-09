@@ -1,0 +1,12 @@
+{
+  "name": "@growthmap/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "跨單元 Firestore 資料契約：appKey、文件路徑、第二堂→第三堂的 orient 欄位形狀",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "node --test"
+  }
+}

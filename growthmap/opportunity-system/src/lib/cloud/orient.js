@@ -1,25 +1,18 @@
+import { APP_KEYS, extractOrientSnapshot } from '@growthmap/contracts';
 import { loadCloud } from './sync';
 import { DEFAULT_CURRENCY } from '../../utils/constants';
 
 // MOD-08：讀取第二堂（加速增長情境 / Orient）雲端資料，萃取差距儀表所需。
-// 第二堂 Firestore：users/{uid}/apps/aspiration
-//   data.companyInfo.naturalGrowth.targetRevenue2028   → Momentum（自然增長）
-//   data.companyInfo.aspirationGrowth.targetRevenue2028 → Aspiration（加速增長）
-//   data.partA                                          → 營收拆解（revenue-breakdown）
+// 欄位契約（第二堂寫入形狀 ↔ 本處讀取）的唯一正本在 @growthmap/contracts——
+// 勿在此直接讀 data.companyInfo.* 欄位，改動形狀請先改契約包。
 export async function loadOrientSnapshot(uid) {
-  const cloud = await loadCloud(uid, 'aspiration');
+  const cloud = await loadCloud(uid, APP_KEYS.aspiration);
   if (!cloud || !cloud.data) return null;
-  const ci = cloud.data.companyInfo || {};
-  const momentum = Number(ci.naturalGrowth?.targetRevenue2028) || 0;
-  const aspiration = Number(ci.aspirationGrowth?.targetRevenue2028) || 0;
+  const core = extractOrientSnapshot(cloud.data);
+  if (!core) return null;
   return {
-    aspiration,
-    momentum,
-    growthGap: Math.max(aspiration - momentum, 0),
-    revenue2025: Number(ci.revenue2025) || 0,
-    companyName: ci.name || '',
+    ...core,
     currency: DEFAULT_CURRENCY,
-    revenueBreakdown: Array.isArray(cloud.data.partA) ? cloud.data.partA : [],
     syncedAt: Date.now(),
   };
 }

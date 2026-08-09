@@ -40,3 +40,8 @@ growthmap/opportunity-system/src/
 
 # Opportunity system source (only need build/)
 growthmap/opportunity-system/public/
+
+# Workspace 共用包原始碼（部署只需各單元 build 輸出）
+packages/
+package.json
+package-lock.json

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 function sanitize(raw) {
-  let s = String(raw).replace(/[^\d.\-]/g, '');
+  let s = String(raw).replace(/[^\d.-]/g, '');
   const leadingMinus = s.startsWith('-');
   s = s.replace(/-/g, '');
   if (leadingMinus) s = '-' + s;

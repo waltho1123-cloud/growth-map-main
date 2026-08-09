@@ -6,15 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **成長藍圖實作平台（Growth Blueprint Platform）** — 商周百億 CEO 工作坊的線上實作平台。
 
-一個 repo 內含五個部分。三個前端單元是**同一工作坊的階段性課程（第一～三堂），資料互相關聯**（見下方「跨單元資料流」），只是各自獨立建置部署；**各單元框架不同，指令互不通用**：
+一個 repo 內含五個部分。三個前端單元是**同一工作坊的階段性課程（第一～三堂），資料互相關聯**（見下方「跨單元資料流」），只是各自獨立建置部署。各單元框架不同，但 2026-08 起以 **npm workspaces** 統一管理：root 一次 `npm install`（單一 lockfile，單元不再各自安裝），批次指令見下：
 
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
 | repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站 | 純靜態，Caddy 提供 | 無需建置 |
-| `growthmap/opportunity-system/` | 識別機會（第三堂，**開發主力**） | Vite + React + Tailwind | `build/`（**要 commit**） |
-| `growthmap/aspiration-case/` | 願景 | Vite + React + zustand | `dist/`（要 commit） |
+| `growthmap/opportunity-system/` | 識別機會（第三堂，**開發主力**） | Vite 8 + React + Tailwind | `build/`（**要 commit**） |
+| `growthmap/aspiration-case/` | 願景 | Vite 8 + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Next.js static export | `out/`（要 commit） |
 | `growthmap/ido-ai-service/` | AI/BFF 後端 | Node + Hono + Anthropic SDK | 無建置，直接跑 `src/` |
+| `packages/contracts/` | 跨單元資料契約包 `@growthmap/contracts` | 純 ESM JS + .d.ts | 無建置（`node --test`） |
 
 ### 跨單元資料流（改資料欄位前必讀）
 
@@ -24,11 +25,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. **opportunity-system 跨單元讀 `apps/aspiration`**（`src/lib/cloud/orient.js`）：取 `data.companyInfo.naturalGrowth.targetRevenue2028`（自然增長）、`data.companyInfo.aspirationGrowth.targetRevenue2028`（加速增長）、`data.partA`（營收拆解），算出成長差距餵給 `GrowthGapDashboard` 與 CHK-1。
 3. opportunity-system 的 `HandoffPanel` 快照凍結後交付第四堂。
 
-**風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：三單元各有一份 `lib/cloud/sync`（momentum 是 TS，其餘 JS），實作有差異、修 bug 不會自動同步到其他單元；`momentum-case/src/lib/cloud/sync.ts` 的 `AppKey` union type 是目前唯一明文寫下這個契約的地方。
+**風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：三單元各有一份 `lib/cloud/sync`（momentum 是 TS，其餘 JS），實作有差異、修 bug 不會自動同步到其他單元；**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名立即炸錯）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
 
 ## 常用指令
 
 ```bash
+# Workspace 根（repo 根執行）
+npm install                                  # 一次裝全部 workspace（唯一的安裝入口）
+VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 三單元全建
+npm test                                     # contracts + opportunity 全測試
+npm run lint                                 # 三單元 lint（基線全綠）
+
 # opportunity-system（在 growthmap/opportunity-system/）
 npm start                                    # Vite dev server :5173
 npm test                                     # Vitest watch 模式（測試在 src/__tests__/）

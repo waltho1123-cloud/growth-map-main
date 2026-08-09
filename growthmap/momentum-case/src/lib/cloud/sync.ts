@@ -8,7 +8,10 @@ export type CloudDoc<T> = {
   version: number;
 };
 
-export type AppKey = 'momentum' | 'aspiration' | 'opportunity';
+// AppKey 契約正本移至 @growthmap/contracts（type-only import，不增加 runtime 依賴）；
+// 保留 re-export 讓既有 `import { AppKey } from './sync'` 呼叫端不變。
+import type { AppKey } from '@growthmap/contracts';
+export type { AppKey };
 
 export async function loadCloud<T>(uid: string, appKey: AppKey): Promise<CloudDoc<T> | null> {
   const { db } = await getFirebase();

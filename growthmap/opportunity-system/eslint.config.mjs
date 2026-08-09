@@ -23,6 +23,8 @@ export default [
     rules: {
       // hooks 只開經典兩條；v7 的 compiler 級規則（purity/refs）會打中
       // OpportunityContext 刻意的 latest-state-ref 同步模式，留待重構時再評估
+      // 剝除診斷欄位的 rest 解構（const { a, b, ...rest } = x）是刻意用法
+      'no-unused-vars': ['error', { ignoreRestSiblings: true }],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react/react-in-jsx-scope': 'off', // Vite 自動 JSX runtime

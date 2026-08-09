@@ -17,7 +17,14 @@ export interface SnapshotMetadata {
 export interface CloudSync {
   loadCloud<T = unknown>(uid: string, appKey: AppKey): Promise<CloudDoc<T> | null>;
   saveCloud<T = unknown>(uid: string, appKey: AppKey, data: T, writer?: string | null): Promise<void>;
-  saveCloudDebounced<T = unknown>(uid: string, appKey: AppKey, data: T, delay?: number, writer?: string | null): void;
+  saveCloudDebounced<T = unknown>(
+    uid: string,
+    appKey: AppKey,
+    data: T,
+    delay?: number,
+    writer?: string | null,
+    callbacks?: { onSaved?: () => void; onError?: (e: unknown) => void } | null
+  ): void;
   subscribeCloud<T = unknown>(
     uid: string,
     appKey: AppKey,
@@ -40,6 +47,9 @@ export interface ChunkReloadRecoveryOptions {
   /** 重載前的同步 flush 回呼（本地持久化非同步的單元使用） */
   onBeforeReload?: (() => void) | null;
 }
+
+/** 註冊「回報本 session 真實最後編輯時間」的 provider；回傳解除函式 */
+export declare function registerLocalTsProvider(flushTsKey: string, provider: () => number): () => void;
 
 export declare function installChunkReloadRecovery(options: ChunkReloadRecoveryOptions): void;
 

@@ -23,22 +23,42 @@ export function userAppDocSegments(uid, appKey) {
 // 生產端：aspiration-case 的 useAspirationStore（companyInfo / partA）
 // 消費端：opportunity-system 的 lib/cloud/orient.js → GrowthGapDashboard 與 CHK-1
 
-// 列出 orient 契約的違約欄位（空陣列＝形狀完整）。生產端與消費端共用同一份檢查，
-// 確保「dev 炸錯」與「prod 標記」判的是同一件事。
-export function listOrientContractViolations(shape) {
-  const missing = [];
-  if (!shape || typeof shape !== 'object') return ['(root)'];
+// ── orient 契約檢查 ─────────────────────────────────────────────────────────────
+// 生產端與消費端共用同一份檢查，確保「dev 炸錯」與「prod 標記」判的是同一件事。
+// 分級：critical＝成長差距計算依賴的數值欄位（缺了數值不可信）；
+//       minor＝裝飾/輔助欄位（名稱、營收拆解等），缺了仍可同步核心數值（GD-06 精神）。
+// 一律「值型別」驗證而非只驗 key 存在——targetRevenue2028: undefined 曾能靜默過關。
+
+function checkFiniteNumber(parent, key, path, out) {
+  // parent 為 primitive 時（legacy/損壞文件）不得用 in 運算子（會拋 TypeError）
+  if (!parent || typeof parent !== 'object' || !(key in parent)) {
+    out.push(`${path}（缺欄位）`);
+  } else if (typeof parent[key] !== 'number' || !Number.isFinite(parent[key])) {
+    out.push(`${path}（需為有限數字，實得 ${parent[key] === null ? 'null' : typeof parent[key]}）`);
+  }
+}
+
+export function listOrientContractViolationsDetailed(shape) {
+  const critical = [];
+  const minor = [];
+  if (!shape || typeof shape !== 'object') return { critical: ['(root)'], minor: [] };
   const ci = shape.companyInfo;
   if (!ci || typeof ci !== 'object') {
-    missing.push('companyInfo');
+    critical.push('companyInfo');
   } else {
-    if (!('name' in ci)) missing.push('companyInfo.name');
-    if (!('revenue2025' in ci)) missing.push('companyInfo.revenue2025');
-    if (!ci.naturalGrowth || !('targetRevenue2028' in ci.naturalGrowth)) missing.push('companyInfo.naturalGrowth.targetRevenue2028');
-    if (!ci.aspirationGrowth || !('targetRevenue2028' in ci.aspirationGrowth)) missing.push('companyInfo.aspirationGrowth.targetRevenue2028');
+    checkFiniteNumber(ci.naturalGrowth, 'targetRevenue2028', 'companyInfo.naturalGrowth.targetRevenue2028', critical);
+    checkFiniteNumber(ci.aspirationGrowth, 'targetRevenue2028', 'companyInfo.aspirationGrowth.targetRevenue2028', critical);
+    if (typeof ci.name !== 'string') minor.push('companyInfo.name');
+    checkFiniteNumber(ci, 'revenue2025', 'companyInfo.revenue2025', minor);
   }
-  if (!Array.isArray(shape.partA)) missing.push('partA');
-  return missing;
+  if (!Array.isArray(shape.partA)) minor.push('partA');
+  return { critical, minor };
+}
+
+// 扁平清單（critical 在前）；空陣列＝形狀完整。
+export function listOrientContractViolations(shape) {
+  const d = listOrientContractViolationsDetailed(shape);
+  return [...d.critical, ...d.minor];
 }
 
 // 從 apps/aspiration 的 data 萃取成長差距核心值。
@@ -47,25 +67,34 @@ export function listOrientContractViolations(shape) {
 //   violations 列表 ＋ console.error——prod 不再靜默，消費端（第三堂儀表）須顯示違約狀態。
 export function extractOrientSnapshot(data) {
   if (!data || typeof data !== 'object') return null;
-  const violations = listOrientContractViolations(data);
-  if (violations.length > 0) {
+  const { critical, minor } = listOrientContractViolationsDetailed(data);
+  if (critical.length > 0) {
     console.error(
-      `[@growthmap/contracts] apps/aspiration 文件違反 orient 契約，缺欄位：${violations.join('、')}。` +
+      `[@growthmap/contracts] apps/aspiration 文件違反 orient 契約（核心欄位）：${critical.join('、')}。` +
       '成長差距數值不可信，請檢查 aspiration-case 寫入端與 packages/contracts 是否同步。'
     );
+  } else if (minor.length > 0) {
+    console.warn(
+      `[@growthmap/contracts] apps/aspiration 文件缺輔助欄位：${minor.join('、')}（核心數值仍可同步）。`
+    );
   }
-  const ci = data.companyInfo || {};
-  const momentum = Number(ci.naturalGrowth?.targetRevenue2028) || 0;
-  const aspiration = Number(ci.aspirationGrowth?.targetRevenue2028) || 0;
+  const ci = (data.companyInfo && typeof data.companyInfo === 'object') ? data.companyInfo : {};
+  const ng = (ci.naturalGrowth && typeof ci.naturalGrowth === 'object') ? ci.naturalGrowth : {};
+  const ag = (ci.aspirationGrowth && typeof ci.aspirationGrowth === 'object') ? ci.aspirationGrowth : {};
+  const momentum = Number(ng.targetRevenue2028) || 0;
+  const aspiration = Number(ag.targetRevenue2028) || 0;
   return {
     aspiration,
     momentum,
     growthGap: Math.max(aspiration - momentum, 0),
     revenue2025: Number(ci.revenue2025) || 0,
-    companyName: ci.name || '',
+    companyName: typeof ci.name === 'string' ? ci.name : '',
     revenueBreakdown: Array.isArray(data.partA) ? data.partA : [],
-    contractOk: violations.length === 0,
-    violations,
+    // contractOk＝核心欄位完整（消費端可信任數值）；minor 缺失不阻擋同步（GD-06）
+    contractOk: critical.length === 0,
+    criticalViolations: critical,
+    minorViolations: minor,
+    violations: [...critical, ...minor],
   };
 }
 

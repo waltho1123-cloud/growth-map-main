@@ -38,12 +38,19 @@ export default function GrowthGapDashboard() {
         return;
       }
       if (orient.contractOk === false) {
-        // 契約違約：數值不可信，停止套用（prod 不靜默——詳細缺欄已由契約包 console.error）
+        // 核心數值欄位違約：數值不可信，停止套用（詳細缺欄已由契約包 console.error）
         toast.error('第二堂資料格式與契約不符，已停止同步。請重新開啟「加速增長情境」儲存一次，或聯繫維護者。');
         return;
       }
-      dispatch({ type: 'UPDATE_PROJECT_META', payload: { targetSnapshot: orient } });
-      toast.success('已從第二堂同步成長差距');
+      // 診斷欄位不持久化（targetSnapshot 會進 localStorage/雲端）；只存業務值
+      const { contractOk, criticalViolations, minorViolations, violations, ...snapshotData } = orient;
+      dispatch({ type: 'UPDATE_PROJECT_META', payload: { targetSnapshot: snapshotData } });
+      if (minorViolations && minorViolations.length > 0) {
+        // 輔助欄位缺失（如公司名稱/營收拆解）：核心數值照常同步（GD-06 優雅降級），僅提示
+        toast('已同步成長差距核心數值；部分輔助欄位缺失（詳見主控台）', { icon: '⚠️' });
+      } else {
+        toast.success('已從第二堂同步成長差距');
+      }
     } catch (e) {
       console.error('[orient sync] failed:', e);
       toast.error('同步失敗，請稍後再試');

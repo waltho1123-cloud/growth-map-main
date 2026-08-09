@@ -5,13 +5,17 @@ import { SCHEMA_VERSION } from '../utils/constants';
 import { useAuth } from '../lib/cloud/auth';
 import { subscribeCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
 import { APP_KEYS } from '@growthmap/contracts';
-import { consumeFlushTs } from '@growthmap/cloud';
+import { consumeFlushTs, registerLocalTsProvider } from '@growthmap/cloud';
 import { isFirebaseConfigured } from '../lib/cloud/firebase-config';
 
 const OpportunityContext = createContext();
 
 // index.jsx 的 vite:preloadError 自動重載前，flush 存檔時寫入的時間戳 key（per-tab）。
 const FLUSH_TS_KEY = 'bw-ceo-flush-ts';
+
+// 模組層一次性消耗（非 render 期）：React 併發模式可能丟棄並重播首次 render，
+// render 期的消耗性讀取會在重播時拿到 0 而遺失 priming。模組載入只執行一次。
+const INITIAL_FLUSH_TS = consumeFlushTs(FLUSH_TS_KEY);
 
 // 從 state 萃取要持久化的完整 data（localStorage + 雲端共用）
 function extractData(state) {
@@ -149,7 +153,7 @@ function initState() {
 export function OpportunityProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, initState);
   const { user } = useAuth();
-  const localTsRef = useRef(0);
+  const localTsRef = useRef(INITIAL_FLUSH_TS);
   // Gate the save effect until the initial cloud reconcile has finished,
   // otherwise a freshly-signed-in user can overwrite cloud with local data
   // before we've had a chance to load it.
@@ -166,16 +170,6 @@ export function OpportunityProvider({ children }) {
   // 永遠指向最新 state，供 onSnapshot 回呼（訂閱建立於登入當下、之後才觸發）讀取。
   const stateRef = useRef(state);
   stateRef.current = state;
-
-  // 重載恢復：若本分頁剛因 chunk 失敗自動重載（index.jsx 會先觸發 bw:flush-save），
-  // 以 flush 時間戳作為本 session 的 localTs——否則 localTs=0 會被 reconcile 視為
-  // 「本 session 未動」，讓雲端較舊的資料蓋回剛救下來的編輯。
-  const flushTsInitRef = useRef(false);
-  if (!flushTsInitRef.current) {
-    flushTsInitRef.current = true;
-    const t = consumeFlushTs(FLUSH_TS_KEY); // storage 不可用時回 0：維持雲端優先的預設
-    if (t) localTsRef.current = t;
-  }
 
   // 自動儲存至 LocalStorage + 雲端 (debounced)
   const saveTimer = useRef(null);
@@ -198,8 +192,10 @@ export function OpportunityProvider({ children }) {
       if (sig !== null && sig === lastCloudSigRef.current) return;
       localTsRef.current = Date.now();
       if (isFirebaseConfigured && user && reconciledRef.current) {
-        lastCloudSigRef.current = sig;
-        saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 1000, clientIdRef.current);
+        // 簽章只能在寫入確實成功（onSaved）後記錄——先記後存會讓存檔失敗被永久視為已同步
+        saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 1000, clientIdRef.current, {
+          onSaved: () => { lastCloudSigRef.current = sig; },
+        });
       }
     }, 300);
     return () => clearTimeout(saveTimer.current);
@@ -212,10 +208,16 @@ export function OpportunityProvider({ children }) {
     const flush = () => {
       clearTimeout(saveTimer.current);
       saveAppData(extractData(stateRef.current));
-      // flush 時間戳由 installChunkReloadRecovery（@growthmap/cloud）寫入，此處只負責同步存檔
+      // flush 時間戳由 installChunkReloadRecovery（@growthmap/cloud）依 provider 寫入
     };
     window.addEventListener('bw:flush-save', flush);
-    return () => window.removeEventListener('bw:flush-save', flush);
+    // 恢復機制的時間戳來源＝本 session 真實最後編輯時間；沒編輯過（0）就不寫，
+    // 重載後維持雲端優先——沉睡分頁的過期資料不得反蓋較新雲端。
+    const unregister = registerLocalTsProvider(FLUSH_TS_KEY, () => localTsRef.current);
+    return () => {
+      window.removeEventListener('bw:flush-save', flush);
+      unregister();
+    };
   }, []);
 
   // 登入時：即時訂閱雲端文件（onSnapshot）。第一筆快照等同原本的一次性 reconcile；
@@ -252,8 +254,10 @@ export function OpportunityProvider({ children }) {
         applyCloud(cloud);
       } else if (decision === 'upload') {
         const data = extractData(stateRef.current);
-        lastCloudSigRef.current = dataSig(data);
-        saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 0, clientIdRef.current);
+        const sig = dataSig(data);
+        saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 0, clientIdRef.current, {
+          onSaved: () => { lastCloudSigRef.current = sig; },
+        });
       }
       reconciledRef.current = true;
     });

@@ -15,7 +15,7 @@ installChunkReloadRecovery({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AppErrorBoundary>
+    <AppErrorBoundary clearOverlayIds={['app-loading']}>
       <App />
     </AppErrorBoundary>
   </React.StrictMode>

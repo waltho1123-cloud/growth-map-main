@@ -18,13 +18,19 @@ export interface OrientCore {
   revenue2025: number;
   companyName: string;
   revenueBreakdown: unknown[];
-  /** false = 資料存在但形狀違約，數值不可信（消費端應顯示違約狀態） */
+  /** false = 核心數值欄位違約，數值不可信（消費端應擋下並顯示違約狀態） */
   contractOk: boolean;
-  /** 違約的欄位路徑清單（contractOk=true 時為空） */
+  /** 核心欄位違約（成長差距計算依賴） */
+  criticalViolations: string[];
+  /** 輔助欄位缺失（可同步核心數值，僅提示） */
+  minorViolations: string[];
+  /** 全部違約（critical 在前） */
   violations: string[];
 }
 
 export declare function listOrientContractViolations(shape: unknown): string[];
+
+export declare function listOrientContractViolationsDetailed(shape: unknown): { critical: string[]; minor: string[] };
 
 export declare function extractOrientSnapshot(data: unknown): OrientCore | null;
 

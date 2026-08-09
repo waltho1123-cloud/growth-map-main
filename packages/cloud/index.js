@@ -44,16 +44,21 @@ export function createCloudSync(getFirebase, firestoreOverride = null) {
 
   const timers = new Map();
 
-  function saveCloudDebounced(uid, appKey, data, delay = 1000, writer = null) {
+  // callbacks = { onSaved, onError }：onSaved 只在寫入確實成功後觸發——
+  // 消費端的內容簽章（lastCloudSig）必須在 onSaved 才記錄，否則存檔失敗會被永久視為已同步。
+  function saveCloudDebounced(uid, appKey, data, delay = 1000, writer = null, callbacks = null) {
     const key = `${uid}:${appKey}`;
     const prev = timers.get(key);
     if (prev) clearTimeout(prev);
     timers.set(
       key,
       setTimeout(() => {
-        saveCloud(uid, appKey, data, writer).catch((e) => {
-          console.error('[cloud sync] save failed:', e);
-        });
+        saveCloud(uid, appKey, data, writer)
+          .then(() => { callbacks?.onSaved?.(); })
+          .catch((e) => {
+            console.error('[cloud sync] save failed:', e);
+            callbacks?.onError?.(e);
+          });
         timers.delete(key);
       }, delay)
     );
@@ -99,6 +104,16 @@ export function createCloudSync(getFirebase, firestoreOverride = null) {
 // 否則 localTs=0 會被 reconcile 視為「本 session 未動」，讓較舊的雲端資料蓋回本地。
 // sessionStorage 被封鎖時改用 URL 參數當防迴圈標記，恢復機制在無 storage 環境仍運作。
 
+// localTs provider 註冊表：bootstrap 註冊「回報本 session 真實最後編輯時間」的函式。
+// 恢復機制不得自行發明時間戳——曾因寫入 reload 當下時間，讓沉睡分頁的過期資料
+// 在重載後被判「較新」而蓋掉他裝置的新編輯（2026-08-09 max 審查 finding）。
+const localTsProviders = new Map();
+
+export function registerLocalTsProvider(flushTsKey, provider) {
+  localTsProviders.set(flushTsKey, provider);
+  return () => { localTsProviders.delete(flushTsKey); };
+}
+
 export function installChunkReloadRecovery({
   reloadKey,
   flushTsKey,
@@ -106,25 +121,36 @@ export function installChunkReloadRecovery({
   onBeforeReload = null, // 本地持久化非同步的單元（如 debounced localStorage）在此 flush；zustand persist 單元可省略
 } = {}) {
   const readLast = () => {
-    try {
-      return { at: Number(sessionStorage.getItem(reloadKey) || 0), persistable: true };
-    } catch {
-      return { at: Number(new URLSearchParams(window.location.search).get('bwreload') || 0), persistable: false };
-    }
+    let ss = 0;
+    try { ss = Number(sessionStorage.getItem(reloadKey) || 0); } catch { /* 讀不到就靠 URL */ }
+    const url = Number(new URLSearchParams(window.location.search).get('bwreload') || 0);
+    return Math.max(ss, url);
   };
   window.addEventListener('vite:preloadError', (event) => {
     const now = Date.now();
-    const { at, persistable } = readLast();
-    if (now - at < cooldownMs) return; // 冷卻期內第二次失敗：放行預設拋錯（交給 ErrorBoundary）
+    if (now - readLast() < cooldownMs) return; // 冷卻期內第二次失敗：放行預設拋錯（交給 ErrorBoundary）
     event.preventDefault();
     if (onBeforeReload) {
       try { onBeforeReload(); } catch (e) { console.error('[chunk recovery] onBeforeReload failed:', e); }
     }
+    // 防迴圈標記必須「確認寫入成功」才可用無標記的 reload()；
+    // setItem 失敗（配額滿/受限模式）就改走 URL 參數路徑，標記隨網址存活。
+    let markerPersisted = false;
     try {
       sessionStorage.setItem(reloadKey, String(now));
-      if (flushTsKey) sessionStorage.setItem(flushTsKey, String(now));
-    } catch { /* storage 不可用：靠 URL 參數防迴圈；flush-ts 缺席時開機端回到雲端優先 */ }
-    if (persistable) {
+      markerPersisted = true;
+    } catch { /* 走 URL 參數 */ }
+    // flush 時間戳＝bootstrap 回報的真實最後編輯時間；沒編輯過（0）就不寫，
+    // 重載後維持「雲端優先」的預設，避免過期本地資料反蓋較新雲端。
+    if (flushTsKey) {
+      const provider = localTsProviders.get(flushTsKey);
+      let ts = 0;
+      try { ts = provider ? Number(provider()) || 0 : 0; } catch { ts = 0; }
+      if (ts > 0) {
+        try { sessionStorage.setItem(flushTsKey, String(ts)); } catch { /* 缺席時開機端回到雲端優先 */ }
+      }
+    }
+    if (markerPersisted) {
       window.location.reload();
     } else {
       const url = new URL(window.location.href);

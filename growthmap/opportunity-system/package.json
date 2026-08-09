@@ -18,8 +18,9 @@
     "start": "vite",
     "build": "eslint src && vite build",
     "preview": "vite preview",
-    "test": "vitest",
-    "lint": "eslint src"
+    "test": "vitest run",
+    "lint": "eslint src",
+    "test:watch": "vitest"
   },
   "browserslist": {
     "production": [

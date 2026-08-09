@@ -42,6 +42,8 @@ test('extractOrientSnapshot 依契約萃取成長差距核心值', () => {
     companyName: '測試公司',
     revenueBreakdown: [{ segment: '主力產品', revenue: 100 }],
     contractOk: true,
+    criticalViolations: [],
+    minorViolations: [],
     violations: [],
   });
 });
@@ -52,12 +54,12 @@ test('extractOrientSnapshot：加速 ≤ 自然時 growthGap 鉗在 0', () => {
   assert.equal(extractOrientSnapshot(snap).growthGap, 0);
 });
 
-test('extractOrientSnapshot：無資料回 null（非違約）；形狀違約標記 contractOk=false（prod 可觀測）', () => {
+test('extractOrientSnapshot：無資料回 null（非違約）；核心違約 contractOk=false（prod 可觀測）', () => {
   assert.equal(extractOrientSnapshot(null), null);
   const core = extractOrientSnapshot({});
   assert.equal(core.contractOk, false);
-  assert.ok(core.violations.includes('companyInfo'));
-  assert.ok(core.violations.includes('partA'));
+  assert.ok(core.criticalViolations.some((v) => v.includes('companyInfo')));
+  assert.ok(core.minorViolations.some((v) => v.includes('partA')));
   assert.deepEqual(
     { aspiration: core.aspiration, momentum: core.momentum, growthGap: core.growthGap },
     { aspiration: 0, momentum: 0, growthGap: 0 }
@@ -68,7 +70,41 @@ test('listOrientContractViolations：完整形狀回空陣列、缺欄逐一列�
   assert.deepEqual(listOrientContractViolations(makeAspirationSnapshot()), []);
   const snap = makeAspirationSnapshot();
   delete snap.companyInfo.aspirationGrowth;
-  assert.deepEqual(listOrientContractViolations(snap), ['companyInfo.aspirationGrowth.targetRevenue2028']);
+  const v = listOrientContractViolations(snap);
+  assert.equal(v.length, 1);
+  assert.ok(v[0].includes('companyInfo.aspirationGrowth.targetRevenue2028'));
+});
+
+test('primitive 值不得炸 TypeError：naturalGrowth 為數字時列為違約而非拋出（legacy/損壞文件）', () => {
+  const snap = makeAspirationSnapshot();
+  snap.companyInfo.naturalGrowth = 42; // 曾使 in 運算子拋 TypeError
+  let core;
+  assert.doesNotThrow(() => { core = extractOrientSnapshot(snap); });
+  assert.equal(core.contractOk, false);
+  assert.ok(core.criticalViolations.some((v) => v.includes('naturalGrowth.targetRevenue2028')));
+});
+
+test('值型別驗證：key 存在但值為 undefined/字串 → 核心違約（不再靜默歸零過關）', () => {
+  const snap = makeAspirationSnapshot();
+  snap.companyInfo.aspirationGrowth.targetRevenue2028 = undefined;
+  let core = extractOrientSnapshot(snap);
+  assert.equal(core.contractOk, false);
+
+  const snap2 = makeAspirationSnapshot();
+  snap2.companyInfo.naturalGrowth.targetRevenue2028 = 'abc';
+  core = extractOrientSnapshot(snap2);
+  assert.equal(core.contractOk, false);
+  assert.ok(core.criticalViolations.some((v) => v.includes('需為有限數字')));
+});
+
+test('critical/minor 分級：只缺 name（裝飾欄位）→ contractOk 仍為 true，核心數值可同步（GD-06）', () => {
+  const snap = makeAspirationSnapshot();
+  delete snap.companyInfo.name;
+  const core = extractOrientSnapshot(snap);
+  assert.equal(core.contractOk, true);
+  assert.equal(core.criticalViolations.length, 0);
+  assert.ok(core.minorViolations.some((v) => v.includes('companyInfo.name')));
+  assert.equal(core.growthGap, 60);
 });
 
 test('assertOrientProducerShape：完整形狀通過', () => {

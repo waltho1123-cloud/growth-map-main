@@ -15,7 +15,8 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "preflight": "npm run check:react && npm test --workspaces --if-present && npm run lint --workspaces --if-present && npm run build --workspaces --if-present",
-    "check:react": "node scripts/check-single-react.mjs"
+    "preflight": "npm run check:env && npm run check:react && npm test --workspaces --if-present && npm run lint --workspaces --if-present && npm run build --workspaces --if-present",
+    "check:react": "node scripts/check-single-react.mjs",
+    "check:env": "node scripts/check-preflight-env.mjs"
   }
 }

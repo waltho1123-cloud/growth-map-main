@@ -43,8 +43,8 @@ VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run preflight   # 部署前
 
 # opportunity-system（在 growthmap/opportunity-system/）
 npm start                                    # Vite dev server :5173
-npm test                                     # Vitest watch 模式（測試在 src/__tests__/）
-npm test -- run                              # 跑一次就結束（CI 模式）
+npm test                                     # Vitest 跑一次（preflight 用；測試在 src/__tests__/）
+npm run test:watch                           # watch 模式（開發用）
 npm run lint                                 # eslint（0 error 為基線）
 VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（見下方「關鍵」）
 # 瀏覽器支援下限明訂於 vite.config.mjs 的 build.target；Node ^22.22.2 || ^24.15.0 || >=26（engines）

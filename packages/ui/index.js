@@ -11,15 +11,24 @@ const h = React.createElement;
 export class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { error: null };
+    // hasError 獨立於 error 值：throw null/undefined/0 等 falsy 值也必須觸發 fallback
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { error };
+    return { hasError: true, error };
+  }
+
+  componentDidCatch() {
+    // 部分單元的 loading 遮罩是 #root 外的 fixed 覆蓋層（由主畫面掛載時移除）——
+    // 錯誤發生時主畫面掛不上來，遮罩會蓋住本 fallback；在此顯式清除。
+    for (const id of this.props.clearOverlayIds || []) {
+      try { document.getElementById(id)?.remove(); } catch { /* 清不掉也不影響 fallback 邏輯 */ }
+    }
   }
 
   render() {
-    if (!this.state.error) return this.props.children;
+    if (!this.state.hasError) return this.props.children;
     const subtitle = this.props.subtitle
       || '可能剛完成版本更新，或網路暫時不穩；重新載入即可回到最新狀態。';
     return h('div', {

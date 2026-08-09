@@ -16,7 +16,7 @@ const MID_GRAY = [148, 163, 184];
 const DARK_TEXT = [36, 59, 83];
 const WHITE = [255, 255, 255];
 
-const FONT_URL = process.env.PUBLIC_URL + '/fonts/NotoSansTC.ttf';
+const FONT_URL = import.meta.env.BASE_URL + 'fonts/NotoSansTC.ttf';
 let cachedFontBase64 = null;
 
 async function loadCJKFont() {

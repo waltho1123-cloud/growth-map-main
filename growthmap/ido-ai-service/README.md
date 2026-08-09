@@ -28,7 +28,7 @@ node --env-file=.env src/index.js   # 或 npm run dev
 
 1. 同 repo 新增服務，**Root Directory** 設為 `growthmap/ido-ai-service`（Dockerfile 自動偵測）。
 2. 環境變數設定：`ANTHROPIC_API_KEY`、`ALLOWED_ORIGINS`（填前端正式域名）、`REQUIRE_AUTH=true`、`MODEL_*`（可選）。
-3. 前端 `opportunity-system` 設定 `REACT_APP_AI_BASE_URL` 指向本服務網址。
+3. 前端 `opportunity-system` 設定 `VITE_AI_BASE_URL` 指向本服務網址。
 
 ## 安全
 

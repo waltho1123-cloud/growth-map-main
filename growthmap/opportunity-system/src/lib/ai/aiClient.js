@@ -1,6 +1,6 @@
 // 前端 AI 客戶端：呼叫 ido-ai-service。AI 產出皆為 draft，需使用者採納才生效（ADR-004/GD-04）。
-// 未設定 REACT_APP_AI_BASE_URL 時 AI 功能停用（優雅降級，GD-06）。
-const AI_BASE = (process.env.REACT_APP_AI_BASE_URL || '').replace(/\/$/, '');
+// 未設定 VITE_AI_BASE_URL 時 AI 功能停用（優雅降級，GD-06）。
+const AI_BASE = (import.meta.env.VITE_AI_BASE_URL || '').replace(/\/$/, '');
 
 export const isAiEnabled = () => Boolean(AI_BASE);
 

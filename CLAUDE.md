@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
 | repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站 | 純靜態，Caddy 提供 | 無需建置 |
-| `growthmap/opportunity-system/` | 識別機會（第三堂，**開發主力**） | CRA React + Tailwind | `build/`（**要 commit**） |
+| `growthmap/opportunity-system/` | 識別機會（第三堂，**開發主力**） | Vite + React + Tailwind | `build/`（**要 commit**） |
 | `growthmap/aspiration-case/` | 願景 | Vite + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Next.js static export | `out/`（要 commit） |
 | `growthmap/ido-ai-service/` | AI/BFF 後端 | Node + Hono + Anthropic SDK | 無建置，直接跑 `src/` |
@@ -30,10 +30,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # opportunity-system（在 growthmap/opportunity-system/）
-npm start                                    # dev server :3000
-npm test                                     # Jest watch 模式（測試在 src/__tests__/）
-npm test -- --watchAll=false                 # 跑一次就結束（CI 模式）
-REACT_APP_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（見下方「關鍵」）
+npm start                                    # Vite dev server :5173
+npm test                                     # Vitest watch 模式（測試在 src/__tests__/）
+npm test -- run                              # 跑一次就結束（CI 模式）
+VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（見下方「關鍵」）
 
 # ido-ai-service（在 growthmap/ido-ai-service/）
 npm run dev                                  # --watch + 讀 .env（需 ANTHROPIC_API_KEY）
@@ -61,7 +61,7 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 
 **改前端 `src` 後的完整流程（三步缺一不可）**：
 
-1. 重 build，且**必須帶 `REACT_APP_AI_BASE_URL`**（CRA 是建置時注入；漏設則線上 AI 功能整組停用——GD-06 優雅降級，不會報錯，容易漏察覺）。
+1. 重 build，且**必須帶 `VITE_AI_BASE_URL`**（Vite 是建置時注入；漏設則線上 AI 功能整組停用——GD-06 優雅降級，不會報錯，容易漏察覺）。
 2. 重新部署前端服務（`.zeaburignore` 只打包 build 輸出，排除 `src/`、`node_modules`、`.map`、`*.md`）。
 3. **commit `build/` 進 git**——本 repo 刻意把建置產物入版控，維持「GitHub = 線上」的同步慣例。
 
@@ -133,15 +133,15 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 
 ## 前端架構 — opportunity-system
 
-CRA React，`src/` 依功能分目錄。流程：**工具分析 → 新增機會（模板一二三）→ 綜合檢查 → 交付**。
+Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機會（模板一二三）→ 綜合檢查 → 交付**。
 
 ### 元件流（`src/components/`）
-- **Dashboard/**：機會長清單首頁。`Dashboard.js`（新增機會、進度列、匯出 PDF）、`GrowthGapDashboard.js`（讀第二堂成長差距）、`OpportunityTable.js`、`AiRankPanel.js`（AI-04）。
-- **Editor/**：`OpportunityEditor.js` 容器 + `TabOne/TabTwo/TabThree.js` ＝ 模板一/二/三（TabThree 含四象限 AI 評分）。
-- **Tools/**：`ToolLibrary.js`、`ToolAnalysis.js`（AI-01 洞察）、`DynamicField.js`。
-- **Check/**：`CheckPanel.js`（CHK-1~5 規則引擎，`utils/checkEngine.js`）。
-- **Handoff/**：`HandoffPanel.js`（快照凍結、交付第四堂）。
-- **ai/**：`AiSuggestionCard.js`（人在迴路採納卡）、`CoachDrawer.js`（AI-07）。
+- **Dashboard/**：機會長清單首頁。`Dashboard.jsx`（新增機會、進度列、匯出 PDF）、`GrowthGapDashboard.jsx`（讀第二堂成長差距）、`OpportunityTable.jsx`、`AiRankPanel.jsx`（AI-04）。
+- **Editor/**：`OpportunityEditor.jsx` 容器 + `TabOne/TabTwo/TabThree.jsx` ＝ 模板一/二/三（TabThree 含四象限 AI 評分）。
+- **Tools/**：`ToolLibrary.jsx`、`ToolAnalysis.jsx`（AI-01 洞察）、`DynamicField.jsx`。
+- **Check/**：`CheckPanel.jsx`（CHK-1~5 規則引擎，`utils/checkEngine.js`）。
+- **Handoff/**：`HandoffPanel.jsx`（快照凍結、交付第四堂）。
+- **ai/**：`AiSuggestionCard.jsx`（人在迴路採納卡）、`CoachDrawer.jsx`（AI-07）。
 
 ### 狀態與資料模型
 - **Context**：`OpportunityContext`（state + reducer + 雲端同步，唯一 state 來源）、`NavContext`（導覽）。
@@ -182,7 +182,7 @@ CRA React，`src/` 依功能分目錄。流程：**工具分析 → 新增機會
 ## 關鍵決策摘要（ADR / GD）
 
 - **ADR-004 / GD-04**：AI 一律輸出 draft，使用者採納後才寫入 state。改任何 AI 流程都不得違反。
-- **GD-06**：未設 `REACT_APP_AI_BASE_URL` 則 AI 優雅降級（停用、不報錯）。
+- **GD-06**：未設 `VITE_AI_BASE_URL` 則 AI 優雅降級（停用、不報錯）。
 - **ADR-007 / GD-08**：BCG 工具庫資料驅動。
 - **ADR-009**：模型字串全部環境變數可配置。
 - **ADR-010**：CHK-1 緩衝係數可於設定頁調整（預設 1.2）。

@@ -138,9 +138,9 @@ GD-02 鎖技術棧（不引入 PostgreSQL/Redis）；GD-04 AI 皆 draft 經人�
 
 ### Phase 5 細節
 - 後端 `growthmap/ido-ai-service`（Node + Hono + `@anthropic-ai/sdk`）：`/api/ai/tasks`（AI-01/03/04）、`/api/ai/coach`（AI-07 SSE）。去識別化、CORS、rate limit、人在迴路（只回 draft）。已用真實 key 驗證 AI-01 通過（`claude-sonnet-4-6`）。
-- 前端：`lib/ai/aiClient.js`、`components/ai/AiSuggestionCard.js`（accept/reject）、`CoachDrawer.js`；工具分析「AI 產洞察」、模版三「AI 評分」、右下教練浮動鈕。`REACT_APP_AI_BASE_URL` 未設時 AI 停用（降級 GD-06）。
+- 前端：`lib/ai/aiClient.js`、`components/ai/AiSuggestionCard.js`（accept/reject）、`CoachDrawer.js`；工具分析「AI 產洞察」、模版三「AI 評分」、右下教練浮動鈕。`VITE_AI_BASE_URL` 未設時 AI 停用（降級 GD-06）。
 - AI-04 排序：已完成（`components/ai/AiRankPanel.js`，採納寫入機會 `rank`，長清單優先依 rank 排序）。
-- **待辦**：本地端到端測試（`REACT_APP_AI_BASE_URL=http://localhost:8787 npm start` + 後端 `node --env-file=.env src/index.js`）；Zeabur 第二服務部署。
+- **待辦**：本地端到端測試（`VITE_AI_BASE_URL=http://localhost:8787 npm start` + 後端 `node --env-file=.env src/index.js`）；Zeabur 第二服務部署。
 - **⚠️ key 安全**：使用者曾將 key 貼於對話，需撤銷換新；正式環境用 Zeabur 環境變數。
 
 Phase 0–4、6 全綠 + **16/16 整合測試通過**。新版 `build/` 已產生但**尚未 commit/部署**（且 AI 在無 `REACT_APP_AI_BASE_URL` 的 build 中停用）。

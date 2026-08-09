@@ -88,7 +88,15 @@ app.post('/api/ai/tasks', async (c) => {
   }
   try {
     const safeInput = sanitizeObject(body.input || {});
-    const { text, usage, model } = await callClaude({ tier: task.model, system: task.system, user: task.buildUser(safeInput) });
+    const { text, stopReason, usage, model } = await callClaude({ tier: task.model, system: task.system, user: task.buildUser(safeInput) });
+    // Claude 5 分類器拒絕（HTTP 200 + refusal + 空 content）與長度截斷都不是解析錯誤——
+    // 分流成可行動的錯誤訊息，避免使用者對著 IDO_AI_PARSE_ERROR 盲目重試。
+    if (stopReason === 'refusal') {
+      return c.json({ error: { code: 'IDO_AI_REFUSAL', message: 'AI 安全機制拒絕了此內容，請調整輸入後重試' } }, 400);
+    }
+    if (stopReason === 'max_tokens') {
+      return c.json({ error: { code: 'IDO_AI_TRUNCATED', message: 'AI 輸出超過長度上限而截斷，請精簡輸入或稍後重試' } }, 502);
+    }
     let payload = text;
     let confidence = null;
     if (task.json) {
@@ -129,10 +137,17 @@ app.post('/api/ai/coach', async (c) => {
   return streamSSE(c, async (stream) => {
     try {
       const s = streamClaude({ tier: task.model, system: task.system, messages });
+      let deltaCount = 0;
       for await (const event of s) {
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          deltaCount += 1;
           await stream.writeSSE({ event: 'coach.delta', data: JSON.stringify({ delta: event.delta.text }) });
         }
+      }
+      // Claude 5 分類器拒絕時串流正常結束但零文字——不能發 done 讓前端顯示空白回覆
+      if (deltaCount === 0) {
+        await stream.writeSSE({ event: 'coach.error', data: JSON.stringify({ message: 'AI 未產生回覆（可能被安全機制拒絕），請調整訊息後重試' }) });
+        return;
       }
       await stream.writeSSE({ event: 'coach.done', data: JSON.stringify({ ok: true }) });
     } catch (e) {

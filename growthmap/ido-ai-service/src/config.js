@@ -7,8 +7,8 @@ export const config = {
   },
   // 模型分工（SDD §4.5.1）
   models: {
-    opus: process.env.MODEL_OPUS || 'claude-opus-4-7', // 教練 / 機會發想 / 檢查建議
-    sonnet: process.env.MODEL_SONNET || 'claude-sonnet-4-6', // 洞察生成 / 模版三評分 / 排序
+    opus: process.env.MODEL_OPUS || 'claude-opus-5', // 教練 / 機會發想 / 檢查建議
+    sonnet: process.env.MODEL_SONNET || 'claude-sonnet-5', // 洞察生成 / 模版三評分 / 排序
     haiku: process.env.MODEL_HAIKU || 'claude-haiku-4-5', // 去識別化前處理（預留）
   },
   // 預設 fail-closed：未設定 ALLOWED_ORIGINS 時不允許任何跨來源，

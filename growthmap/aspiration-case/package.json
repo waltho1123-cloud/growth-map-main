@@ -12,6 +12,7 @@
   "dependencies": {
     "@growthmap/cloud": "*",
     "@growthmap/contracts": "*",
+    "@growthmap/firebase": "*",
     "@growthmap/pdf": "*",
     "@growthmap/ui": "*",
     "firebase": "^12.12.0",

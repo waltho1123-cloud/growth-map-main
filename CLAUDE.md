@@ -18,6 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `packages/contracts/` | 跨單元資料契約 `@growthmap/contracts` | 純 ESM JS + .d.ts | 無建置（`node --test`） |
 | `packages/cloud/` | 共用同步協定 `@growthmap/cloud`（load/save/subscribe/reconcile） | 純 ESM JS + .d.ts | 無建置（`node --test`） |
 | `packages/pdf/` | 共用 PDF 匯出管線 `@growthmap/pdf`（DOM→多頁 PDF） | 純 ESM JS + .d.ts | 無建置 |
+| `packages/firebase/` | 共用 Firebase 層 `@growthmap/firebase`（config/init/auth hook） | 純 ESM JS + .d.ts | 無建置 |
+| `packages/ui/` | 共用 UI `@growthmap/ui`（AppErrorBoundary，createElement 免 JSX） | 純 ESM JS + .d.ts | 無建置 |
 
 ### 跨單元資料流（改資料欄位前必讀）
 
@@ -29,7 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：同步協定（load/save/subscribe/reconcile）唯一正本在 `@growthmap/cloud`——各單元的 `lib/cloud/sync` 只是綁定自家 firebase 實例的薄轉接層，**修同步 bug 一律改共用包**；三單元現皆為 onSnapshot 即時同步＋防迴授三層（hasPendingWrites／writer=clientId／applying 旗標）。**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名立即炸錯）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
 
-**ADR（2026-08-09）：firebase 初始化／auth／config 暫維持各單元一份**——三者與各單元的登入 UI 與 bundle 切分耦合，且為純複製（無行為分歧）；同步協定（會演化、曾發生修 bug 不同步）已合一於 `@growthmap/cloud`。若未來 auth 行為需要分歧修正，屆時再抽 `@growthmap/firebase`（Phase 2d）。
+**ADR 更新（2026-08-09 Phase 2d 完成）**：firebase config／lazy init／auth hook 已合一於 `@growthmap/firebase`（盤點確認三份純複製、零行為分歧，單元檔為薄 re-export 保持 import 路徑）；**AuthWidget（登入按鈕 UI）刻意留在各單元**——樣式與版位屬單元自主範圍，僅邏輯層共用。
 
 ## 常用指令
 

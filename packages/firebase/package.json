@@ -1,0 +1,13 @@
+{
+  "name": "@growthmap/firebase",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "三單元共用的 Firebase 層：config、lazy init（getFirebase）、Google auth 與 useAuth hook",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "peerDependencies": {
+    "firebase": "^12",
+    "react": "^19"
+  }
+}

@@ -29,6 +29,19 @@ export default function AiDrawer({ ctx }) {
   const [consented, setConsented] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // #4：同意的存活範圍＝「抽屜開啟期間」——元件常駐（render null 不卸載），
+  // 抽屜關閉當下重置（render 期調整模式，同 useDraft；effect 版會觸發
+  // set-state-in-effect 級聯警告）
+  const isAiOpen = drawer?.type === 'ai';
+  const [wasAiOpen, setWasAiOpen] = useState(isAiOpen);
+  if (wasAiOpen !== isAiOpen) {
+    setWasAiOpen(isAiOpen);
+    if (!isAiOpen) {
+      setConsented(false);
+      setConfirmOpen(false);
+    }
+  }
+
   if (!drawer || drawer.type !== 'ai') return null;
   const mode = AI_MODES.find((m) => m.key === modeKey);
 
@@ -52,19 +65,25 @@ export default function AiDrawer({ ctx }) {
   };
 
   const generate = () => {
-    if (busy) return;
-    if ((mode.key === 'reverse' || mode.key === 'scan') && !fieldValue.trim()) {
-      setError(`請先填「${mode.inputLabel}」`);
-      return;
-    }
     if (!consented) {
       setConfirmOpen(true); // CFM-06：首次送出前確認
       return;
     }
-    doGenerate();
+    doGenerate(false);
   };
 
-  const doGenerate = async () => {
+  // #9/#10：驗證與同意檢查都收在 doGenerate 內——Modal 直呼路徑不再繞過必填，
+  // 「未同意即到達」在此被硬擋，aiLogs 的 sentNamesConsent 因此名副其實
+  const doGenerate = async (justConsented) => {
+    if (busy) return;
+    if (!consented && !justConsented) {
+      setConfirmOpen(true);
+      return;
+    }
+    if ((mode.key === 'reverse' || mode.key === 'scan') && !fieldValue.trim()) {
+      setError(`請先填「${mode.inputLabel}」`);
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -74,7 +93,8 @@ export default function AiDrawer({ ctx }) {
       const logId = await addSubDoc(project.id, 'aiLogs', {
         mode: mode.key, taskCode: mode.taskCode,
         promptSummary: (fieldValue.trim() || '(預設)').slice(0, 120),
-        sentNamesConsent: true, // CFM-06：名稱類內容經確認後送出
+        sentNamesConsent: true, // doGenerate 開頭硬擋未同意路徑——此欄位由建構保證
+        consentAt: Date.now(),
         model: res?.model || mode.model,
         confidence: res?.confidence ?? null,
         usage: res?.usage || null,
@@ -216,7 +236,7 @@ export default function AiDrawer({ ctx }) {
         </div>
         <div className="mt-3 flex justify-end gap-2">
           <Btn onClick={() => setConfirmOpen(false)}>取消</Btn>
-          <Btn kind="primary" onClick={() => { setConsented(true); setConfirmOpen(false); doGenerate(); }}>
+          <Btn kind="primary" onClick={() => { setConsented(true); setConfirmOpen(false); doGenerate(true); }}>
             我了解，送出
           </Btn>
         </div>

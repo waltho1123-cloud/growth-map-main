@@ -8,21 +8,10 @@ import { waterfallSegments } from '../../domain/rollup';
 import { derivePnl } from '../../domain/finance';
 import { captureElementToPdf } from '@growthmap/pdf';
 import { fmtAmount, fmtTime, yearLabels } from '../../lib/format';
+import { downloadJson } from '../../lib/download';
 import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, Modal } from '../common/ui';
-
-function downloadJson(filename, obj) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 // P-14 交付輸出：BCG 五步驟結構預覽 → 凍結不可變快照（handoffs 子集合）→ PDF/JSON
 export default function P14Handoff({ ctx }) {

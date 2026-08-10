@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
-import { updateProject, inviteMember, revokeInvite, updateMemberRole, removeMember, deleteProject } from '../../lib/db';
+import {
+  updateProject, inviteMember, revokeInvite, updateMemberRole, removeMember,
+  deleteProject, updateSubDoc, getSubDocs,
+} from '../../lib/db';
 import { resizeFin } from '../../domain/finance';
-import { updateSubDoc, getSubDocs } from '../../lib/db';
+import { downloadJson } from '../../lib/download';
 import { ROLES } from '../../domain/model';
 import { Section, Btn, TextInput, NumInput, Chip, Modal } from '../common/ui';
 
@@ -184,13 +187,7 @@ export default function SettingsPage({ ctx }) {
           <Btn onClick={async () => {
             const rows = await getSubDocs(project.id, 'events');
             rows.sort((a, b) => (a.at || 0) - (b.at || 0));
-            const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `量測事件_${project.name}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            downloadJson(`量測事件_${project.name}.json`, rows);
           }}>
             匯出量測事件 JSON
           </Btn>

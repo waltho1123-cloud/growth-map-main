@@ -65,13 +65,17 @@ export default function App() {
 function Workspace({ pid, user, onExit }) {
   const route = useHashRoute();
   const bind = useProjectStore((s) => s.bind);
+  const unbind = useProjectStore((s) => s.unbind);
   const project = useProjectStore((s) => s.project);
   const projectLoaded = useProjectStore((s) => s.projectLoaded);
   const storeError = useProjectStore((s) => s.error);
 
   useEffect(() => {
     bind(pid, user.uid);
-  }, [pid, user.uid, bind]);
+    // 清理（code-review #7）：離開 Workspace 拆掉全部 onSnapshot——
+    // 否則 listener 掛著且死掉的不會復活、殘留 error 讓紅色橫幅永駐
+    return () => unbind();
+  }, [pid, user.uid, bind, unbind]);
 
   // 換帳號防護：目前帳號不是成員（或專案被刪）→ 回選擇頁
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { serverTimestamp } from 'firebase/firestore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { setSubDoc, updateSubDoc, subscribeSubcollection, subscribeMyVotes, transactSubDoc } from '../../lib/db';
@@ -6,6 +6,7 @@ import {
   createWorkshopDoc, timerRemaining, tallyVotes, buildMinutes, missingResolutions,
 } from '../../domain/workshop';
 import { fmtTime } from '../../lib/format';
+import { downloadText } from '../../lib/download';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, EmptyState, Modal, TextInput } from '../common/ui';
 
@@ -19,9 +20,11 @@ export default function P06Workshop({ ctx, n }) {
   const isFacil = ctx.role === 'owner' || ctx.role === 'facilitator';
   const [, forceTick] = useState(0);
   const [voteDocs, setVoteDocs] = useState([]); // 主持人才訂得到全量（規則半記名）
+  const votesReadyRef = useRef(false); // 首個 wsVotes 快照已到（#1 歸零回歸的閘門；ref＝不需獨立重繪）
   const [newVote, setNewVote] = useState(null); // { title, optionsText }
   const [opinionText, setOpinionText] = useState('');
   const [resolutionText, setResolutionText] = useState('');
+  const [timerNotice, setTimerNotice] = useState('');
 
   // 計時器每秒重繪
   useEffect(() => {
@@ -29,10 +32,16 @@ export default function P06Workshop({ ctx, n }) {
     return () => clearInterval(t);
   }, []);
 
-  // 原始票訂閱：主持人彙總回寫 tally；一般成員此訂閱會被規則擋（onError 靜默）
+  // 原始票訂閱：主持人彙總回寫 tally；一般成員此訂閱會被規則擋（onError 靜默）。
+  // votesReady：對帳 effect 必須等第一個快照——否則掛載瞬間 voteDocs=[] 會把
+  // 所有票數（含已截止的正式結果）寫成 0（code-review 嚴重回歸 #1）。
   useEffect(() => {
     if (!project?.id || !isFacil) return undefined;
-    return subscribeSubcollection(project.id, 'wsVotes', setVoteDocs, () => {});
+    votesReadyRef.current = false;
+    return subscribeSubcollection(project.id, 'wsVotes', (rows) => {
+      votesReadyRef.current = true; // 先標 ready 再 setState——對帳 effect 由 voteDocs 觸發
+      setVoteDocs(rows);
+    }, () => {});
   }, [project?.id, isFacil]);
 
   // 自己的票（所有成員可讀自己的原始票）：顯示「我投了哪項」
@@ -49,16 +58,18 @@ export default function P06Workshop({ ctx, n }) {
   // voteDocs 快照晚到，若只彙總 open 會永久凍結錯票數；截止後原始票被規則
   // 凍結，對帳收斂即正確值）。寫入前比對現值，兩位主持人併發也會收斂不迴圈。
   useEffect(() => {
-    if (!isFacil || !ws) return;
+    if (!isFacil || !ws || !votesReadyRef.current) return; // ready 閘門：防掛載空快照歸零
     const votes = ws.votes || {};
+    const patch2 = {}; // 一次合併寫入（#13：N 票分 N 筆寫會觸發 N 輪重算）
     for (const [key, v] of Object.entries(votes)) {
       const { tally, voters } = tallyVotes(voteDocs.filter((d) => d.workshopN === n), key, (v.options || []).length);
       if (JSON.stringify(tally) !== JSON.stringify(v.tally) || voters !== (v.voters || 0)) {
-        updateSubDoc(project.id, 'workshops', String(n), {
-          [`votes.${key}.tally`]: tally,
-          [`votes.${key}.voters`]: voters,
-        });
+        patch2[`votes.${key}.tally`] = tally;
+        patch2[`votes.${key}.voters`] = voters;
       }
+    }
+    if (Object.keys(patch2).length > 0) {
+      updateSubDoc(project.id, 'workshops', String(n), patch2);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voteDocs, ws?.votes, isFacil]);
@@ -105,22 +116,28 @@ export default function P06Workshop({ ctx, n }) {
       timer: { startedAt: serverTimestamp(), durationSec: item.minutes * 60, pausedRemainingSec: null },
     });
   };
-  const pauseTimer = () => transactSubDoc(project.id, 'workshops', String(n), (data) => {
-    if (data.currentIndex !== ws.currentIndex || !data.timer?.startedAt) return null;
-    const startedAt = data.timer.startedAt?.toMillis ? data.timer.startedAt.toMillis() : data.timer.startedAt;
-    const rem = Math.round((data.timer.durationSec || 0) - (Date.now() - startedAt) / 1000);
-    return { timer: { durationSec: data.timer.durationSec || 0, pausedRemainingSec: rem, startedAt: null } };
+  // 交易失敗（離線／衝突）不得靜默（#3）：交易需要連線，離線時明確提示重試。
+  // 已知接受（#11 記錄）：交易前提比對「伺服器現值 vs 本地樂觀回顯」在剛切議程
+  // 的亞秒窗口內可能靜默放棄一次點擊——重按即恢復，修它的複雜度不值。
+  const timerOp = (fn) => fn().catch(() => {
+    setTimerNotice('計時操作未生效（離線或與其他主持人衝突）——請確認連線後重試。');
+    setTimeout(() => setTimerNotice(''), 6000);
   });
-  const resumeTimer = () => transactSubDoc(project.id, 'workshops', String(n), (data) => {
+  const pauseTimer = () => timerOp(() => transactSubDoc(project.id, 'workshops', String(n), (data) => {
+    if (data.currentIndex !== ws.currentIndex || !data.timer?.startedAt) return null;
+    const rem = timerRemaining(data.timer); // #15：時鐘數學唯一正本在 domain/workshop
+    return { timer: { durationSec: data.timer.durationSec || 0, pausedRemainingSec: rem, startedAt: null } };
+  }));
+  const resumeTimer = () => timerOp(() => transactSubDoc(project.id, 'workshops', String(n), (data) => {
     if (data.currentIndex !== ws.currentIndex || data.timer?.pausedRemainingSec == null) return null;
     return { timer: { startedAt: serverTimestamp(), durationSec: data.timer.pausedRemainingSec, pausedRemainingSec: null } };
-  });
-  const extendTimer = (min) => transactSubDoc(project.id, 'workshops', String(n), (data) => {
+  }));
+  const extendTimer = (min) => timerOp(() => transactSubDoc(project.id, 'workshops', String(n), (data) => {
     if (data.currentIndex !== ws.currentIndex || !data.timer) return null;
     return data.timer.pausedRemainingSec != null
       ? { 'timer.pausedRemainingSec': data.timer.pausedRemainingSec + min * 60 }
       : { 'timer.durationSec': (data.timer.durationSec || 0) + min * 60 };
-  });
+  }));
 
   const addResolution = () => {
     const text = resolutionText.trim();
@@ -163,18 +180,23 @@ export default function P06Workshop({ ctx, n }) {
   const endMeeting = () => {
     const missing = missingResolutions(ws);
     if (missing.length && !window.confirm(`下列「取得共識」議程還沒有決議：${missing.join('、')}。仍要結束？`)) return;
-    const minutes = buildMinutes(ws, { projectName: project.name, opinions });
-    patch({ status: 'ended', endedAt: Date.now(), minutes });
+    // #5：會議紀錄是永久檔——結束前用「本地最新原始票」做最終對帳，
+    // 不信任可能落後的 ws.votes；修正後的 tally 與 minutes 同一筆寫入。
+    const finalVotes = {};
+    const finalPatch = {};
+    for (const [key, v] of Object.entries(ws.votes || {})) {
+      const fin = tallyVotes(voteDocs.filter((d) => d.workshopN === n), key, (v.options || []).length);
+      // 不回退保護：本地快照比現值舊（票更少）時保留現值（同 #8 截止語意）
+      const useFin = fin.voters >= (v.voters || 0);
+      finalVotes[key] = { ...v, tally: useFin ? fin.tally : v.tally, voters: useFin ? fin.voters : (v.voters || 0), status: 'closed' };
+      finalPatch[`votes.${key}`] = finalVotes[key];
+    }
+    const minutes = buildMinutes({ ...ws, votes: finalVotes }, { projectName: project.name, opinions });
+    patch({ status: 'ended', endedAt: Date.now(), minutes, ...finalPatch });
   };
 
   const downloadMinutes = () => {
-    const blob = new Blob([ws.minutes || buildMinutes(ws, { projectName: project.name, opinions })], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `工作坊${n}_會議紀錄_${project.name}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(`工作坊${n}_會議紀錄_${project.name}.md`, ws.minutes || buildMinutes(ws, { projectName: project.name, opinions }));
   };
 
   const mm = Math.floor(Math.abs(remaining) / 60);
@@ -220,6 +242,9 @@ export default function P06Workshop({ ctx, n }) {
             {overtime ? '−' : ''}{mm}:{ss}
             {overtime && <div className="mt-1 text-xs font-normal text-red-600">已超時（不強制中斷）</div>}
           </div>
+          {timerNotice && (
+            <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-center text-xs text-amber-800">{timerNotice}</p>
+          )}
           {isFacil && ws.status === 'running' && (
             <div className="mb-3 flex flex-wrap justify-center gap-2">
               {ws.timer?.pausedRemainingSec != null
@@ -274,13 +299,16 @@ export default function P06Workshop({ ctx, n }) {
                         <span className="text-[11px] text-slate-500">{v.voters || 0} 票</span>
                         {isFacil && v.status === 'open' && (
                           <Btn kind="ghost" onClick={() => {
-                            // 截止＝最終彙總＋關閉同一筆寫入（先算後關；晚到的票由對帳 effect 補上）
+                            // 截止＝最終彙總＋關閉同一筆寫入；#8 不回退保護：本地快照
+                            // 比現值舊（票更少＝另一位主持人的彙總較新）時只關不覆寫，
+                            // 晚到的票由對帳 effect 收斂
                             const fin = tallyVotes(voteDocs.filter((d2) => d2.workshopN === n), key, (v.options || []).length);
-                            patch({
-                              [`votes.${key}.status`]: 'closed',
-                              [`votes.${key}.tally`]: fin.tally,
-                              [`votes.${key}.voters`]: fin.voters,
-                            });
+                            const p2 = { [`votes.${key}.status`]: 'closed' };
+                            if (fin.voters >= (v.voters || 0)) {
+                              p2[`votes.${key}.tally`] = fin.tally;
+                              p2[`votes.${key}.voters`] = fin.voters;
+                            }
+                            patch(p2);
                           }}>截止</Btn>
                         )}
                         {v.status === 'closed' && <Chip tone="idle">已截止</Chip>}

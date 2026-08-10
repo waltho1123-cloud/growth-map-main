@@ -142,7 +142,8 @@ service cloud.firestore {
           && request.resource.data.authorUid == request.auth.uid
           && request.resource.data.keys().hasOnly(
                ['targetRef', 'targetLabel', 'text', 'authorUid', 'authorName', 'resolved', 'createdAt'])
-          && (request.resource.data.targetRef == null || request.resource.data.targetRef is string)
+          && (request.resource.data.targetRef == null
+              || (request.resource.data.targetRef is string && request.resource.data.targetRef.size() <= 200))
           && request.resource.data.targetLabel is string
           && request.resource.data.targetLabel.size() <= 200
           && request.resource.data.text is string
@@ -157,9 +158,11 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'resolved'])
             && request.resource.data.text is string
             && request.resource.data.text.size() > 0
-            && request.resource.data.text.size() <= 2000)
+            && request.resource.data.text.size() <= 2000
+            && request.resource.data.resolved is bool)
           || (parentEditor()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved']));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved'])
+            && request.resource.data.resolved is bool);
         allow delete: if parentMember() && resource.data.authorUid == request.auth.uid;
       }
 

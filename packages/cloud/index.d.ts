@@ -7,11 +7,15 @@ export interface CloudDoc<T = unknown> {
   writer?: string | null;
   /** data 各 top-level key 的最後編輯毫秒（additive；舊文件為 null → merge 退回 whole-doc） */
   sectionTs?: Record<string, number> | null;
+  /** 墓碑：{ key: 刪除毫秒 }。運維刪 section 時寫入；本地 ts > 墓碑的新編輯合法復活（自動清墓碑） */
+  sectionTombstones?: Record<string, number> | null;
 }
 
 /** saveCloud / saveCloudDebounced 的選配欄位 */
 export interface SaveExtra {
   sectionTs?: Record<string, number>;
+  /** 空物件時不寫欄位（全量 setDoc 下「不寫」＝清除全部墓碑） */
+  sectionTombstones?: Record<string, number>;
 }
 
 export type ReconcileDecision = 'cloud' | 'upload' | 'same';
@@ -74,7 +78,11 @@ export interface SectionMergeResult<T = Record<string, unknown>> {
   mergedSectionTs: Record<string, number>;
   usedCloud: string[];
   keptLocal: string[];
-  /** keptLocal 中存在 ts>0 的項目（本地確實較新）→ 呼叫端應把 merged 回傳雲端 */
+  /** 被墓碑壓制的 keys：不套用、不上傳（雲端刻意刪除的 section 不得復活） */
+  suppressed: string[];
+  /** 上傳時應轉發的墓碑（雲端現值減去本輪合法復活的 keys） */
+  survivingTombstones: Record<string, number>;
+  /** keptLocal 中存在 ts>0 且內容確實不同的項目 → 呼叫端應把 merged 回傳雲端 */
   needUpload: boolean;
 }
 

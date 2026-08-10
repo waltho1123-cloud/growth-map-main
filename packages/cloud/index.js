@@ -5,10 +5,15 @@
 // 本包收斂為單一實作；各單元的 sync 檔只剩「綁定自家 firebase 實例」的薄轉接層。
 //
 // 雲端文件形狀（與三單元既有線上資料完全相容，勿改欄位名）：
-//   users/{uid}/apps/{appKey} = { data, updatedAtMs, updatedAt: serverTimestamp, version: 1, writer, sectionTs? }
+//   users/{uid}/apps/{appKey} = { data, updatedAtMs, updatedAt: serverTimestamp, version: 1, writer,
+//                                 sectionTs?, sectionTombstones? }
 //   writer = 寫入者的裝置 session 識別碼（可為 null），供即時訂閱端略過「自己寫入的回送」。
 //   sectionTs = data 各 top-level key 的最後編輯毫秒（additive：舊 client 不讀不寫此欄位，
 //   缺席時 merge 端以 updatedAtMs 作為全部 section 的時間 → 退回 whole-doc 行為）。
+//   sectionTombstones = { key: 刪除毫秒 }——運維從雲端刪 section 時同時寫入
+//   （data.{key} 刪除＋sectionTs.{key} 刪除＋sectionTombstones.{key}=Date.now()），
+//   否則開著的 client 會把本地殘值回寫復活。本地 ts > 墓碑時間的「刪除後新編輯」
+//   合法復活該 section（上傳時自動清墓碑）；雲端同時有資料與墓碑時資料優先。
 
 import { useEffect, useRef } from 'react';
 import { userAppDocSegments } from '@growthmap/contracts';
@@ -30,10 +35,12 @@ export function createCloudSync(getFirebase, firestoreOverride = null) {
       version: raw.version ?? 1,
       writer: raw.writer ?? null,
       sectionTs: raw.sectionTs ?? null,
+      sectionTombstones: raw.sectionTombstones ?? null,
     };
   }
 
-  // extra = { sectionTs }：選配的 section 級時間戳（見檔頭文件形狀）；不傳時不寫該欄位。
+  // extra = { sectionTs, sectionTombstones }：選配的 section 級中繼資料（見檔頭文件形狀）。
+  // sectionTombstones 為空物件時不寫欄位（setDoc 全量覆蓋下「不寫」＝清除，正確表達「無墓碑」）。
   async function saveCloud(uid, appKey, data, writer = null, extra = null) {
     const { db } = await getFirebase();
     if (!db) return;
@@ -45,6 +52,9 @@ export function createCloudSync(getFirebase, firestoreOverride = null) {
       version: 1,
       writer,
       ...(extra && extra.sectionTs ? { sectionTs: extra.sectionTs } : {}),
+      ...(extra && extra.sectionTombstones && Object.keys(extra.sectionTombstones).length > 0
+        ? { sectionTombstones: extra.sectionTombstones }
+        : {}),
     });
   }
 
@@ -94,6 +104,7 @@ export function createCloudSync(getFirebase, firestoreOverride = null) {
               version: raw.version ?? 1,
               writer: raw.writer ?? null,
               sectionTs: raw.sectionTs ?? null,
+              sectionTombstones: raw.sectionTombstones ?? null,
             },
             snap.metadata
           );
@@ -235,16 +246,25 @@ export function stableStringify(value) {
 export function mergeBySection(localData, localSectionTs, localFallbackTs, cloud) {
   const cloudData = (cloud && cloud.data) || {};
   const cloudSectionTs = (cloud && cloud.sectionTs) || null;
+  const tombstones = (cloud && cloud.sectionTombstones) || {};
   const merged = {};
   const mergedSectionTs = {};
   const usedCloud = [];
   const keptLocal = [];
+  const suppressed = []; // 被墓碑壓制的 keys：不套用、不上傳（雲端刻意刪除的 section 不得復活）
   const keys = new Set([...Object.keys(localData || {}), ...Object.keys(cloudData)]);
   for (const key of keys) {
     const inLocal = localData != null && Object.prototype.hasOwnProperty.call(localData, key);
     const inCloud = Object.prototype.hasOwnProperty.call(cloudData, key);
     const cloudTs = cloudSectionTs && cloudSectionTs[key] != null ? cloudSectionTs[key] : (cloud ? cloud.updatedAt : 0);
     const localTs = localSectionTs && localSectionTs[key] != null ? localSectionTs[key] : localFallbackTs;
+    // 墓碑裁決（優先於本地保留規則）：雲端沒有該 section 且墓碑時間 >= 本地編輯時間
+    // → 雲端的刪除是權威，本地殘值壓制。localTs > 墓碑 = 刪除之後的新編輯 → 走正常
+    // 規則合法復活；雲端同時有資料與墓碑（異常態）→ 資料優先，墓碑視為過期。
+    if (!inCloud && tombstones[key] != null && localTs <= tombstones[key]) {
+      suppressed.push(key);
+      continue;
+    }
     if (!inLocal) {
       merged[key] = cloudData[key];
       mergedSectionTs[key] = cloudTs;
@@ -290,7 +310,14 @@ export function mergeBySection(localData, localSectionTs, localFallbackTs, cloud
       mergedSectionTs[key] = mergedSectionTs[key] + 1;
     }
   }
-  return { merged, mergedSectionTs, usedCloud, keptLocal, needUpload };
+  // 上傳時應轉發的墓碑＝雲端現有墓碑（壓制中或無關的）減去本輪合法復活的 keys
+  //（keptLocal 中 ts > 墓碑者）。全量 setDoc 下漏轉發＝墓碑被洗掉、其他裝置復活。
+  const survivingTombstones = {};
+  for (const key of Object.keys(tombstones)) {
+    const resurrected = keptLocal.includes(key) || usedCloud.includes(key);
+    if (!resurrected) survivingTombstones[key] = tombstones[key];
+  }
+  return { merged, mergedSectionTs, usedCloud, keptLocal, suppressed, survivingTombstones, needUpload };
 }
 
 // ── zustand 單元的同步控制器（單一正本）─────────────────────────────────────────
@@ -331,6 +358,7 @@ export function createCloudSyncBootstrap({
     const initialTsRef = useRef(initialLocalTs); // flush-ts fallback；換帳號時必須可歸零（模組常數摸不到）
     const sectionTsRef = useRef({}); // 各 section 的本地最後編輯毫秒；缺席 key 以 initialTsRef 為底線
     const cloudOnlyRef = useRef({ data: {}, ts: {} }); // 雲端有、單元 getSnapshot 沒有的 sections（新舊版本並存時保住新版欄位）
+    const tombstonesRef = useRef({}); // 雲端墓碑現值——上傳時轉發（漏轉發＝墓碑被全量 setDoc 洗掉）並壓制殘值回寫
     const prevSnapRef = useRef(null); // 引用比較基準（偵測哪個 section 變了）
     const applyingRef = useRef(false);
     const reconciledRef = useRef(false);
@@ -367,6 +395,17 @@ export function createCloudSyncBootstrap({
     const uploadSnapshot = (snap, sectionTs, precomputedSig = null) => {
       const fullSnap = { ...cloudOnlyRef.current.data, ...snap };
       const fullTs = { ...cloudOnlyRef.current.ts, ...sectionTs };
+      // 墓碑壓制：ts <= 墓碑時間的 section 不上傳（雲端刻意刪除不得由殘值復活）；
+      // ts > 墓碑（刪除後的新編輯）＝合法復活——照常上傳且墓碑不再轉發（自動清除）。
+      const tombs = tombstonesRef.current;
+      const liveTombstones = {};
+      for (const key of Object.keys(tombs)) {
+        if ((fullTs[key] ?? 0) <= tombs[key]) {
+          delete fullSnap[key];
+          delete fullTs[key];
+          liveTombstones[key] = tombs[key];
+        }
+      }
       try {
         if (guardSnapshot) guardSnapshot(fullSnap);
       } catch (e) {
@@ -379,7 +418,7 @@ export function createCloudSyncBootstrap({
       const sig = precomputedSig ?? JSON.stringify(snap);
       sync.saveCloudDebounced(user.uid, appKey, fullSnap, 0, clientIdRef.current, {
         onSaved: () => { lastCloudSigRef.current = sig; },
-      }, { sectionTs: cappedTs });
+      }, { sectionTs: cappedTs, sectionTombstones: liveTombstones });
     };
 
     // 恢復機制的時間戳來源＝真實最後編輯時間；未編輯（0）不寫（雲端優先不被破壞）
@@ -427,6 +466,7 @@ export function createCloudSyncBootstrap({
         initialTsRef.current = 0;
         sectionTsRef.current = {};
         cloudOnlyRef.current = { data: {}, ts: {} };
+        tombstonesRef.current = {};
         lastCloudSigRef.current = '';
         prevSnapRef.current = getSnapshot();
       }
@@ -438,13 +478,15 @@ export function createCloudSyncBootstrap({
         reconciledRef.current = true;
         if (cloud && cloud.writer === clientIdRef.current) {
           if (cloud.updatedAt > localTsRef.current) localTsRef.current = cloud.updatedAt;
+          tombstonesRef.current = (cloud && cloud.sectionTombstones) || {};
           return;
         }
         if (cloud && cloud.data) {
           const localSnap = getSnapshot();
-          const { merged, mergedSectionTs, usedCloud, needUpload } = mergeBySection(
+          const { merged, mergedSectionTs, usedCloud, needUpload, survivingTombstones } = mergeBySection(
             localSnap, sectionTsViewOf(localSnap), localTsRef.current, cloud
           );
+          tombstonesRef.current = survivingTombstones; // 上傳路徑據此壓制殘值並轉發墓碑
           // 記下雲端獨有 sections（單元固定 keys 之外的）——上傳路徑會 spread 回去，
           // 舊版 client 才不會把新版寫入的欄位整份蓋掉。每輪以雲端現況重算（不累積），
           // 雲端刪掉的 key 自然消失。
@@ -497,7 +539,8 @@ export function createCloudSyncBootstrap({
             }
           }
         } else if (reconcile(localTsRef.current, cloud) === 'upload') {
-          // 雲端文件不存在：本 session 有編輯才上傳（零編輯不寫雲端）
+          // 雲端文件不存在（＝也無墓碑）：本 session 有編輯才上傳（零編輯不寫雲端）
+          tombstonesRef.current = {};
           const snap = getSnapshot();
           uploadSnapshot(snap, sectionTsViewOf(snap));
         }

@@ -184,6 +184,56 @@ test('mergeBySection：tie 且內容真的不同 → 破對稱（上傳 ts 必�
   assert.equal(other.needUpload, false);
 });
 
+test('mergeBySection：墓碑壓制——雲端刪除的 section 不得由本地殘值復活', () => {
+  const DEL = 5000;
+  const r = mergeBySection(
+    { partA: 'stale-residue', partB: 'b' },
+    { partA: 3000, partB: 4000 },
+    0,
+    { data: { partB: 'b' }, updatedAt: DEL, version: 1, sectionTs: { partB: 4000 }, sectionTombstones: { partA: DEL } }
+  );
+  assert.deepEqual(r.suppressed, ['partA'], '殘值 ts(3000) <= 墓碑(5000) → 壓制');
+  assert.ok(!('partA' in r.merged), '壓制的 section 不進 merged');
+  assert.equal(r.needUpload, false, '壓制不得觸發上傳（復活的根源）');
+  assert.deepEqual(r.survivingTombstones, { partA: DEL }, '墓碑必須轉發，否則全量 setDoc 洗掉後其他裝置復活');
+});
+
+test('mergeBySection：墓碑之後的新編輯合法復活並自動清墓碑', () => {
+  const DEL = 5000;
+  const r = mergeBySection(
+    { partA: 'new-after-delete' },
+    { partA: 6000 },
+    0,
+    { data: {}, updatedAt: DEL, version: 1, sectionTs: {}, sectionTombstones: { partA: DEL } }
+  );
+  assert.equal(r.suppressed.length, 0);
+  assert.deepEqual(r.keptLocal, ['partA'], '刪除後的新編輯（ts>墓碑）是有效資料');
+  assert.equal(r.needUpload, true);
+  assert.deepEqual(r.survivingTombstones, {}, '復活的 key 墓碑不再轉發（自動清除）');
+});
+
+test('mergeBySection：雲端同時有資料與墓碑（異常態）→ 資料優先、墓碑視為過期', () => {
+  const r = mergeBySection(
+    { partA: 'local' },
+    { partA: 100 },
+    0,
+    { data: { partA: 'cloud' }, updatedAt: 900, version: 1, sectionTs: { partA: 900 }, sectionTombstones: { partA: 500 } }
+  );
+  assert.equal(r.merged.partA, 'cloud', '有資料就正常裁決');
+  assert.deepEqual(r.survivingTombstones, {}, '資料存在的 key 墓碑清除');
+});
+
+test('sectionTombstones 傳輸：extra 寫入讀回；空物件不寫欄位（=清除）', async () => {
+  const fake = makeFakeFirestore();
+  const sync = createCloudSync(async () => ({ db: {} }), fake.module);
+  await sync.saveCloud('u1', 'momentum', { tree: 't' }, 'w1', { sectionTs: { tree: 1 }, sectionTombstones: { drivers: 999 } });
+  const doc = await sync.loadCloud('u1', 'momentum');
+  assert.deepEqual(doc.sectionTombstones, { drivers: 999 });
+  await sync.saveCloud('u1', 'momentum', { tree: 't2', drivers: 'revived' }, 'w1', { sectionTs: { tree: 2, drivers: 1000 }, sectionTombstones: {} });
+  const doc2 = await sync.loadCloud('u1', 'momentum');
+  assert.equal(doc2.sectionTombstones, null, '空墓碑不寫欄位＝全量覆蓋下清除');
+});
+
 test('mergeBySection：雙裝置收斂模擬——交替 merge 至多兩輪後 needUpload 必須歸零', () => {
   const T1 = 1000;
   const T2 = 2000;

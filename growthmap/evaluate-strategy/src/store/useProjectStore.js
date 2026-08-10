@@ -22,6 +22,7 @@ const EMPTY_SUBS = Object.fromEntries(Object.keys(SUB_SORTERS).map((k) => [k, []
 
 export const useProjectStore = create((set, get) => ({
   pid: null,
+  _uid: null, // 綁定時的使用者——同機換帳號（pid 相同、uid 不同）必須重建訂閱
   project: null,      // null＝載入中或不存在；ready 後仍 null＝已被刪除/無權限
   projectLoaded: false,
   ...EMPTY_SUBS,
@@ -30,10 +31,11 @@ export const useProjectStore = create((set, get) => ({
 
   bind(pid, uid) {
     const state = get();
-    if (state.pid === pid) return;
+    // 對抗式審查 P1：只比 pid 會讓換帳號沿用舊 scorerUid 的盲評查詢——pid＋uid 都要比
+    if (state.pid === pid && state._uid === uid) return;
     state._unsubs.forEach((u) => u?.());
     if (!pid) {
-      set({ pid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
+      set({ pid: null, _uid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
       return;
     }
     const onError = (err) => set({ error: err?.message || String(err) });
@@ -51,12 +53,12 @@ export const useProjectStore = create((set, get) => ({
         set({ scores: rows });
       }, onError),
     ];
-    set({ pid, project: null, projectLoaded: false, error: null, _unsubs: unsubs, ...EMPTY_SUBS });
+    set({ pid, _uid: uid, project: null, projectLoaded: false, error: null, _unsubs: unsubs, ...EMPTY_SUBS });
   },
 
   unbind() {
     get()._unsubs.forEach((u) => u?.());
-    set({ pid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
+    set({ pid: null, _uid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
   },
 }));
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { updateProject, inviteMember, revokeInvite, updateMemberRole, removeMember, deleteProject } from '../../lib/db';
 import { resizeFin } from '../../domain/finance';
-import { updateSubDoc } from '../../lib/db';
+import { updateSubDoc, getSubDocs } from '../../lib/db';
 import { ROLES } from '../../domain/model';
 import { Section, Btn, TextInput, NumInput, Chip, Modal } from '../common/ui';
 
@@ -177,6 +177,28 @@ export default function SettingsPage({ ctx }) {
             <Btn kind="primary" onClick={invite}>邀請</Btn>
           </div>
         )}
+      </Section>
+
+      <Section title="量測事件（EVT 埋點）">
+        <div className="flex flex-wrap items-center gap-3">
+          <Btn onClick={async () => {
+            const rows = await getSubDocs(project.id, 'events');
+            rows.sort((a, b) => (a.at || 0) - (b.at || 0));
+            const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `量測事件_${project.name}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}>
+            匯出量測事件 JSON
+          </Btn>
+          <p className="text-xs leading-relaxed text-slate-500">
+            關鍵動作事件（建案／提交評分／短名單／建方案／回頭路徑／檢查／交付）——
+            算 KPI（如承接到交付的週期）用這份原始資料。
+          </p>
+        </div>
       </Section>
 
       {isOwner && (

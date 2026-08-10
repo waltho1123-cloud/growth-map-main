@@ -6,7 +6,7 @@ import { useDerived } from '../../hooks/useDerived';
 import { addSubDoc, updateSubDoc } from '../../lib/db';
 import { AI_MODES, callEvaMode } from '../../lib/ai';
 import { createAssumptionDoc } from '../../domain/model';
-import { Btn, Chip, TextArea } from '../common/ui';
+import { Btn, Chip, TextArea, Modal } from '../common/ui';
 
 // P-15 AI 協作抽屜：四模式（假說生成）。鐵則 6／GR-8：
 // 「AI 的 output 只能當 input」——假說卡必須先進入編輯狀態才能採納；
@@ -23,6 +23,11 @@ export default function AiDrawer({ ctx }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [cards, setCards] = useState([]); // { id, title, content, edited, editing, logId, adopted }
+  // CFM-06（PD-09 補全）：金額已指數化，但機會/方案「名稱」與使用者輸入無法
+  // 代碼化（代碼化會讓紅隊/掃描失去分析對象）——首次送出前明示內容並取得確認，
+  // 確認記入稽核；本抽屜開啟期間有效。
+  const [consented, setConsented] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!drawer || drawer.type !== 'ai') return null;
   const mode = AI_MODES.find((m) => m.key === modeKey);
@@ -46,21 +51,30 @@ export default function AiDrawer({ ctx }) {
     };
   };
 
-  const generate = async () => {
+  const generate = () => {
     if (busy) return;
     if ((mode.key === 'reverse' || mode.key === 'scan') && !fieldValue.trim()) {
       setError(`請先填「${mode.inputLabel}」`);
       return;
     }
+    if (!consented) {
+      setConfirmOpen(true); // CFM-06：首次送出前確認
+      return;
+    }
+    doGenerate();
+  };
+
+  const doGenerate = async () => {
     setBusy(true);
     setError('');
     try {
       const res = await callEvaMode(mode, fieldValue.trim(), buildContext());
       const hyps = res?.payload?.hypotheses || [];
-      // 稽核（FR-10-04）：prompt 摘要/模型/信心/用量
+      // 稽核（FR-10-04）：prompt 摘要/模型/信心/用量＋CFM-06 同意記錄
       const logId = await addSubDoc(project.id, 'aiLogs', {
         mode: mode.key, taskCode: mode.taskCode,
-        promptSummary: fieldValue.trim() || '(預設)',
+        promptSummary: (fieldValue.trim() || '(預設)').slice(0, 120),
+        sentNamesConsent: true, // CFM-06：名稱類內容經確認後送出
         model: res?.model || mode.model,
         confidence: res?.confidence ?? null,
         usage: res?.usage || null,
@@ -185,6 +199,28 @@ export default function AiDrawer({ ctx }) {
           每次生成的 prompt／模型／用量已寫入稽核（aiLogs）。
         </div>
       </aside>
+
+      {/* CFM-06：送出內容明示＋二次確認（金額已指數化；名稱與輸入文字無法代碼化） */}
+      <Modal open={confirmOpen} title="送出內容確認（寫入稽核）" onClose={() => setConfirmOpen(false)}>
+        <div className="space-y-2 text-sm leading-relaxed text-slate-700">
+          <p>本次請求將送出以下內容給 AI 服務：</p>
+          <ul className="list-disc pl-5 text-[13px]">
+            <li>短名單機會與策略方案的<b>名稱／一句話說明</b>（原文，未代碼化）</li>
+            <li>你在輸入框填的文字</li>
+            <li>金額摘要——<b>已指數化</b>（Momentum＝100），不含實際幣值與完整財表</li>
+          </ul>
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            若機會／方案名稱含併購標的、未公開產品代號等敏感字眼，請先改寫名稱再使用 AI。
+            此確認會寫入稽核（aiLogs），本次抽屜開啟期間不再重複詢問。
+          </p>
+        </div>
+        <div className="mt-3 flex justify-end gap-2">
+          <Btn onClick={() => setConfirmOpen(false)}>取消</Btn>
+          <Btn kind="primary" onClick={() => { setConsented(true); setConfirmOpen(false); doGenerate(); }}>
+            我了解，送出
+          </Btn>
+        </div>
+      </Modal>
     </div>
   );
 }

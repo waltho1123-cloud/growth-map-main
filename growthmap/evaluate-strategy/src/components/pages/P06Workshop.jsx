@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { serverTimestamp } from 'firebase/firestore';
 import { useProjectStore } from '../../store/useProjectStore';
-import { setSubDoc, updateSubDoc, subscribeSubcollection, subscribeMyVotes } from '../../lib/db';
+import { setSubDoc, updateSubDoc, subscribeSubcollection, subscribeMyVotes, transactSubDoc } from '../../lib/db';
 import {
   createWorkshopDoc, timerRemaining, tallyVotes, buildMinutes, missingResolutions,
 } from '../../domain/workshop';
@@ -44,14 +44,16 @@ export default function P06Workshop({ ctx, n }) {
     }, () => {});
   }, [project?.id, ctx.user.uid, n]);
 
-  // 主持人端：票數變動 → 彙總寫回 workshop.votes（參與者只看 tally）
+  // 主持人端：票數變動 → 彙總寫回 workshop.votes（參與者只看 tally）。
+  // 開放與已截止的投票「都」持續對帳（對抗式審查 P1：截止競態下最後一票的
+  // voteDocs 快照晚到，若只彙總 open 會永久凍結錯票數；截止後原始票被規則
+  // 凍結，對帳收斂即正確值）。寫入前比對現值，兩位主持人併發也會收斂不迴圈。
   useEffect(() => {
     if (!isFacil || !ws) return;
     const votes = ws.votes || {};
     for (const [key, v] of Object.entries(votes)) {
-      if (v.status !== 'open') continue;
       const { tally, voters } = tallyVotes(voteDocs.filter((d) => d.workshopN === n), key, (v.options || []).length);
-      if (JSON.stringify(tally) !== JSON.stringify(v.tally) || voters !== v.voters) {
+      if (JSON.stringify(tally) !== JSON.stringify(v.tally) || voters !== (v.voters || 0)) {
         updateSubDoc(project.id, 'workshops', String(n), {
           [`votes.${key}.tally`]: tally,
           [`votes.${key}.voters`]: voters,
@@ -92,7 +94,9 @@ export default function P06Workshop({ ctx, n }) {
   const remaining = timerRemaining(ws.timer);
   const overtime = remaining < 0;
 
-  // 計時起點用 serverTimestamp：避免主持人機器時鐘偏差讓各端倒數不一致
+  // 計時起點用 serverTimestamp（防主持人時鐘偏差）；暫停/繼續/延長走交易式
+  // 狀態轉移（對抗式審查 P2：兩位主持人併發時 LWW 會讓過期的 pause 蓋掉新議程）
+  // ——交易內驗前提（議程沒被切走、計時器仍在預期狀態），不成立就放棄寫入。
   const startItem = (idx) => {
     const item = ws.agenda[idx];
     patch({
@@ -101,12 +105,21 @@ export default function P06Workshop({ ctx, n }) {
       timer: { startedAt: serverTimestamp(), durationSec: item.minutes * 60, pausedRemainingSec: null },
     });
   };
-  const pauseTimer = () => patch({ timer: { durationSec: ws.timer?.durationSec || 0, pausedRemainingSec: remaining, startedAt: null } });
-  const resumeTimer = () => patch({ timer: { startedAt: serverTimestamp(), durationSec: ws.timer.pausedRemainingSec, pausedRemainingSec: null } });
-  const extendTimer = (min) => patch({
-    timer: ws.timer.pausedRemainingSec != null
-      ? { ...ws.timer, pausedRemainingSec: ws.timer.pausedRemainingSec + min * 60 }
-      : { ...ws.timer, durationSec: (ws.timer.durationSec || 0) + min * 60 },
+  const pauseTimer = () => transactSubDoc(project.id, 'workshops', String(n), (data) => {
+    if (data.currentIndex !== ws.currentIndex || !data.timer?.startedAt) return null;
+    const startedAt = data.timer.startedAt?.toMillis ? data.timer.startedAt.toMillis() : data.timer.startedAt;
+    const rem = Math.round((data.timer.durationSec || 0) - (Date.now() - startedAt) / 1000);
+    return { timer: { durationSec: data.timer.durationSec || 0, pausedRemainingSec: rem, startedAt: null } };
+  });
+  const resumeTimer = () => transactSubDoc(project.id, 'workshops', String(n), (data) => {
+    if (data.currentIndex !== ws.currentIndex || data.timer?.pausedRemainingSec == null) return null;
+    return { timer: { startedAt: serverTimestamp(), durationSec: data.timer.pausedRemainingSec, pausedRemainingSec: null } };
+  });
+  const extendTimer = (min) => transactSubDoc(project.id, 'workshops', String(n), (data) => {
+    if (data.currentIndex !== ws.currentIndex || !data.timer) return null;
+    return data.timer.pausedRemainingSec != null
+      ? { 'timer.pausedRemainingSec': data.timer.pausedRemainingSec + min * 60 }
+      : { 'timer.durationSec': (data.timer.durationSec || 0) + min * 60 };
   });
 
   const addResolution = () => {
@@ -259,7 +272,17 @@ export default function P06Workshop({ ctx, n }) {
                       <span className="text-sm font-medium text-slate-800">{v.title}</span>
                       <span className="flex items-center gap-1.5">
                         <span className="text-[11px] text-slate-500">{v.voters || 0} 票</span>
-                        {isFacil && v.status === 'open' && <Btn kind="ghost" onClick={() => patch({ [`votes.${key}.status`]: 'closed' })}>截止</Btn>}
+                        {isFacil && v.status === 'open' && (
+                          <Btn kind="ghost" onClick={() => {
+                            // 截止＝最終彙總＋關閉同一筆寫入（先算後關；晚到的票由對帳 effect 補上）
+                            const fin = tallyVotes(voteDocs.filter((d2) => d2.workshopN === n), key, (v.options || []).length);
+                            patch({
+                              [`votes.${key}.status`]: 'closed',
+                              [`votes.${key}.tally`]: fin.tally,
+                              [`votes.${key}.voters`]: fin.voters,
+                            });
+                          }}>截止</Btn>
+                        )}
                         {v.status === 'closed' && <Chip tone="idle">已截止</Chip>}
                       </span>
                     </div>

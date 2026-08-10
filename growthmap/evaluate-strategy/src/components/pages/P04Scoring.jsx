@@ -217,6 +217,9 @@ export default function P04Scoring({ ctx }) {
                         {mine?.submitted ? (
                           <div className="space-y-1">
                             <Chip tone="ok">已提交</Chip>
+                            {/* 裁定（對抗式審查設計題 #2）：submitted=false 同時代表「草稿私密」
+                                與「解鎖重評」是刻意的——解鎖＝該評分回到修訂中，從全體彙總消失
+                                （避免以過期分數參與離散度判定）。不另設 locked 旗標。 */}
                             {isFacil && roundOpen && (
                               <button type="button" className="block text-[11px] text-slate-500 hover:text-indigo-600"
                                 onClick={() => updateSubDoc(project.id, 'scores', scoreDocId(o.id, activeRoundN, mine.scorerUid), { submitted: false })}>

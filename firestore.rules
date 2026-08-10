@@ -134,12 +134,30 @@ service cloud.firestore {
           || (parentMember() && resource.data.authorUid == request.auth.uid);
       }
 
-      // 評論（FR-11-04）：coach 也可評論（PRD §7.7 唯讀＋評論的唯一例外）；
-      // 內容只有作者可改；resolved 旗標開放編輯角色處理
+      // 評論（FR-11-04）：coach 也可評論（PRD §7.7 唯讀＋評論的唯一例外）。
+      // 因為這是 coach 唯一可寫面，欄位採白名單＋型別＋長度硬化（對抗式審查 P2：
+      // 防偽造 metadata/巨量文字污染看板）；內容只有作者可改，resolved 開放編輯角色。
       match /comments/{commentId} {
-        allow create: if parentMember() && request.resource.data.authorUid == request.auth.uid;
+        allow create: if parentMember()
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(
+               ['targetRef', 'targetLabel', 'text', 'authorUid', 'authorName', 'resolved', 'createdAt'])
+          && (request.resource.data.targetRef == null || request.resource.data.targetRef is string)
+          && request.resource.data.targetLabel is string
+          && request.resource.data.targetLabel.size() <= 200
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 100
+          && request.resource.data.resolved == false
+          && request.resource.data.createdAt is int;
         allow update: if
-          (parentMember() && resource.data.authorUid == request.auth.uid)
+          (parentMember() && resource.data.authorUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'resolved'])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 2000)
           || (parentEditor()
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved']));
         allow delete: if parentMember() && resource.data.authorUid == request.auth.uid;

@@ -3,12 +3,12 @@
 // 注意：portal 是無建置的純靜態頁，無法 import @growthmap/firebase（npm workspace 包），
 // 因此 Firebase 以官方 CDN ESM 載入、config 為 packages/firebase/index.js 的複本
 // （公開值，非祕密）。改 config 時兩處要一起改。
-// 版本鎖定與各單元 package.json 的 firebase ^12 對齊。
+// 版本必須與 workspace 實際安裝版一致（packages/firebase/config-sync.test.js 會驗）。
 
-import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js';
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut,
-} from 'https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js';
+} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyANpkc1-X1-1VMiPjZLkw_2CeOhc2BVzfk',

@@ -240,6 +240,19 @@ export async function deleteSubDoc(pid, sub, id) {
   await trackWrite(deleteDoc(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id)));
 }
 
+// 交易式更新：mutate(現值) 回傳 patch（回 null＝前提不成立、放棄寫入）。
+// 供多主持人併發下的狀態轉移（如工作坊計時器）——LWW 覆寫改為條件轉移。
+export async function transactSubDoc(pid, sub, id, mutate) {
+  const d = await db();
+  await trackWrite(runTransaction(d, async (tx) => {
+    const ref = doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id);
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const patch = mutate(snap.data());
+    if (patch) tx.update(ref, patch);
+  }));
+}
+
 export async function getSubDocIds(pid, sub) {
   const d = await db();
   const snap = await getDocs(subCol(d, pid, sub));

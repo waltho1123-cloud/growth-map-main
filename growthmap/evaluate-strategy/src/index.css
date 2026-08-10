@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  /* 第四堂主色：收斂／決策的深靛藍系，與三單元同族但可辨識 */
+  --color-brand: #4338ca;
+  --color-brand-light: #6366f1;
+  --color-brand-bg: #eef2ff;
+  /* PRD 7.2.2 狀態色 */
+  --color-ok: #059669;
+  --color-warn: #d97706;
+  --color-block: #dc2626;
+  --color-idle: #94a3b8;
+  --color-hypo: #7c3aed; /* 紫＝AI 假說（本版未啟用 AI，保留 token） */
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-bg-section: rgba(255, 255, 255, 0.55);
+}
+
+/* Hide number input spinner arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+html {
+  font-family: system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+}

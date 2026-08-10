@@ -17,10 +17,15 @@ export const RECOVERY_KEYS = Object.freeze({
   momentum: Object.freeze({ reload: 'mom_chunk_reload_at', flushTs: 'mom-flush-ts' }),
   aspiration: Object.freeze({ reload: 'asp_chunk_reload_at', flushTs: 'asp-flush-ts' }),
   opportunity: Object.freeze({ reload: 'bw_chunk_reload_at', flushTs: 'bw-ceo-flush-ts' }),
+  evaluate: Object.freeze({ reload: 'eva_chunk_reload_at', flushTs: 'eva-flush-ts' }),
 });
 
 export const USERS_COLLECTION = 'users';
 export const APPS_SUBCOLLECTION = 'apps';
+
+// 第四堂（evaluate-strategy）的多人共享專案集合。與單人 users/{uid}/apps/* 模型
+// 刻意分離：evalProjects 文件以 memberUids 控管成員存取（見 firestore.rules）。
+export const EVAL_PROJECTS_COLLECTION = 'evalProjects';
 
 // Firestore 文件路徑段：doc(db, ...userAppDocSegments(uid, appKey))
 export function userAppDocSegments(uid, appKey) {
@@ -116,5 +121,144 @@ export function assertOrientProducerShape(snapshot) {
       `${violations.join('、')}——第三堂（opportunity-system）依賴這些欄位計算成長差距。` +
       '若是刻意改名，請同步更新 packages/contracts 與 opportunity-system 的消費端。'
     );
+  }
+}
+
+// ── Handoff 契約：第四堂讀取第三堂（apps/opportunity）交付快照的欄位形狀 ────────
+// 生產端：opportunity-system 的 utils/handoff.js（buildHandoffSnapshot →
+//         state.longlistSnapshots 陣列，隨 apps/opportunity 文件上雲）
+// 消費端：evaluate-strategy 建立評估專案時匯入（lib/import.js → P-02 長清單承接）
+
+function checkNonEmptyString(parent, key, path, out) {
+  if (!parent || typeof parent !== 'object' || !(key in parent)) {
+    out.push(`${path}（缺欄位）`);
+  } else if (typeof parent[key] !== 'string' || parent[key].length === 0) {
+    out.push(`${path}（需為非空字串，實得 ${parent[key] === null ? 'null' : typeof parent[key]}）`);
+  }
+}
+
+// 分級同 orient 契約：critical＝第四堂承接依賴的識別欄位（缺了無法建立評估列）；
+// minor＝輔助欄位（模板內容、分數、目標快照），缺了仍可承接但功能降級。
+export function listHandoffContractViolationsDetailed(snapshot) {
+  const critical = [];
+  const minor = [];
+  if (!snapshot || typeof snapshot !== 'object') return { critical: ['(root)'], minor: [] };
+  checkFiniteNumber(snapshot, 'version', 'version', critical);
+  checkFiniteNumber(snapshot, 'frozenAt', 'frozenAt', critical);
+  if (!Array.isArray(snapshot.opportunities)) {
+    critical.push('opportunities（需為陣列）');
+  } else {
+    snapshot.opportunities.forEach((o, i) => {
+      checkNonEmptyString(o, 'id', `opportunities[${i}].id`, critical);
+      // 名稱：型別錯＝critical；空字串＝minor——單元三允許未命名機會進快照，
+      // 空名稱的處置屬第四堂 GR-3（矩陣紅色徽章、不得入短名單），不在生產端阻擋。
+      if (!o || typeof o !== 'object' || typeof o.opportunityName !== 'string') {
+        critical.push(`opportunities[${i}].opportunityName（需為字串）`);
+      } else if (o.opportunityName.length === 0) {
+        minor.push(`opportunities[${i}].opportunityName（空字串，GR-3 由消費端處置）`);
+      }
+      if (!o || typeof o !== 'object') return;
+      if (!Array.isArray(o.sourceToolCodes)) minor.push(`opportunities[${i}].sourceToolCodes`);
+      for (const t of ['template1', 'template2', 'template3']) {
+        if (!o[t] || typeof o[t] !== 'object') minor.push(`opportunities[${i}].${t}`);
+      }
+    });
+  }
+  if (snapshot.targetSnapshot != null) {
+    checkFiniteNumber(snapshot.targetSnapshot, 'aspiration', 'targetSnapshot.aspiration', minor);
+    checkFiniteNumber(snapshot.targetSnapshot, 'momentum', 'targetSnapshot.momentum', minor);
+    checkFiniteNumber(snapshot.targetSnapshot, 'growthGap', 'targetSnapshot.growthGap', minor);
+  }
+  return { critical, minor };
+}
+
+export function listHandoffContractViolations(snapshot) {
+  const d = listHandoffContractViolationsDetailed(snapshot);
+  return [...d.critical, ...d.minor];
+}
+
+// 列出 apps/opportunity 文件內可承接的交付快照版本（供第四堂匯入時挑選）。
+// 無資料或從未交付 → 空陣列。
+export function listHandoffVersions(data) {
+  if (!data || typeof data !== 'object' || !Array.isArray(data.longlistSnapshots)) return [];
+  return data.longlistSnapshots
+    .filter((s) => s && typeof s === 'object')
+    .map((s) => ({
+      version: Number(s.version) || 0,
+      frozenAt: Number(s.frozenAt) || 0,
+      opportunityCount: Array.isArray(s.opportunities) ? s.opportunities.length : 0,
+    }))
+    .sort((a, b) => b.version - a.version);
+}
+
+// 從 apps/opportunity 的 data 萃取一份交付快照（預設取最新版本）。
+// - 「無資料」或「從未交付」回 null——那是第三堂還沒做完，不是違約。
+// - 「有快照但形狀違約」比照 orient：正規化後仍回傳（不讓下游崩潰），
+//   contractOk=false ＋ violations 列表 ＋ console.error。
+export function extractHandoffSnapshot(data, version = null) {
+  if (!data || typeof data !== 'object' || !Array.isArray(data.longlistSnapshots)) return null;
+  const snaps = data.longlistSnapshots.filter((s) => s && typeof s === 'object');
+  if (snaps.length === 0) return null;
+  const snap = version == null
+    ? snaps.reduce((a, b) => ((Number(b.version) || 0) > (Number(a.version) || 0) ? b : a))
+    : snaps.find((s) => Number(s.version) === Number(version));
+  if (!snap) return null;
+  const { critical, minor } = listHandoffContractViolationsDetailed(snap);
+  if (critical.length > 0) {
+    console.error(
+      `[@growthmap/contracts] apps/opportunity 交付快照違反 handoff 契約（核心欄位）：${critical.join('、')}。` +
+      '第四堂承接結果不可信，請檢查 opportunity-system 的 buildHandoffSnapshot 與 packages/contracts 是否同步。'
+    );
+  } else if (minor.length > 0) {
+    console.warn(
+      `[@growthmap/contracts] apps/opportunity 交付快照缺輔助欄位：${minor.join('、')}（仍可承接，功能降級）。`
+    );
+  }
+  const ts = (snap.targetSnapshot && typeof snap.targetSnapshot === 'object') ? snap.targetSnapshot : null;
+  return {
+    version: Number(snap.version) || 0,
+    frozenAt: Number(snap.frozenAt) || 0,
+    archetype: typeof snap.archetype === 'string' ? snap.archetype : null,
+    targetSnapshot: ts ? {
+      aspiration: Number(ts.aspiration) || 0,
+      momentum: Number(ts.momentum) || 0,
+      growthGap: Number(ts.growthGap) || 0,
+      currency: typeof ts.currency === 'string' ? ts.currency : 'TWD',
+    } : null,
+    opportunities: (Array.isArray(snap.opportunities) ? snap.opportunities : [])
+      .filter((o) => o && typeof o === 'object')
+      .map((o) => ({
+        id: typeof o.id === 'string' ? o.id : String(o.id ?? ''),
+        opportunityName: typeof o.opportunityName === 'string' ? o.opportunityName : '',
+        estRevenue: Number(o.estRevenue) || 0,
+        currency: typeof o.currency === 'string' ? o.currency : 'TWD',
+        sourceToolCodes: Array.isArray(o.sourceToolCodes) ? o.sourceToolCodes : [],
+        sourceToolNames: Array.isArray(o.sourceToolNames) ? o.sourceToolNames : [],
+        aiScore: Number.isFinite(o.aiScore) ? o.aiScore : null,
+        template1: (o.template1 && typeof o.template1 === 'object') ? o.template1 : null,
+        template2: (o.template2 && typeof o.template2 === 'object') ? o.template2 : null,
+        template3: (o.template3 && typeof o.template3 === 'object') ? o.template3 : null,
+      })),
+    contractOk: critical.length === 0,
+    criticalViolations: critical,
+    minorViolations: minor,
+    violations: [...critical, ...minor],
+  };
+}
+
+// 生產端形狀守衛：opportunity-system 於 dev 模式建立交付快照時呼叫。
+// 任何人改掉 buildHandoffSnapshot 的契約欄位名，開發時立即炸錯，而不是等第四堂承接靜默壞掉。
+// 只擋 critical（識別欄位）；minor（空名稱、缺模板）屬合法降級，僅 console.warn。
+export function assertHandoffProducerShape(snapshot) {
+  const { critical, minor } = listHandoffContractViolationsDetailed(snapshot);
+  if (critical.length > 0) {
+    throw new Error(
+      `[@growthmap/contracts] opportunity 交付快照違反 handoff 契約（${critical.length} 項核心）：` +
+      `${critical.join('、')}——第四堂（evaluate-strategy）依賴這些欄位承接長清單。` +
+      '若是刻意改名，請同步更新 packages/contracts 與 evaluate-strategy 的消費端。'
+    );
+  }
+  if (minor.length > 0) {
+    console.warn(`[@growthmap/contracts] 交付快照缺輔助欄位：${minor.join('、')}（仍可交付，第四堂功能降級）。`);
   }
 }

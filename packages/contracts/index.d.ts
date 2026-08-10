@@ -10,10 +10,12 @@ export declare const RECOVERY_KEYS: Readonly<{
   momentum: Readonly<{ reload: string; flushTs: string }>;
   aspiration: Readonly<{ reload: string; flushTs: string }>;
   opportunity: Readonly<{ reload: string; flushTs: string }>;
+  evaluate: Readonly<{ reload: string; flushTs: string }>;
 }>;
 
 export declare const USERS_COLLECTION: 'users';
 export declare const APPS_SUBCOLLECTION: 'apps';
+export declare const EVAL_PROJECTS_COLLECTION: 'evalProjects';
 
 export declare function userAppDocSegments(uid: string, appKey: AppKey): [string, string, string, string];
 
@@ -41,3 +43,52 @@ export declare function listOrientContractViolationsDetailed(shape: unknown): { 
 export declare function extractOrientSnapshot(data: unknown): OrientCore | null;
 
 export declare function assertOrientProducerShape(snapshot: unknown): void;
+
+export interface HandoffTargetSnapshot {
+  aspiration: number;
+  momentum: number;
+  growthGap: number;
+  currency: string;
+}
+
+export interface HandoffOpportunity {
+  id: string;
+  opportunityName: string;
+  estRevenue: number;
+  currency: string;
+  sourceToolCodes: unknown[];
+  sourceToolNames: string[];
+  aiScore: number | null;
+  template1: Record<string, unknown> | null;
+  template2: Record<string, unknown> | null;
+  template3: Record<string, unknown> | null;
+}
+
+export interface HandoffCore {
+  version: number;
+  frozenAt: number;
+  archetype: string | null;
+  targetSnapshot: HandoffTargetSnapshot | null;
+  opportunities: HandoffOpportunity[];
+  /** false = 核心識別欄位違約，承接結果不可信 */
+  contractOk: boolean;
+  criticalViolations: string[];
+  minorViolations: string[];
+  violations: string[];
+}
+
+export interface HandoffVersionInfo {
+  version: number;
+  frozenAt: number;
+  opportunityCount: number;
+}
+
+export declare function listHandoffContractViolations(snapshot: unknown): string[];
+
+export declare function listHandoffContractViolationsDetailed(snapshot: unknown): { critical: string[]; minor: string[] };
+
+export declare function listHandoffVersions(data: unknown): HandoffVersionInfo[];
+
+export declare function extractHandoffSnapshot(data: unknown, version?: number | null): HandoffCore | null;
+
+export declare function assertHandoffProducerShape(snapshot: unknown): void;

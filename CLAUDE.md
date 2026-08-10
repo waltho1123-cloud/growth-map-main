@@ -6,14 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **成長藍圖實作平台（Growth Blueprint Platform）** — 商周百億 CEO 工作坊的線上實作平台。
 
-一個 repo 內含五個部分。三個前端單元是**同一工作坊的階段性課程（第一～三堂），資料互相關聯**（見下方「跨單元資料流」），只是各自獨立建置部署。三個前端單元已統一為 **Vite 8**（momentum 為 TypeScript），以 **npm workspaces** 統一管理：root 一次 `npm install`（單一 lockfile，單元不再各自安裝），批次指令見下：
+一個 repo 內含多個部分。四個前端單元是**同一工作坊的階段性課程（第一～四堂），資料互相關聯**（見下方「跨單元資料流」），只是各自獨立建置部署。前端單元已統一為 **Vite 8**（momentum 為 TypeScript），以 **npm workspaces** 統一管理：root 一次 `npm install`（單一 lockfile，單元不再各自安裝），批次指令見下：
 
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
-| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站 | 純靜態，Caddy 提供 | 無需建置 |
-| `growthmap/opportunity-system/` | 識別機會（第三堂，**開發主力**） | Vite 8 + React + Tailwind | `build/`（**要 commit**） |
+| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站（單元卡片資料驅動自 `data/unit-registry.json`） | 純靜態，Caddy 提供 | 無需建置 |
+| `growthmap/opportunity-system/` | 識別機會（第三堂） | Vite 8 + React + Tailwind | `build/`（**要 commit**） |
 | `growthmap/aspiration-case/` | 願景 | Vite 8 + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Vite 8 + React + TS | `out/`（要 commit） |
+| `growthmap/evaluate-strategy/` | 評估策略（第四堂，**多人協作**，2026-08-10 新增） | Vite 8 + React + zustand + Tailwind | `dist/`（要 commit） |
 | `growthmap/ido-ai-service/` | AI/BFF 後端 | Node + Hono + Anthropic SDK | 無建置，直接跑 `src/` |
 | `packages/contracts/` | 跨單元資料契約 `@growthmap/contracts` | 純 ESM JS + .d.ts | 無建置（`node --test`） |
 | `packages/cloud/` | 共用同步協定 `@growthmap/cloud`（load/save/subscribe/reconcile） | 純 ESM JS + .d.ts | 無建置（`node --test`） |
@@ -32,6 +33,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：同步協定（load/save/subscribe/reconcile）唯一正本在 `@growthmap/cloud`——各單元的 `lib/cloud/sync` 只是綁定自家 firebase 實例的薄轉接層，**修同步 bug 一律改共用包**；三單元現皆為 onSnapshot 即時同步＋防迴授四層（hasPendingWrites／writer=clientId／applying 旗標／內容簽章 onSaved 後記錄）。**momentum 與 aspiration（走 `createCloudSyncBootstrap` factory）另有 section 級 merge**：雲端文件 additive `sectionTs` 記各 top-level section 最後編輯毫秒，兩台裝置並行編輯不同 section 互不覆蓋（`mergeBySection` 純函式，tie 偏本地＋內容比較用 stableStringify 防 Firestore key 排序誤判＋tie-with-diff 破對稱防 ping-pong）；opportunity 仍為 whole-doc reconcile（有 migrate／交付快照 union 獨有層，刻意不併入——不同 appKey 不同文件，兩種語意各自一致）。**Section 刪除走墓碑（tombstone）**：直接刪 `data.{key}` 會被開著的 client 秒級復活——正確的運維刪除是三件一起做：刪 `data.{key}`＋刪 `sectionTs.{key}`＋寫 `sectionTombstones.{key} = Date.now()`（毫秒）。墓碑生效後 ts ≤ 墓碑的殘值不套用、不上傳；使用者在刪除**之後**的新編輯（ts > 墓碑）合法復活該 section 並自動清墓碑；雲端同時有資料與墓碑時資料優先。注意：對 aspiration 的 orient 契約欄位（companyInfo/partA）下墓碑會觸發 dev guard 擋上傳且弄壞第三堂——那些欄位不該刪。**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名＝dev console 立即報錯並擋下該次上傳——不炸整個同步，`[cloud sync] guardSnapshot rejected upload` 即此守衛）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
 
 **ADR 更新（2026-08-09 Phase 2d 完成）**：firebase config／lazy init／auth hook 已合一於 `@growthmap/firebase`（盤點確認三份純複製、零行為分歧，單元檔為薄 re-export 保持 import 路徑）；**AuthWidget（登入按鈕 UI）刻意留在各單元**——樣式與版位屬單元自主範圍，僅邏輯層共用。
+
+### 第四堂（evaluate-strategy）——多人協作模型，與單人模型刻意分離
+
+第四堂承接第三堂交付快照做「評估策略」（四維評分 → 2×2 矩陣短名單 → 編組 1–3 個策略方案 → 財務三表 → 疊加達標 → 交付第五堂），PRD 正本在 Dropbox《成長藍圖平台_評估策略模組_PRD_v1.0》。與單元一～三的三個關鍵差異：
+
+1. **資料模型是共享專案，不是單人工作簿**：`evalProjects/{projectId}` 主文件（成員/邀請/criteria/settings/synergies/consensus）＋子集合 `opportunities`／`rounds`／`scores`／`plays`／`assumptions`／`handoffs`。成員以 email 邀請（`invitedEmails`＋`inviteRoles`，受邀者自助加入），存取閘門是 `memberUids`；角色 owner/facilitator/member 可編輯、**coach 由 firestore.rules 強制唯讀**；`scores` 每評分者一份文件（僅本人可寫）；`handoffs` 交付快照 create-only 不可變。**改 firestore.rules 後必須部署**（Firebase Console → Firestore → Rules 貼上，或 `firebase deploy --only firestore:rules`）——rules 沒上線第四堂整個不能用。
+2. **同步不走 `@growthmap/cloud`**：多人並行編輯用「細粒度文件＋onSnapshot」直訂閱（`src/lib/db.js` 是唯一讀寫面），天然避開 whole-doc merge；`@growthmap/cloud` 的 section merge/reconcile 仍只屬單元一～三。登入為硬需求（無離線後援語意）。
+3. **跨單元讀取走 handoff 契約**：`@growthmap/contracts` 新增 `extractHandoffSnapshot`／`listHandoffVersions`／`assertHandoffProducerShape`（生產端＝opportunity-system `utils/handoff.js`（dev 模式建快照即驗形狀）、消費端＝evaluate-strategy `src/lib/import.js`）。承接語意冪等：文件 id `imp-{sourceId}`，重新同步只補新機會不覆寫既有補件；`targetSnapshot` 差距核心值優先取快照內建、缺了 fallback 讀 apps/aspiration（orient 契約）。
+
+單元內結構：`src/domain/`（純函式：scoring/matrix/guards/finance/rollup/sequencing/checks/model＋criteria，Vitest 測試在 `src/__tests__/`）、`src/lib/`（db/import/format/useHashRoute）、`src/store/`（zustand 即時鏡像）、`src/components/pages/`（P-01～P-14、P-16 對應 PRD 頁碼）。PRD 的 P-06 工作坊主持台、P-15 AI 抽屜、P-17 看板屬 R4/R5，本版未實作；輸出為 PDF（`@growthmap/pdf`）＋JSON，PPTX 依 PD-10 延後。
 
 ## 常用指令
 
@@ -59,6 +70,7 @@ npm run dev                                  # --watch + 讀 .env（需 ANTHROPI
 
 # aspiration-case：npm run dev / npm run build / npm run lint（eslint）
 # momentum-case：npm run dev / npm run build（tsc → eslint → vite 三重 gate）/ npm run lint
+# evaluate-strategy：npm run dev / npm test（Vitest，domain 純函式）/ npm run build（eslint gate → vite）
 # portal 本機預覽（repo 根）：python3 -m http.server 8000
 ```
 
@@ -92,7 +104,7 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 
 > staging 備註：後端 `ALLOWED_ORIGINS` 已含 staging origin（`https://growthmap-staging.zeabur.app`）；Google 登入要在 Firebase Console → Authentication → Settings → Authorized domains 手動加 `growthmap-staging.zeabur.app`（一次性，無 API 可自動化）。純 UI/資產類變更在 staging 可不登入驗證，跳過此需求。
 
-前端站線上路徑：opportunity-system 於 `/growthmap/opportunity-system/build/`。
+前端站線上路徑：opportunity-system 於 `/growthmap/opportunity-system/build/`、evaluate-strategy 於 `/growthmap/evaluate-strategy/dist/`。
 
 ### 後端環境變數（存於 Zeabur，非 git）
 

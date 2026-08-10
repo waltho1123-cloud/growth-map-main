@@ -1,12 +1,77 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Only a signed-in user can read/write their own docs.
+    // ── 單人工作簿（單元一～三）：本人限定 ─────────────────────────────────
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
 
       match /apps/{doc=**} {
         allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // ── 第四堂（evaluate-strategy）多人共享評估專案 ──────────────────────────
+    // 成員制：memberUids 陣列是唯一存取閘門；members[uid].role 決定可否編輯。
+    // 角色語意：owner／facilitator／member 可編輯；coach 規則層強制唯讀（PRD §7.7）。
+    // 其餘角色細分（誰能核定、誰只能評分）屬 UI 層，內部單租戶工具刻意不下沉到規則。
+    match /evalProjects/{pid} {
+      function isSignedIn() { return request.auth != null; }
+      function isMember() { return isSignedIn() && request.auth.uid in resource.data.memberUids; }
+      function myRole() { return resource.data.members[request.auth.uid].role; }
+      function isEditor() { return isMember() && myRole() != 'coach'; }
+      function isOwner() { return isMember() && myRole() == 'owner'; }
+      // email 邀請自助加入：受邀者只能把「自己」加進成員，且只能動成員/邀請欄位，
+      // 角色以邀請時登錄的 inviteRoles[email] 為準（不能自封 owner）。
+      function isSelfJoin() {
+        return isSignedIn()
+          && request.auth.token.email in resource.data.invitedEmails
+          && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['memberUids', 'members', 'invitedEmails', 'inviteRoles'])
+          && request.resource.data.members.diff(resource.data.members).affectedKeys()
+               .hasOnly([request.auth.uid])
+          && request.resource.data.members[request.auth.uid].role
+               == resource.data.inviteRoles[request.auth.token.email];
+      }
+
+      // 受邀者（尚非成員）可讀專案文件——自助加入需要讀到現有成員陣列；
+      // 對應查詢 where('invitedEmails','array-contains', email) 的清單權限
+      function isInvited() {
+        return isSignedIn() && request.auth.token.email in resource.data.invitedEmails;
+      }
+
+      // 建立者必須把自己登記為唯一成員＋owner（防止代建或冒名掛人）
+      allow create: if isSignedIn()
+        && request.resource.data.memberUids == [request.auth.uid]
+        && request.resource.data.members[request.auth.uid].role == 'owner';
+      allow read: if isMember() || isInvited();
+      allow update: if isEditor() || isSelfJoin();
+      allow delete: if isOwner();
+
+      // 子集合共用：成員可讀；一般業務子集合由可編輯角色寫入
+      function projData() { return get(/databases/$(database)/documents/evalProjects/$(pid)).data; }
+      function parentMember() { return isSignedIn() && request.auth.uid in projData().memberUids; }
+      function parentEditor() { return parentMember() && projData().members[request.auth.uid].role != 'coach'; }
+
+      match /{sub}/{docId} {
+        allow read: if parentMember()
+          && sub in ['opportunities', 'rounds', 'plays', 'assumptions', 'scores', 'handoffs'];
+        // scores／handoffs 各有更嚴的專屬規則，不走這條泛用寫入
+        allow write: if parentEditor()
+          && sub in ['opportunities', 'rounds', 'plays', 'assumptions'];
+      }
+
+      // 評分：每位評分者只能寫自己的評分文件（scorerUid 綁定本人）
+      match /scores/{scoreId} {
+        allow create, update: if parentEditor()
+          && request.resource.data.scorerUid == request.auth.uid;
+        allow delete: if parentEditor() && resource.data.scorerUid == request.auth.uid;
+      }
+
+      // 交付快照：不可變——只能建立，禁止改寫與刪除（PRD FR-11-07）
+      match /handoffs/{version} {
+        allow create: if parentEditor();
+        allow update, delete: if false;
       }
     }
   }

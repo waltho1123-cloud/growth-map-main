@@ -8,6 +8,8 @@ node_modules/
 growthmap/momentum-case/src/
 growthmap/aspiration-case/src/
 growthmap/opportunity-system/src/
+growthmap/evaluate-strategy/src/
+growthmap/evaluate-strategy/public/
 
 # Source maps (large, not needed in production)
 **/*.map

@@ -1,0 +1,58 @@
+import { useProjectStore } from '../../store/useProjectStore';
+import { useUiStore } from '../../store/useUiStore';
+import { useDerived } from '../../hooks/useDerived';
+import { navigate } from '../../lib/useHashRoute';
+import { signOut } from '../../lib/cloud/auth';
+import { ROLES } from '../../domain/model';
+import { Lamp, Chip } from '../common/ui';
+
+// 頂欄（PRD 7.2.1 區 A）：專案切換 · 達標水位徽章 · CHK 燈號群 · 假設庫 · 使用者
+export default function TopBar({ ctx, onExit }) {
+  const project = useProjectStore((s) => s.project);
+  const openAssumptions = useUiStore((s) => s.openAssumptions);
+  const { rollup, checkRun } = useDerived();
+
+  const att = rollup.attainmentPct;
+  const attTone = att == null ? 'bg-slate-200 text-slate-500'
+    : att >= 100 ? 'bg-emerald-100 text-emerald-800'
+    : att >= 80 ? 'bg-amber-100 text-amber-800'
+    : 'bg-red-100 text-red-700';
+
+  return (
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4">
+      <button type="button" onClick={onExit} title="回專案清單"
+        className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50">
+        ⌂ 專案
+      </button>
+      <div className="min-w-0">
+        <div className="truncate text-sm font-semibold text-slate-900">{project?.name}</div>
+        <div className="text-[11px] leading-none text-slate-400">第四堂 · 評估策略 Evaluate</div>
+      </div>
+
+      <div className="ml-auto flex items-center gap-3">
+        <button type="button" onClick={() => navigate('rollup')} title="疊加效益 ÷ 加速增長目標"
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${attTone}`}>
+          達標 {att == null ? '—' : `${att}%`}
+        </button>
+
+        <button type="button" onClick={() => navigate('check')} title="綜合檢查（點擊查看）"
+          className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 hover:bg-slate-50">
+          {checkRun.results.map((r) => <Lamp key={r.code} lamp={r.lamp} />)}
+        </button>
+
+        <button type="button" onClick={() => openAssumptions()}
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+          假設庫
+        </button>
+
+        <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+          <Chip tone={ctx.editable ? 'brand' : 'idle'}>{ROLES[ctx.role]?.label || ctx.role}</Chip>
+          <span className="hidden max-w-[140px] truncate text-xs text-slate-500 md:inline">
+            {ctx.user.displayName || ctx.user.email}
+          </span>
+          <button type="button" onClick={() => signOut()} className="text-xs text-slate-400 hover:text-slate-700">登出</button>
+        </div>
+      </div>
+    </header>
+  );
+}

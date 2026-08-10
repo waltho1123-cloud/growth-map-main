@@ -13,5 +13,6 @@ COPY pages /srv/pages
 COPY growthmap/momentum-case/out /srv/growthmap/momentum-case/out
 COPY growthmap/aspiration-case/dist /srv/growthmap/aspiration-case/dist
 COPY growthmap/opportunity-system/build /srv/growthmap/opportunity-system/build
+COPY growthmap/evaluate-strategy/dist /srv/growthmap/evaluate-strategy/dist
 
 EXPOSE 8080

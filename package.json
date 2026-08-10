@@ -9,6 +9,7 @@
     "growthmap/opportunity-system",
     "growthmap/aspiration-case",
     "growthmap/momentum-case",
+    "growthmap/evaluate-strategy",
     "growthmap/ido-ai-service"
   ],
   "scripts": {

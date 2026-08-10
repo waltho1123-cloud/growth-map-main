@@ -13,9 +13,12 @@
       "nameEn": "Momentum Case",
       "description": "分析現有業務的自然成長趨勢，建立基準情境作為策略規劃的起點",
       "route": "growthmap/momentum-case/out/index.html",
-      "icon": "\ud83d\udcc8",
+      "icon": "📈",
       "status": "available",
-      "tags": ["基礎分析", "情境建模"],
+      "tags": [
+        "基礎分析",
+        "情境建模"
+      ],
       "prerequisite": null
     },
     {
@@ -25,9 +28,12 @@
       "nameEn": "Aspiration Case",
       "description": "設定超越自然增長的目標情境，定義加速成長的策略方向與關鍵假設",
       "route": "growthmap/aspiration-case/dist/index.html",
-      "icon": "\ud83d\ude80",
+      "icon": "🚀",
       "status": "available",
-      "tags": ["目標設定", "情境建模"],
+      "tags": [
+        "目標設定",
+        "情境建模"
+      ],
       "prerequisite": "unit-1"
     },
     {
@@ -37,10 +43,28 @@
       "nameEn": "Identify Opportunities",
       "description": "比對自然增長與加速增長之間的差距，系統化識別並優先排序成長機會",
       "route": "growthmap/opportunity-system/build/index.html",
-      "icon": "\ud83d\udd0d",
+      "icon": "🔍",
       "status": "available",
-      "tags": ["機會分析", "差距識別"],
+      "tags": [
+        "機會分析",
+        "差距識別"
+      ],
       "prerequisite": "unit-2"
+    },
+    {
+      "id": "unit-4",
+      "order": 4,
+      "nameCn": "評估策略",
+      "nameEn": "Evaluate",
+      "description": "多人協作評估長清單：四維評分與 2×2 排序，收斂 1–3 個策略方案並完成高階商業計劃與交付",
+      "route": "growthmap/evaluate-strategy/dist/index.html",
+      "icon": "⚖️",
+      "status": "available",
+      "tags": [
+        "多人協作",
+        "策略收斂"
+      ],
+      "prerequisite": "unit-3"
     }
   ]
 }

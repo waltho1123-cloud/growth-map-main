@@ -92,6 +92,7 @@ export default function P14Handoff({ ctx }) {
       const pptx = new PptxGen();
       pptx.defineLayout({ name: 'W16x9', width: 13.33, height: 7.5 });
       pptx.layout = 'W16x9';
+      pptx.theme = { headFontFace: 'Microsoft JhengHei', bodyFontFace: 'Microsoft JhengHei' }; // 中文字型
       const T = { x: 0.5, y: 1.1, w: 12.3, fontSize: 10, border: { pt: 0.5, color: 'CBD5E1' }, color: '1E293B' };
       const addTitle = (slide, text) => slide.addText(text, { x: 0.5, y: 0.3, w: 12.3, h: 0.6, fontSize: 20, bold: true, color: '1E293B' });
 

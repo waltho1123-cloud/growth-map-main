@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { serverTimestamp } from 'firebase/firestore';
 import { useProjectStore } from '../../store/useProjectStore';
-import { setSubDoc, updateSubDoc, subscribeSubcollection } from '../../lib/db';
+import { setSubDoc, updateSubDoc, subscribeSubcollection, subscribeMyVotes } from '../../lib/db';
 import {
   createWorkshopDoc, timerRemaining, tallyVotes, buildMinutes, missingResolutions,
 } from '../../domain/workshop';
@@ -33,6 +34,15 @@ export default function P06Workshop({ ctx, n }) {
     if (!project?.id || !isFacil) return undefined;
     return subscribeSubcollection(project.id, 'wsVotes', setVoteDocs, () => {});
   }, [project?.id, isFacil]);
+
+  // 自己的票（所有成員可讀自己的原始票）：顯示「我投了哪項」
+  const [myVotes, setMyVotes] = useState({});
+  useEffect(() => {
+    if (!project?.id) return undefined;
+    return subscribeMyVotes(project.id, ctx.user.uid, (rows) => {
+      setMyVotes(Object.fromEntries(rows.filter((v) => v.workshopN === n).map((v) => [v.voteKey, v.choice])));
+    }, () => {});
+  }, [project?.id, ctx.user.uid, n]);
 
   // 主持人端：票數變動 → 彙總寫回 workshop.votes（參與者只看 tally）
   useEffect(() => {
@@ -82,16 +92,17 @@ export default function P06Workshop({ ctx, n }) {
   const remaining = timerRemaining(ws.timer);
   const overtime = remaining < 0;
 
+  // 計時起點用 serverTimestamp：避免主持人機器時鐘偏差讓各端倒數不一致
   const startItem = (idx) => {
     const item = ws.agenda[idx];
     patch({
       currentIndex: idx,
       status: 'running',
-      timer: { startedAt: Date.now(), durationSec: item.minutes * 60, pausedRemainingSec: null },
+      timer: { startedAt: serverTimestamp(), durationSec: item.minutes * 60, pausedRemainingSec: null },
     });
   };
-  const pauseTimer = () => patch({ timer: { ...ws.timer, pausedRemainingSec: remaining, startedAt: null } });
-  const resumeTimer = () => patch({ timer: { startedAt: Date.now(), durationSec: ws.timer.pausedRemainingSec, pausedRemainingSec: null } });
+  const pauseTimer = () => patch({ timer: { durationSec: ws.timer?.durationSec || 0, pausedRemainingSec: remaining, startedAt: null } });
+  const resumeTimer = () => patch({ timer: { startedAt: serverTimestamp(), durationSec: ws.timer.pausedRemainingSec, pausedRemainingSec: null } });
   const extendTimer = (min) => patch({
     timer: ws.timer.pausedRemainingSec != null
       ? { ...ws.timer, pausedRemainingSec: ws.timer.pausedRemainingSec + min * 60 }
@@ -255,13 +266,14 @@ export default function P06Workshop({ ctx, n }) {
                     <div className="space-y-1">
                       {(v.options || []).map((opt, i) => {
                         const count = v.tally?.[i] ?? 0;
+                        const mine = myVotes[key] === i;
                         return (
                           <button key={i} type="button"
                             disabled={v.status !== 'open' || ws.status === 'ended'}
                             onClick={() => castVote(key, i)}
-                            className="block w-full rounded-lg border border-slate-200 px-2 py-1 text-left text-sm hover:border-indigo-300 disabled:cursor-not-allowed">
+                            className={`block w-full rounded-lg border px-2 py-1 text-left text-sm disabled:cursor-not-allowed ${mine ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'}`}>
                             <span className="flex items-center justify-between">
-                              <span>{opt}</span>
+                              <span>{mine ? '● ' : ''}{opt}</span>
                               <span className="tabular-nums text-xs text-slate-500">{count}</span>
                             </span>
                             <span className="mt-0.5 block h-1 overflow-hidden rounded bg-slate-100">

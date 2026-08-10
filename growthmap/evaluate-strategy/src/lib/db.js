@@ -169,6 +169,49 @@ export function subscribeSubcollection(pid, sub, onChange, onError) {
   return () => { cancelled = true; unsub?.(); };
 }
 
+// 評分訂閱（盲評規則配套）：規則限定「未提交僅本人可讀」，整包集合查詢會被拒——
+// 改為兩條可證明的查詢（已提交全員＋自己的草稿）合併，全角色同一路徑。
+export function subscribeScores(pid, uid, onChange, onError) {
+  let unsubs = [];
+  let cancelled = false;
+  const parts = { submitted: [], mine: [] };
+  const emit = () => {
+    const map = new Map();
+    for (const row of [...parts.submitted, ...parts.mine]) map.set(row.id, row);
+    onChange([...map.values()]);
+  };
+  (async () => {
+    const d = await db();
+    if (cancelled) return;
+    const col = subCol(d, pid, 'scores');
+    unsubs = [
+      onSnapshot(query(col, where('submitted', '==', true)), (snap) => {
+        parts.submitted = snap.docs.map((x) => ({ id: x.id, ...x.data() }));
+        emit();
+      }, (err) => onError?.(err)),
+      onSnapshot(query(col, where('scorerUid', '==', uid)), (snap) => {
+        parts.mine = snap.docs.map((x) => ({ id: x.id, ...x.data() }));
+        emit();
+      }, (err) => onError?.(err)),
+    ];
+  })();
+  return () => { cancelled = true; unsubs.forEach((u) => u?.()); };
+}
+
+// 自己的投票（P-06 顯示「我投了哪項」；規則僅本人與主持人可讀原始票）
+export function subscribeMyVotes(pid, uid, onChange, onError) {
+  let unsub = null;
+  let cancelled = false;
+  (async () => {
+    const d = await db();
+    if (cancelled) return;
+    unsub = onSnapshot(query(subCol(d, pid, 'wsVotes'), where('voterUid', '==', uid)), (snap) => {
+      onChange(snap.docs.map((x) => ({ id: x.id, ...x.data() })));
+    }, (err) => onError?.(err));
+  })();
+  return () => { cancelled = true; unsub?.(); };
+}
+
 // ── 寫入原語（targeted update；並行編輯衝突面最小化）─────────────────────────
 
 export async function updateProject(pid, patch) {

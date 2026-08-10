@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { increment } from 'firebase/firestore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useUiStore } from '../../store/useUiStore';
 import { useDerived } from '../../hooks/useDerived';
@@ -26,15 +27,24 @@ export default function AiDrawer({ ctx }) {
   if (!drawer || drawer.type !== 'ai') return null;
   const mode = AI_MODES.find((m) => m.key === modeKey);
 
-  // 脈絡帶入（去識別化考量：只帶名稱與相對數字摘要，不帶完整財表）
-  const buildContext = () => ({
-    成長差距摘要: target
-      ? `Aspiration ${target.aspiration}、Momentum ${target.momentum}、Gap ${target.growthGap}（相對值）`
-      : '未接上游',
-    疊加達成率: rollup.attainmentPct != null ? `${rollup.attainmentPct}%` : '未計算',
-    短名單機會: opportunities.filter((o) => o.shortlist?.included).map((o) => o.opportunityName),
-    策略方案: plays.map((p) => ({ 名稱: p.name, 形成: p.formation, 一句話: p.oneLiner, [`Y${years}營收`]: p.bizplan?.fin?.pnl?.revenue?.[years - 1] || 0 })),
-  });
+  // 脈絡帶入——PD-09 去識別化：金額一律轉「Momentum＝100 的指數」，不送原始數值；
+  // 也不帶完整財表。方法論本來就主張市場規模用相對倍數思考。
+  const buildContext = () => {
+    const base = target?.momentum || target?.aspiration || 0;
+    const idx = (v) => (base > 0 && Number.isFinite(Number(v)) ? Math.round((Number(v) / base) * 100) : null);
+    return {
+      口徑說明: '所有金額為指數（自然增長 Momentum＝100），非實際幣值',
+      成長差距摘要: target
+        ? `Aspiration 指數 ${idx(target.aspiration) ?? '—'}、Momentum 100、Gap 指數 ${idx(target.growthGap) ?? '—'}`
+        : '未接上游',
+      疊加達成率: rollup.attainmentPct != null ? `${rollup.attainmentPct}%` : '未計算',
+      短名單機會: opportunities.filter((o) => o.shortlist?.included).map((o) => o.opportunityName),
+      策略方案: plays.map((p) => ({
+        名稱: p.name, 形成: p.formation, 一句話: p.oneLiner,
+        [`Y${years}營收指數`]: idx(p.bizplan?.fin?.pnl?.revenue?.[years - 1]) ?? 0,
+      })),
+    };
+  };
 
   const generate = async () => {
     if (busy) return;
@@ -85,7 +95,7 @@ export default function AiDrawer({ ctx }) {
       authorName: ctx.user.displayName || ctx.user.email || '',
     }));
     await updateSubDoc(project.id, 'aiLogs', card.logId, {
-      adopted: (cards.filter((c) => c.logId === card.logId && c.adopted).length + 1),
+      adopted: increment(1), // 原子遞增——連續採納不因 stale closure 少計
       adoptedAt: Date.now(),
       adoptedWithoutEdit: !card.edited, // 未編輯即採納 → 稽核異常清單素材
     });

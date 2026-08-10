@@ -87,9 +87,10 @@ service cloud.firestore {
       // 業務子集合（trusted-editor 邊界，見上方裁定）：成員可讀、非 coach 可寫。
       // rounds／scores／handoffs／comments／wsVotes 各有專屬規則，不走這條泛用寫入。
       // wsVotes 刻意不在泛用讀取清單（PD-08 半記名：原始票僅主持人與本人可讀）。
+      // scores 不在泛用讀取清單：未提交草稿僅本人可讀（防評分錨定），見 scores 專屬規則
       match /{sub}/{docId} {
         allow read: if parentMember()
-          && sub in ['opportunities', 'rounds', 'plays', 'assumptions', 'scores', 'handoffs',
+          && sub in ['opportunities', 'rounds', 'plays', 'assumptions', 'handoffs',
                      'workshops', 'wsOpinions', 'comments', 'aiLogs', 'events'];
         allow write: if parentEditor()
           && sub in ['opportunities', 'plays', 'assumptions'];
@@ -104,14 +105,22 @@ service cloud.firestore {
       }
 
       // 匿名投票（PD-08 半記名）：docId 綁 {場次}__{投票題}__{uid} 防重投；
-      // 原始票只有主持人與投票者本人可讀，參與者看的是主持人彙總回寫的 tally
+      // 原始票只有主持人與投票者本人可讀，參與者看的是主持人彙總回寫的 tally；
+      // 投票題截止（status != 'open'）後不得再投/改/撤（截止與 UI 一致下沉規則層）
       match /wsVotes/{voteId} {
+        function voteOpen(wsN, voteKey) {
+          return get(/databases/$(database)/documents/evalProjects/$(pid)/workshops/$(wsN))
+            .data.votes[voteKey].status == 'open';
+        }
         allow read: if parentFacil()
           || (parentMember() && resource.data.voterUid == request.auth.uid);
         allow create, update: if parentMember()
           && request.resource.data.voterUid == request.auth.uid
-          && voteId == string(request.resource.data.workshopN) + '__' + request.resource.data.voteKey + '__' + request.auth.uid;
-        allow delete: if parentMember() && resource.data.voterUid == request.auth.uid;
+          && voteId == string(request.resource.data.workshopN) + '__' + request.resource.data.voteKey + '__' + request.auth.uid
+          && voteOpen(string(request.resource.data.workshopN), request.resource.data.voteKey);
+        allow delete: if parentMember()
+          && resource.data.voterUid == request.auth.uid
+          && voteOpen(string(resource.data.workshopN), resource.data.voteKey);
       }
 
       // 匿名意見板：本人建立/編輯；任何成員可按讚（只准動 likes 欄位）
@@ -157,11 +166,15 @@ service cloud.firestore {
       }
 
       // 評分：一人一票——docId 綁 {oppId}__r{round}__{uid}、scorerUid 綁本人、
-      // 輪次必須開放、提交後鎖定（僅主持人可解鎖，且只能動 submitted 旗標）
+      // 輪次必須開放、提交後鎖定（僅主持人可解鎖，且只能動 submitted 旗標）。
+      // 讀取（獨立評分防錨定）：未提交的草稿只有本人與主持人可讀；提交後全員可讀。
       match /scores/{scoreId} {
         function roundOpen(roundStr) {
           return get(/databases/$(database)/documents/evalProjects/$(pid)/rounds/$(roundStr)).data.status == 'open';
         }
+        allow read: if parentFacil()
+          || (parentMember()
+            && (resource.data.scorerUid == request.auth.uid || resource.data.submitted == true));
         allow create: if parentEditor()
           && request.resource.data.scorerUid == request.auth.uid
           && scoreId == request.resource.data.oppId + '__r' + string(request.resource.data.round) + '__' + request.auth.uid

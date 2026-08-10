@@ -9,5 +9,8 @@
   "peerDependencies": {
     "firebase": "^12",
     "react": "^19"
+  },
+  "scripts": {
+    "test": "node --test"
   }
 }

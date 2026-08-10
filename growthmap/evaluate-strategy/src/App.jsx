@@ -30,13 +30,26 @@ import SettingsPage from './components/pages/SettingsPage';
 
 const SELECTED_KEY = 'eva_selected_project';
 
+// storage 可能被瀏覽器政策封鎖（封鎖所有 cookie／隱私模式）——不得因此白屏，
+// 降級為「不記住選擇」（Firebase auth 的持久化失敗它自己會處理）
+const safeStorage = {
+  get(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  set(key, value) {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch { /* 封鎖環境：本 session 內仍可運作，只是不記住 */ }
+  },
+};
+
 export default function App() {
   const { user, loading } = useAuth();
-  const [pid, setPid] = useState(() => localStorage.getItem(SELECTED_KEY) || null);
+  const [pid, setPid] = useState(() => safeStorage.get(SELECTED_KEY));
 
   const select = (next) => {
-    if (next) localStorage.setItem(SELECTED_KEY, next);
-    else localStorage.removeItem(SELECTED_KEY);
+    safeStorage.set(SELECTED_KEY, next);
     setPid(next);
     navigate('dashboard');
   };
@@ -57,8 +70,8 @@ function Workspace({ pid, user, onExit }) {
   const storeError = useProjectStore((s) => s.error);
 
   useEffect(() => {
-    bind(pid);
-  }, [pid, bind]);
+    bind(pid, user.uid);
+  }, [pid, user.uid, bind]);
 
   // 換帳號防護：目前帳號不是成員（或專案被刪）→ 回選擇頁
   useEffect(() => {

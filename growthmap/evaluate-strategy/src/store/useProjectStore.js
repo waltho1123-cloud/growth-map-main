@@ -3,7 +3,7 @@
 // Firestore SDK 的 latency compensation 已提供本地即時回饋。
 
 import { create } from 'zustand';
-import { subscribeProjectDoc, subscribeSubcollection } from '../lib/db';
+import { subscribeProjectDoc, subscribeSubcollection, subscribeScores } from '../lib/db';
 
 const SUB_SORTERS = {
   opportunities: (a, b) => (a.no || 0) - (b.no || 0),
@@ -28,7 +28,7 @@ export const useProjectStore = create((set, get) => ({
   error: null,
   _unsubs: [],
 
-  bind(pid) {
+  bind(pid, uid) {
     const state = get();
     if (state.pid === pid) return;
     state._unsubs.forEach((u) => u?.());
@@ -39,12 +39,17 @@ export const useProjectStore = create((set, get) => ({
     const onError = (err) => set({ error: err?.message || String(err) });
     const unsubs = [
       subscribeProjectDoc(pid, (project) => set({ project, projectLoaded: true }), onError),
-      ...Object.keys(SUB_SORTERS).map((sub) =>
+      ...Object.keys(SUB_SORTERS).filter((s) => s !== 'scores').map((sub) =>
         subscribeSubcollection(pid, sub, (rows) => {
           rows.sort(SUB_SORTERS[sub]);
           set({ [sub]: rows });
         }, onError)
       ),
+      // scores 走盲評雙查詢（已提交全員＋自己的草稿）
+      subscribeScores(pid, uid, (rows) => {
+        rows.sort(SUB_SORTERS.scores);
+        set({ scores: rows });
+      }, onError),
     ];
     set({ pid, project: null, projectLoaded: false, error: null, _unsubs: unsubs, ...EMPTY_SUBS });
   },

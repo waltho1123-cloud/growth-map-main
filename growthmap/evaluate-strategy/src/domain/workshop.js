@@ -35,12 +35,14 @@ export function createWorkshopDoc(n, { doubled = false } = {}) {
   };
 }
 
-// 目前剩餘秒數（各端本地推算；startedAt 為雲端時間戳）
+// 目前剩餘秒數（各端本地推算）。startedAt 接受毫秒數或 Firestore Timestamp
+// （serverTimestamp 寫入——避免主持人機器時鐘偏差讓各端倒數不一致）。
 export function timerRemaining(timer, nowMs = Date.now()) {
   if (!timer) return 0;
   if (timer.pausedRemainingSec != null) return Math.round(timer.pausedRemainingSec);
-  if (!timer.startedAt) return timer.durationSec || 0;
-  return Math.round((timer.durationSec || 0) - (nowMs - timer.startedAt) / 1000);
+  const startedAt = timer.startedAt?.toMillis ? timer.startedAt.toMillis() : timer.startedAt;
+  if (!startedAt) return timer.durationSec || 0;
+  return Math.round((timer.durationSec || 0) - (nowMs - startedAt) / 1000);
 }
 
 // 主持人端把原始票（wsVotes 文件）彙總成 tally（參與者只看得到 tally——PD-08 半記名）

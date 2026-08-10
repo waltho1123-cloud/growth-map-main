@@ -115,6 +115,8 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 | `MODEL_OPUS` / `MODEL_SONNET` / `MODEL_HAIKU` | 模型字串，預設 `claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5` |
 | `ALLOWED_ORIGINS` | CORS 白名單 CSV（fail-closed）。線上＝`https://growth-map-main.zeabur.app`（staging 建立後追加其 origin） |
 | `REQUIRE_AUTH` | `true` 時強制 Firebase 登入 |
+| `ALLOWED_EMAILS` | AI 端點 email 白名單 CSV（選填）。與 `ALLOWED_EMAIL_DOMAINS` 任一有設即強制：名單外帳號回 403（堵「任何有效登入都能燒 Anthropic 額度」的成本洞）；皆未設＝不限制（啟動時 console.warn） |
+| `ALLOWED_EMAIL_DOMAINS` | AI 端點 email 網域白名單 CSV（選填，如 `corp.tw`；嚴格比對、子網域不放行） |
 | `FIREBASE_PROJECT_ID` | 驗 token aud/iss 用 |
 | `PORT` | 預設 8787（線上由平台給 8080） |
 
@@ -147,6 +149,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | --- | --- | --- |
 | `IDO_PERMISSION_DENIED` | 401 | 缺 Bearer token |
 | `IDO_TOKEN_INVALID` | 401 | token 無效/過期（前端會強制刷新後重試一次） |
+| `IDO_FORBIDDEN` | 403 | email 不在 AI 白名單（`ALLOWED_EMAILS`/`ALLOWED_EMAIL_DOMAINS`） |
 | `IDO_RATE_LIMIT` | 429 | 超過 20/min |
 | `IDO_AI_NO_KEY` | 503 | 伺服器未設 `ANTHROPIC_API_KEY` |
 | `IDO_VALIDATION` / `IDO_VALIDATION_TASK` | 400 | JSON 解析失敗 / 未知任務 |

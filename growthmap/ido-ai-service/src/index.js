@@ -7,8 +7,16 @@ import { callClaude, streamClaude } from './anthropic.js';
 import { sanitizeObject, sanitizeText } from './sanitize.js';
 import { TASKS } from './prompts.js';
 import { verifyFirebaseIdToken } from './firebase-auth.js';
+import { parseAllowlist, allowlistEnabled, isEmailAllowed } from './allowlist.js';
 
 const app = new Hono();
+
+// email 白名單（成本洞：任何有效 Firebase 登入都能燒 Anthropic 額度——
+// 設 ALLOWED_EMAILS／ALLOWED_EMAIL_DOMAINS 後僅名單內帳號可用 AI）
+const allowlist = parseAllowlist(process.env);
+if (config.requireAuth && !allowlistEnabled(allowlist)) {
+  console.warn('[auth] 未設定 ALLOWED_EMAILS/ALLOWED_EMAIL_DOMAINS——任何有效 Firebase 登入都可呼叫 AI 端點（成本面未上鎖）');
+}
 
 app.use(
   '/*',
@@ -34,6 +42,12 @@ app.use('/api/*', async (c, next) => {
     } catch (e) {
       console.warn('[auth]', e?.message);
       return c.json({ error: { code: 'IDO_TOKEN_INVALID', message: '登入憑證無效或已過期' } }, 401);
+    }
+    // 白名單（啟用時）：token 有效仍須 email 在名單內
+    const email = c.get('user')?.email;
+    if (!isEmailAllowed(email, allowlist)) {
+      console.warn('[auth] 白名單拒絕：', email || '(token 無 email)');
+      return c.json({ error: { code: 'IDO_FORBIDDEN', message: '此帳號未獲授權使用 AI 功能，請聯絡平台管理員' } }, 403);
     }
   }
   return next();

@@ -79,15 +79,15 @@ export default function P12Consensus({ ctx }) {
       {/* 區 2 WHY／WHAT／HOW 共識表 */}
       <div className="grid gap-3 lg:grid-cols-3">
         <Section title="WHY 選定這些策略方案的理由">
-          <p className="mb-2 text-xs text-slate-400">各方案理由、方案間綜效、執行順序邏輯、主要風險（≥2 筆）</p>
+          <p className="mb-2 text-xs text-slate-500">各方案理由、方案間綜效、執行順序邏輯、主要風險（≥2 筆）</p>
           <ListEditor disabled={disabled} items={consensus.why} onCommit={(v) => patch({ why: v })} />
         </Section>
         <Section title="WHAT 未來目標狀態定義">
-          <p className="mb-2 text-xs text-slate-400">業務組合、客戶組合、成長輪廓、價值主張（≥2 筆）</p>
+          <p className="mb-2 text-xs text-slate-500">業務組合、客戶組合、成長輪廓、價值主張（≥2 筆）</p>
           <ListEditor disabled={disabled} items={consensus.what} onCommit={(v) => patch({ what: v })} />
         </Section>
         <Section title="HOW 如何實現公司願景">
-          <p className="mb-2 text-xs text-slate-400">既有業務綜效、多角化效益、客戶關係強化、與願景的連結（≥2 筆）</p>
+          <p className="mb-2 text-xs text-slate-500">既有業務綜效、多角化效益、客戶關係強化、與願景的連結（≥2 筆）</p>
           <ListEditor disabled={disabled} items={consensus.how} onCommit={(v) => patch({ how: v })} />
         </Section>
       </div>

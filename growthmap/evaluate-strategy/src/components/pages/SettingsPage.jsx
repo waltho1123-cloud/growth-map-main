@@ -62,18 +62,18 @@ export default function SettingsPage({ ctx }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="專案">
           <label className="mb-1 block text-xs text-slate-500">專案名稱</label>
-          <TextInput value={project.name} disabled={disabled} onCommit={(v) => updateProject(project.id, { name: v })} />
+          <TextInput value={project.name} disabled={disabled} ariaLabel="專案名稱" onCommit={(v) => updateProject(project.id, { name: v })} />
         </Section>
 
         <Section title="方案規則（PD-03）">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs text-slate-500">警示門檻（建議 1–3）</label>
-              <NumInput value={s.playWarn ?? 3} disabled={disabled} onCommit={(v) => patchSettings({ playWarn: Math.max(1, Math.min(5, v || 3)) })} />
+              <NumInput value={s.playWarn ?? 3} disabled={disabled} ariaLabel="方案數警示門檻" onCommit={(v) => patchSettings({ playWarn: Math.max(1, Math.min(5, v || 3)) })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">硬上限（不得 &gt;5）</label>
-              <NumInput value={s.playMax ?? 5} disabled={disabled} onCommit={(v) => patchSettings({ playMax: Math.max(1, Math.min(5, v || 5)) })} />
+              <NumInput value={s.playMax ?? 5} disabled={disabled} ariaLabel="方案數硬上限" onCommit={(v) => patchSettings({ playMax: Math.max(1, Math.min(5, v || 5)) })} />
             </div>
           </div>
         </Section>
@@ -82,23 +82,23 @@ export default function SettingsPage({ ctx }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs text-slate-500">所得稅率（0–1，預設 0.2）</label>
-              <NumInput value={s.taxRate ?? 0.2} disabled={disabled} onCommit={(v) => patchSettings({ taxRate: Math.max(0, Math.min(1, v)) })} />
+              <NumInput value={s.taxRate ?? 0.2} disabled={disabled} ariaLabel="所得稅率" onCommit={(v) => patchSettings({ taxRate: Math.max(0, Math.min(1, v)) })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">預測年期（3–5，PD-04）</label>
-              <NumInput value={s.forecastYears ?? 3} disabled={disabled} onCommit={changeYears} />
+              <NumInput value={s.forecastYears ?? 3} disabled={disabled} ariaLabel="預測年期" onCommit={changeYears} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">可用資金上限（現金流硬檢查）</label>
-              <NumInput value={s.availableCapital ?? ''} disabled={disabled} onCommit={(v) => patchSettings({ availableCapital: v })} />
+              <NumInput value={s.availableCapital ?? ''} disabled={disabled} ariaLabel="可用資金上限" onCommit={(v) => patchSettings({ availableCapital: v })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">可用 FTE 上限</label>
-              <NumInput value={s.availableFte ?? ''} disabled={disabled} onCommit={(v) => patchSettings({ availableFte: v })} />
+              <NumInput value={s.availableFte ?? ''} disabled={disabled} ariaLabel="可用 FTE 上限" onCommit={(v) => patchSettings({ availableFte: v })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">幣別／單位（表頭標示）</label>
-              <TextInput value={`${s.currency || 'TWD'} ${s.unit || 'M'}`} disabled={disabled}
+              <TextInput value={`${s.currency || 'TWD'} ${s.unit || 'M'}`} disabled={disabled} ariaLabel="幣別與單位"
                 onCommit={(v) => {
                   const [currency = 'TWD', unit = 'M'] = String(v).trim().split(/\s+/);
                   patchSettings({ currency, unit });
@@ -111,30 +111,31 @@ export default function SettingsPage({ ctx }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs text-slate-500">假設掛載目標比率（CHK-5）</label>
-              <NumInput value={s.assumptionTargetRatio ?? 0.8} disabled={disabled} onCommit={(v) => patchSettings({ assumptionTargetRatio: Math.max(0, Math.min(1, v || 0.8)) })} />
+              <NumInput value={s.assumptionTargetRatio ?? 0.8} disabled={disabled} ariaLabel="假設掛載目標比率" onCommit={(v) => patchSettings({ assumptionTargetRatio: Math.max(0, Math.min(1, v || 0.8)) })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">複議門檻（極差 ≥，預設 2）</label>
-              <NumInput value={s.dispersionThreshold ?? 2} disabled={disabled} onCommit={(v) => patchSettings({ dispersionThreshold: Math.max(1, Math.min(4, v || 2)) })} />
+              <NumInput value={s.dispersionThreshold ?? 2} disabled={disabled} ariaLabel="複議門檻" onCommit={(v) => patchSettings({ dispersionThreshold: Math.max(1, Math.min(4, v || 2)) })} />
             </div>
           </div>
         </Section>
       </div>
 
       <Section title={`成員（${project.memberUids?.length || 0}）`}
-        aside={<span className="text-xs text-slate-400">coach 角色由安全規則強制唯讀</span>}>
+        aside={<span className="text-xs text-slate-500">coach 角色由安全規則強制唯讀</span>}>
         <div className="space-y-2">
           {Object.entries(project.members || {}).map(([uid, m]) => (
             <div key={uid} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-slate-800">{m.displayName || m.email || uid}</div>
-                <div className="truncate text-xs text-slate-400">{m.email}</div>
+                <div className="truncate text-xs text-slate-500">{m.email}</div>
               </div>
               <div className="flex items-center gap-2">
                 {isOwner && uid !== ctx.user.uid ? (
                   <>
                     <select
                       value={m.role}
+                      aria-label={`${m.displayName || m.email} 的角色`}
                       onChange={(e) => updateMemberRole(project, uid, e.target.value)}
                       className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
                     >
@@ -155,7 +156,7 @@ export default function SettingsPage({ ctx }) {
             <div className="mb-1 text-xs font-semibold text-slate-500">待接受邀請</div>
             {(project.invitedEmails || []).map((e) => (
               <div key={e} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
-                <span>{e} <span className="text-xs text-slate-400">（{ROLES[project.inviteRoles?.[e]]?.label || '成員'}）</span></span>
+                <span>{e} <span className="text-xs text-slate-500">（{ROLES[project.inviteRoles?.[e]]?.label || '成員'}）</span></span>
                 {canInvite && <Btn kind="ghost" onClick={() => revokeInvite(project, e)}>撤回</Btn>}
               </div>
             ))}
@@ -169,7 +170,7 @@ export default function SettingsPage({ ctx }) {
               placeholder="邀請成員的 Google 帳號 email"
               className="w-64 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
             />
-            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}
+            <select value={inviteRole} aria-label="邀請角色" onChange={(e) => setInviteRole(e.target.value)}
               className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
               {Object.values(ROLES).map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
             </select>

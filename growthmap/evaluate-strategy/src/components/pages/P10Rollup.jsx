@@ -166,7 +166,7 @@ function Row({ label, value, strong, pct }) {
     <tr className={`border-b border-slate-100 ${strong ? 'bg-slate-50 font-semibold' : ''}`}>
       <td className="py-1.5 pr-2 text-slate-700">{label}</td>
       <td className="w-32 py-1.5 pr-2 text-right tabular-nums text-slate-900">{fmtAmount(value)}</td>
-      <td className="w-16 py-1.5 text-right text-xs tabular-nums text-slate-400">{pct != null ? `${Math.round(pct * 100)}%` : ''}</td>
+      <td className="w-16 py-1.5 text-right text-xs tabular-nums text-slate-500">{pct != null ? `${Math.round(pct * 100)}%` : ''}</td>
     </tr>
   );
 }

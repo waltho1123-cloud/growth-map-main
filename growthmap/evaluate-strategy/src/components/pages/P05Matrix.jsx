@@ -168,7 +168,7 @@ export default function P05Matrix({ ctx }) {
             <text x={scaleX(dividers.x) + 10} y={22} className="fill-emerald-600 text-[11px] font-semibold">最高優先事項｜必做</text>
             <text x={PAD + 4} y={22} className="fill-amber-600 text-[11px] font-semibold">大膽投注（高風險）</text>
             <text x={scaleX(dividers.x) + 10} y={H - PAD + 16} className="fill-indigo-600 text-[11px] font-semibold">潛在速贏｜可選</text>
-            <text x={PAD + 4} y={H - PAD + 16} className="fill-slate-400 text-[11px] font-semibold">低優先事項｜不做</text>
+            <text x={PAD + 4} y={H - PAD + 16} className="fill-slate-500 text-[11px] font-semibold">低優先事項｜不做</text>
 
             {/* 軸 */}
             <line x1={PAD} y1={H - PAD} x2={W - 10} y2={H - PAD} stroke="#cbd5e1" strokeWidth="1.5" />
@@ -177,8 +177,8 @@ export default function P05Matrix({ ctx }) {
             <text x={14} y={16} className="fill-slate-500 text-[11px]" transform={`rotate(-90 14 16)`} textAnchor="end">機會吸引力（①市場規模&競爭 · ②操作潛力）</text>
             {[1, 2, 3, 4, 5].map((t) => (
               <g key={t}>
-                <text x={scaleX(t)} y={H - PAD + 14} textAnchor="middle" className="fill-slate-400 text-[10px]">{t}</text>
-                <text x={PAD - 8} y={scaleY(t) + 3} textAnchor="end" className="fill-slate-400 text-[10px]">{t}</text>
+                <text x={scaleX(t)} y={H - PAD + 14} textAnchor="middle" className="fill-slate-500 text-[10px]">{t}</text>
+                <text x={PAD - 8} y={scaleY(t) + 3} textAnchor="end" className="fill-slate-500 text-[10px]">{t}</text>
               </g>
             ))}
 
@@ -217,7 +217,7 @@ export default function P05Matrix({ ctx }) {
             })}
           </svg>
           </div>
-          <p className="mt-1 text-center text-[11px] text-slate-400">點擊泡泡＝納入／移出短名單（粗框＝已入短名單；紅點＝GR-3 名稱無效）</p>
+          <p className="mt-1 text-center text-[11px] text-slate-500">點擊泡泡＝納入／移出短名單（粗框＝已入短名單；紅點＝GR-3 名稱無效）</p>
         </Section>
 
         {/* 區 2 排序表格 */}
@@ -234,7 +234,7 @@ export default function P05Matrix({ ctx }) {
                   className={`rounded-lg border px-2.5 py-2 transition ${hoverId === o.id ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="mr-1 text-xs tabular-nums text-slate-400">#{i + 1}</span>
+                      <span className="mr-1 text-xs tabular-nums text-slate-500">#{i + 1}</span>
                       <span className="text-[13px] font-medium text-slate-800">{o.opportunityName || '（未命名）'}</span>
                     </div>
                     <span className="shrink-0 text-sm font-bold tabular-nums text-slate-900">{agg.total}</span>
@@ -243,7 +243,7 @@ export default function P05Matrix({ ctx }) {
                     <Chip tone={q.key === 'must' ? 'ok' : q.key === 'bigbet' ? 'warn' : q.key === 'quickwin' ? 'brand' : 'idle'}>{q.short}</Chip>
                     {agg.needsReview && <Chip tone="fail">需複議</Chip>}
                     {gr3.flagged && <Chip tone="fail">GR-3</Chip>}
-                    <span className="text-[11px] text-slate-400">Y {agg.axes.y}｜X {agg.axes.x}</span>
+                    <span className="text-[11px] text-slate-500">Y {agg.axes.y}｜X {agg.axes.x}</span>
                     {ctx.editable && (
                       <span className="ml-auto flex gap-1">
                         <button type="button"
@@ -266,12 +266,12 @@ export default function P05Matrix({ ctx }) {
 
           {excluded.length > 0 && (
             <div className="mt-3 border-t border-slate-100 pt-2">
-              <div className="mb-1 text-xs font-semibold text-slate-400">保留池（不刪除）</div>
+              <div className="mb-1 text-xs font-semibold text-slate-500">保留池（不刪除）</div>
               {excluded.map((o) => (
-                <div key={o.id} className="flex items-center justify-between py-1 text-xs text-slate-400">
+                <div key={o.id} className="flex items-center justify-between py-1 text-xs text-slate-500">
                   <span className="line-through">{o.opportunityName}</span>
                   {ctx.editable && (
-                    <button type="button" className="text-indigo-500 hover:underline"
+                    <button type="button" className="text-indigo-600 hover:underline"
                       onClick={() => updateSubDoc(project.id, 'opportunities', o.id, { excluded: { flag: false, reason: '', decidedBy: ctx.user.uid, decidedAt: Date.now() } })}>
                       撿回
                     </button>

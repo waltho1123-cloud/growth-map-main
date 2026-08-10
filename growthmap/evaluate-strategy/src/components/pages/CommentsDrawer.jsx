@@ -42,35 +42,35 @@ export default function CommentsDrawer({ ctx }) {
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">評論</h3>
-            <p className="text-[11px] text-slate-400">{drawer.ref ? `鎖定：${drawer.label || drawer.ref}` : `全專案（${comments.length}）`}</p>
+            <p className="text-[11px] text-slate-500">{drawer.ref ? `鎖定：${drawer.label || drawer.ref}` : `全專案（${comments.length}）`}</p>
           </div>
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1 text-[11px] text-slate-400">
+            <label className="flex items-center gap-1 text-[11px] text-slate-500">
               <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} />
               含已解決
             </label>
-            <button type="button" onClick={close} className="text-slate-400 hover:text-slate-700">✕</button>
+            <button type="button" onClick={close} className="text-slate-500 hover:text-slate-700">✕</button>
           </div>
         </div>
 
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
-          {filtered.length === 0 && <p className="pt-8 text-center text-xs text-slate-400">目前沒有{showResolved ? '' : '未解決的'}評論。</p>}
+          {filtered.length === 0 && <p className="pt-8 text-center text-xs text-slate-500">目前沒有{showResolved ? '' : '未解決的'}評論。</p>}
           {filtered.map((c) => (
             <div key={c.id} className={`rounded-xl border p-3 ${c.resolved ? 'border-slate-100 opacity-60' : 'border-slate-200'}`}>
               {c.targetLabel && <div className="mb-1 text-[11px] font-medium text-indigo-600">{c.targetLabel}</div>}
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{c.text}</p>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-[10px] text-slate-400">{c.authorName}・{fmtTime(c.createdAt)}</span>
+                <span className="text-[10px] text-slate-500">{c.authorName}・{fmtTime(c.createdAt)}</span>
                 {c.resolved && <Chip tone="idle">已解決</Chip>}
                 <span className="ml-auto flex gap-2">
                   {ctx.editable && (
-                    <button type="button" className="text-[11px] text-slate-400 hover:text-emerald-600"
+                    <button type="button" className="text-[11px] text-slate-500 hover:text-emerald-600"
                       onClick={() => updateSubDoc(project.id, 'comments', c.id, { resolved: !c.resolved })}>
                       {c.resolved ? '重開' : '標記解決'}
                     </button>
                   )}
                   {c.authorUid === ctx.user.uid && (
-                    <button type="button" className="text-[11px] text-slate-300 hover:text-red-600"
+                    <button type="button" className="text-[11px] text-slate-500 hover:text-red-600"
                       onClick={() => deleteSubDoc(project.id, 'comments', c.id)}>刪除</button>
                   )}
                 </span>

@@ -188,7 +188,7 @@ export default function P06Workshop({ ctx, n }) {
                 className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${idx === ws.currentIndex && ws.status === 'running' ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200'}`}>
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium text-slate-800">{item.title}</div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[11px] text-slate-500">
                     {item.minutes} 分鐘{item.goal ? `｜${item.goal}` : ''}
                     {(ws.resolutions?.[item.key] || []).length > 0 && `｜決議 ${(ws.resolutions[item.key]).length} 條`}
                   </div>
@@ -205,7 +205,7 @@ export default function P06Workshop({ ctx, n }) {
         <Section title={current ? `目前議題：${current.title}` : '尚未開始'}>
           <div className={`mb-3 rounded-xl py-6 text-center text-5xl font-bold tabular-nums ${overtime ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-900'}`}>
             {overtime ? '−' : ''}{mm}:{ss}
-            {overtime && <div className="mt-1 text-xs font-normal text-red-500">已超時（不強制中斷）</div>}
+            {overtime && <div className="mt-1 text-xs font-normal text-red-600">已超時（不強制中斷）</div>}
           </div>
           {isFacil && ws.status === 'running' && (
             <div className="mb-3 flex flex-wrap justify-center gap-2">
@@ -224,7 +224,7 @@ export default function P06Workshop({ ctx, n }) {
             <div className="mb-1 text-xs font-semibold text-slate-500">本段決議{current?.needsResolution ? '（此段需取得共識）' : ''}</div>
             {(ws.resolutions?.[current?.key] || []).map((r, i) => (
               <div key={i} className="mb-1 rounded bg-emerald-50 px-2 py-1 text-sm text-emerald-900">
-                {i + 1}. {r.text} <span className="text-[10px] text-emerald-600">{r.by}・{fmtTime(r.at)}</span>
+                {i + 1}. {r.text} <span className="text-[10px] text-emerald-700">{r.by}・{fmtTime(r.at)}</span>
               </div>
             ))}
             {ctx.editable && ws.status === 'running' && (
@@ -239,8 +239,8 @@ export default function P06Workshop({ ctx, n }) {
           </div>
 
           {n === 1
-            ? <p className="mt-3 text-center text-[11px] text-slate-400">評估與排序請開分頁到 <button className="text-indigo-500 underline" onClick={() => navigate('matrix')}>優先排序矩陣</button> 投影</p>
-            : <p className="mt-3 text-center text-[11px] text-slate-400">效益與時序請開分頁到 <button className="text-indigo-500 underline" onClick={() => navigate('rollup')}>疊加效益</button>／<button className="text-indigo-500 underline" onClick={() => navigate('sequencing')}>時序彙總</button> 投影</p>}
+            ? <p className="mt-3 text-center text-[11px] text-slate-500">評估與排序請開分頁到 <button className="text-indigo-600 underline" onClick={() => navigate('matrix')}>優先排序矩陣</button> 投影</p>
+            : <p className="mt-3 text-center text-[11px] text-slate-500">效益與時序請開分頁到 <button className="text-indigo-600 underline" onClick={() => navigate('rollup')}>疊加效益</button>／<button className="text-indigo-600 underline" onClick={() => navigate('sequencing')}>時序彙總</button> 投影</p>}
         </Section>
 
         {/* 右：投票＋意見板 */}
@@ -248,7 +248,7 @@ export default function P06Workshop({ ctx, n }) {
           <Section title="匿名投票"
             aside={isFacil && ws.status !== 'ended' ? <Btn kind="ghost" onClick={() => setNewVote({ title: '', optionsText: '' })}>＋ 發起投票</Btn> : null}>
             {Object.entries(ws.votes || {}).length === 0 && (
-              <p className="text-xs text-slate-400">尚無投票。介面匿名呈現；系統留存投票紀錄以防重投（PD-08 半記名——僅主持人可查原始票）。</p>
+              <p className="text-xs text-slate-500">尚無投票。介面匿名呈現；系統留存投票紀錄以防重投（PD-08 半記名——僅主持人可查原始票）。</p>
             )}
             <div className="space-y-3">
               {Object.entries(ws.votes || {}).sort(([, a], [, b]) => (a.createdAt || 0) - (b.createdAt || 0)).map(([key, v]) => {
@@ -258,7 +258,7 @@ export default function P06Workshop({ ctx, n }) {
                     <div className="mb-1.5 flex items-center justify-between">
                       <span className="text-sm font-medium text-slate-800">{v.title}</span>
                       <span className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-slate-400">{v.voters || 0} 票</span>
+                        <span className="text-[11px] text-slate-500">{v.voters || 0} 票</span>
                         {isFacil && v.status === 'open' && <Btn kind="ghost" onClick={() => patch({ [`votes.${key}.status`]: 'closed' })}>截止</Btn>}
                         {v.status === 'closed' && <Chip tone="idle">已截止</Chip>}
                       </span>

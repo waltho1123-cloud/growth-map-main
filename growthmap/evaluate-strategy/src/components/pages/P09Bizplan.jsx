@@ -77,7 +77,7 @@ export default function P09Bizplan({ ctx, playId }) {
             <div className={`px-2 text-right text-sm tabular-nums ${derived[yi] < 0 ? 'text-red-600' : 'text-slate-800'}`}>{fmtAmount(derived[yi])}</div>
           ) : (
             <div className="flex items-center">
-              <NumInput disabled={disabled}
+              <NumInput disabled={disabled} ariaLabel={`${label} ${yls[yi]}`}
                 value={key.field ? fin[key.group][key.field][yi] : fin[key.group][yi]}
                 onCommit={(v) => patchFinCell(key.group, key.field, yi, v)} />
               {isKey && <AssumptionDot path={key.field ? `${key.group}.${key.field}` : key.group} yi={yi} label={label} />}
@@ -87,7 +87,7 @@ export default function P09Bizplan({ ctx, playId }) {
       ))}
       <td className="py-1 text-right">
         {isKey && !disabled && (
-          <button type="button" className="text-[11px] text-indigo-500 hover:underline"
+          <button type="button" className="text-[11px] text-indigo-600 hover:underline"
             onClick={() => setEstimator({ path: key.field ? `${key.group}.${key.field}` : key.group, label })}>
             估算
           </button>
@@ -187,7 +187,7 @@ export default function P09Bizplan({ ctx, playId }) {
                 {finRow({ label: '本期現金增減', derived: cfRows.netChange })}
                 {finRow({ label: '期末現金餘額', derived: cfRows.endingCash, tone: 'strong' })}
               </FinTable>
-              <p className="mt-2 text-xs text-slate-400">期末現金為負時上方會出現紅字提示（不阻擋儲存，ERR-05）。</p>
+              <p className="mt-2 text-xs text-slate-500">期末現金為負時上方會出現紅字提示（不阻擋儲存，ERR-05）。</p>
             </Section>
           </div>
 
@@ -195,9 +195,9 @@ export default function P09Bizplan({ ctx, playId }) {
           <Section title="NPV（選填，僅供參考）">
             <div className="flex items-center gap-3">
               <div className="w-40">
-                <NumInput disabled={disabled} value={play.bizplan?.npv ?? ''} onCommit={(v) => patchBizplan('npv', v || null)} placeholder="淨現值" />
+                <NumInput disabled={disabled} value={play.bizplan?.npv ?? ''} ariaLabel="NPV 淨現值" onCommit={(v) => patchBizplan('npv', v || null)} placeholder="淨現值" />
               </div>
-              <p className="text-xs leading-relaxed text-slate-400">
+              <p className="text-xs leading-relaxed text-slate-500">
                 方法論已降規為「三表＋疊加圖」；NPV/DCF 不是必填，填了也不進任何檢查。
               </p>
             </div>
@@ -220,7 +220,7 @@ export default function P09Bizplan({ ctx, playId }) {
                 </button>
               ))}
               {assumptions.filter((a) => (a.target?.ref || '').includes(`fin:${play.id}:`)).length === 0 && (
-                <p className="text-xs text-slate-400">尚無假設。點關鍵欄位旁的黃點，或用「估算」建立第一筆。</p>
+                <p className="text-xs text-slate-500">尚無假設。點關鍵欄位旁的黃點，或用「估算」建立第一筆。</p>
               )}
             </div>
           </Section>
@@ -233,13 +233,13 @@ export default function P09Bizplan({ ctx, playId }) {
             {risks.map((r, i) => (
               <div key={i} className="grid gap-2 rounded-lg border border-slate-200 p-3 md:grid-cols-12">
                 <div className="md:col-span-4">
-                  <label className="mb-1 block text-[11px] text-slate-400">風險</label>
-                  <TextInput disabled={disabled} value={r.risk} onCommit={(v) => patchBizplan('risks', risks.map((x, j) => j === i ? { ...x, risk: v } : x))} />
+                  <label className="mb-1 block text-[11px] text-slate-500">風險</label>
+                  <TextInput disabled={disabled} value={r.risk} ariaLabel={`風險 ${i + 1} 描述`} onCommit={(v) => patchBizplan('risks', risks.map((x, j) => j === i ? { ...x, risk: v } : x))} />
                 </div>
                 {[['likelihood', '可能性'], ['impact', '影響']].map(([f, label]) => (
                   <div key={f} className="md:col-span-2">
-                    <label className="mb-1 block text-[11px] text-slate-400">{label}</label>
-                    <select disabled={disabled} value={r[f] || ''}
+                    <label className="mb-1 block text-[11px] text-slate-500">{label}</label>
+                    <select disabled={disabled} value={r[f] || ''} aria-label={`風險 ${i + 1} ${label}`}
                       onChange={(e) => patchBizplan('risks', risks.map((x, j) => j === i ? { ...x, [f]: e.target.value } : x))}
                       className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                       <option value="">—</option>
@@ -248,8 +248,8 @@ export default function P09Bizplan({ ctx, playId }) {
                   </div>
                 ))}
                 <div className="md:col-span-3">
-                  <label className="mb-1 block text-[11px] text-slate-400">潛在緩解方式</label>
-                  <TextInput disabled={disabled} value={r.mitigation} onCommit={(v) => patchBizplan('risks', risks.map((x, j) => j === i ? { ...x, mitigation: v } : x))} />
+                  <label className="mb-1 block text-[11px] text-slate-500">潛在緩解方式</label>
+                  <TextInput disabled={disabled} value={r.mitigation} ariaLabel={`風險 ${i + 1} 緩解方式`} onCommit={(v) => patchBizplan('risks', risks.map((x, j) => j === i ? { ...x, mitigation: v } : x))} />
                 </div>
                 <div className="flex items-end justify-end md:col-span-1">
                   {!disabled && <Btn kind="ghost" onClick={() => patchBizplan('risks', risks.filter((_, j) => j !== i))}>刪除</Btn>}
@@ -265,11 +265,11 @@ export default function P09Bizplan({ ctx, playId }) {
         <div className="grid gap-4 md:grid-cols-2">
           <Section title="資源需求">
             <label className="mb-1 block text-xs text-slate-500">全職人力（FTE）</label>
-            <TextInput disabled={disabled} value={play.bizplan?.resources?.fte} onCommit={(v) => patchBizplan('resources.fte', v)} />
+            <TextInput disabled={disabled} value={play.bizplan?.resources?.fte} ariaLabel="全職人力 FTE" onCommit={(v) => patchBizplan('resources.fte', v)} />
             <label className="mb-1 mt-3 block text-xs text-slate-500">資本</label>
-            <TextInput disabled={disabled} value={play.bizplan?.resources?.capital} onCommit={(v) => patchBizplan('resources.capital', v)} />
+            <TextInput disabled={disabled} value={play.bizplan?.resources?.capital} ariaLabel="資本需求" onCommit={(v) => patchBizplan('resources.capital', v)} />
             <label className="mb-1 mt-3 block text-xs text-slate-500">管理層精力分配</label>
-            <TextInput disabled={disabled} value={play.bizplan?.resources?.mgmtAttention} onCommit={(v) => patchBizplan('resources.mgmtAttention', v)} />
+            <TextInput disabled={disabled} value={play.bizplan?.resources?.mgmtAttention} ariaLabel="管理層精力分配" onCommit={(v) => patchBizplan('resources.mgmtAttention', v)} />
           </Section>
           <Section title="關鍵成功要素 KSF（基本門檻 vs 成功關鍵，分列）">
             <label className="mb-1 block text-xs text-slate-500">基本門檻（不做就出局）</label>
@@ -303,7 +303,7 @@ export default function P09Bizplan({ ctx, playId }) {
                     ))}
                   </div>
                   <div className="min-w-64 flex-1">
-                    <TextInput disabled={disabled} placeholder="說明…" value={feasibility[key]?.note}
+                    <TextInput disabled={disabled} placeholder="說明…" ariaLabel={`${q} 說明`} value={feasibility[key]?.note}
                       onCommit={(v) => patchBizplan(`feasibility.${key}`, { ...feasibility[key], note: v })} />
                   </div>
                 </div>

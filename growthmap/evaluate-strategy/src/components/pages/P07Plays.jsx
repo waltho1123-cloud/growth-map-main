@@ -93,7 +93,7 @@ export default function P07Plays({ ctx }) {
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-medium leading-snug text-slate-800">{o.opportunityName}</span>
-                    <span className="mt-0.5 block text-[11px] text-slate-400">
+                    <span className="mt-0.5 block text-[11px] text-slate-500">
                       總分 {o.lastAggregate?.total ?? '—'}｜Y {o.lastAggregate?.axes?.y ?? '—'}｜X {o.lastAggregate?.axes?.x ?? '—'}
                     </span>
                   </span>
@@ -110,12 +110,12 @@ export default function P07Plays({ ctx }) {
                 )}
               </div>
             ))}
-            {pool.length === 0 && <p className="text-xs text-slate-400">短名單機會都已編入方案。</p>}
+            {pool.length === 0 && <p className="text-xs text-slate-500">短名單機會都已編入方案。</p>}
           </div>
 
           {reserve.length > 0 && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs font-semibold text-slate-400">保留池／未入短名單（仍可拉入）</summary>
+              <summary className="cursor-pointer text-xs font-semibold text-slate-500">保留池／未入短名單（仍可拉入）</summary>
               <div className="mt-1.5 space-y-1">
                 {reserve.map((o) => (
                   <div key={o.id} className="flex items-center justify-between gap-2 rounded bg-slate-50 px-2 py-1.5 text-xs text-slate-500">
@@ -173,7 +173,7 @@ export default function P07Plays({ ctx }) {
           解散後，「{dissolveTarget?.name}」的三模板與商業計劃將刪除，來源機會回到機會池。
           輸入方案名稱以確認：
         </p>
-        <TextInput value={dissolveText} onCommit={setDissolveText} placeholder={dissolveTarget?.name} />
+        <TextInput value={dissolveText} onCommit={setDissolveText} placeholder={dissolveTarget?.name} ariaLabel="輸入方案名稱以確認解散" />
         <div className="mt-3 flex justify-end gap-2">
           <Btn onClick={() => setDissolveTarget(null)}>取消</Btn>
           <Btn kind="danger" disabled={dissolveText !== dissolveTarget?.name} onClick={dissolve}>確認解散</Btn>
@@ -205,15 +205,15 @@ function PlayCard({ play, ctx, project, opportunities, onRemoveSource, onDissolv
         <div className="space-y-2">
           <div>
             <label className="mb-1 block text-xs text-slate-500">方案名稱（建議市場／賽道層級的名詞）</label>
-            <TextInput value={play.name} disabled={disabled} onCommit={(v) => patch({ name: v })} />
+            <TextInput value={play.name} disabled={disabled} ariaLabel="方案名稱" onCommit={(v) => patch({ name: v })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500">一句話說明</label>
-            <TextInput value={play.oneLiner} disabled={disabled} onCommit={(v) => patch({ oneLiner: v })} />
+            <TextInput value={play.oneLiner} disabled={disabled} ariaLabel="方案一句話說明" onCommit={(v) => patch({ oneLiner: v })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500">方案負責人</label>
-            <select value={play.ownerUid || ''} disabled={disabled}
+            <select value={play.ownerUid || ''} disabled={disabled} aria-label={`${play.name || '方案'} 負責人`}
               onChange={(e) => patch({ ownerUid: e.target.value || null })}
               className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
               <option value="">未指派</option>
@@ -259,7 +259,7 @@ function PlayCard({ play, ctx, project, opportunities, onRemoveSource, onDissolv
           ) : (
             <div>
               <label className="mb-1 block text-xs text-slate-500">延伸主題（提煉出的更廣泛主題／價值主張，必填）</label>
-              <TextArea rows={2} disabled={disabled} value={play.extendTheme}
+              <TextArea rows={2} disabled={disabled} value={play.extendTheme} ariaLabel="延伸主題"
                 onCommit={(v) => patch({ extendTheme: v })} />
               {!(play.extendTheme || '').trim() && <p className="mt-1 text-xs text-red-600">延伸型方案必須填寫延伸主題。</p>}
             </div>

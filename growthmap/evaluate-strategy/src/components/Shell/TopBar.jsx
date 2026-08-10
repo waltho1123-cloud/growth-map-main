@@ -58,14 +58,15 @@ export default function TopBar({ ctx, onExit }) {
       </button>
       <div className="hidden shrink-0 leading-tight lg:block">
         <div className="text-sm font-bold tracking-tight text-slate-900">
-          <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
+          {/* 小字版品牌綠用深階 #00804A（5.0:1，AA 小字合格）；大標題版保留 #00A651（大字 3:1 合格） */}
+          <span className="text-[#00804A]">BW</span> 成長藍圖實作平台
         </div>
-        <div className="text-[11px] leading-none text-slate-400">評估策略 (Evaluate)</div>
+        <div className="text-[11px] leading-none text-slate-500">評估策略 (Evaluate)</div>
       </div>
       <div className="hidden h-7 w-px bg-slate-200 lg:block" />
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold text-slate-900">{project?.name}</div>
-        <div className="text-[11px] leading-none text-slate-400 lg:hidden">第四堂 · 評估策略 Evaluate</div>
+        <div className="text-[11px] leading-none text-slate-500 lg:hidden">第四堂 · 評估策略 Evaluate</div>
       </div>
 
       <div className="ml-auto flex items-center gap-3">
@@ -97,7 +98,7 @@ export default function TopBar({ ctx, onExit }) {
         <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
           <SyncPill user={ctx.user} />
           <Chip tone={ctx.editable ? 'brand' : 'idle'}>{ROLES[ctx.role]?.label || ctx.role}</Chip>
-          <button type="button" onClick={() => signOut()} className="text-xs text-slate-400 hover:text-slate-700">登出</button>
+          <button type="button" onClick={() => signOut()} className="text-xs text-slate-500 hover:text-slate-700">登出</button>
         </div>
       </div>
     </header>

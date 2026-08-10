@@ -109,7 +109,7 @@ export default function P17Board({ ctx }) {
                   className={`flex-1 rounded py-1 text-[11px] font-semibold transition ${
                     maturity[s.key] === pct
                       ? pct >= 90 ? 'bg-emerald-600 text-white' : pct >= 70 ? 'bg-indigo-600 text-white' : 'bg-amber-500 text-white'
-                      : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                   } disabled:cursor-not-allowed`}>
                   {pct}
                 </button>
@@ -123,7 +123,7 @@ export default function P17Board({ ctx }) {
         {/* 區 2 待辦與複議清單 */}
         <Section title={`待辦與複議（${todos.length}）`}>
           {todos.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-400">目前沒有待處理的複議、爭議或評論。</p>
+            <p className="py-6 text-center text-sm text-slate-500">目前沒有待處理的複議、爭議或評論。</p>
           ) : (
             <div className="max-h-96 space-y-1.5 overflow-y-auto">
               {todos.map((t, i) => (
@@ -133,7 +133,7 @@ export default function P17Board({ ctx }) {
                     <span className="truncate text-sm text-slate-700">{t.text}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
-                    {t.owner && <span className="text-[10px] text-slate-400">{t.owner}</span>}
+                    {t.owner && <span className="text-[10px] text-slate-500">{t.owner}</span>}
                     {t.comment
                       ? <Btn kind="ghost" onClick={() => openComments()}>查看</Btn>
                       : t.path && <Btn kind="ghost" onClick={() => navigate(t.path)}>前往</Btn>}
@@ -147,7 +147,7 @@ export default function P17Board({ ctx }) {
         {/* 區 3 稽核軌跡 */}
         <Section title="稽核軌跡（AI 採納／交付／評論）">
           {timeline.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-400">尚無紀錄。</p>
+            <p className="py-6 text-center text-sm text-slate-500">尚無紀錄。</p>
           ) : (
             <div className="max-h-96 space-y-1.5 overflow-y-auto">
               {timeline.map((t, i) => (
@@ -155,7 +155,7 @@ export default function P17Board({ ctx }) {
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
                   <span className="min-w-0">
                     <span className={`block text-sm leading-snug ${t.tone === 'warn' ? 'text-amber-700' : 'text-slate-700'}`}>{t.text}</span>
-                    <span className="text-[10px] text-slate-400">{fmtTime(t.at)}</span>
+                    <span className="text-[10px] text-slate-500">{fmtTime(t.at)}</span>
                   </span>
                 </div>
               ))}

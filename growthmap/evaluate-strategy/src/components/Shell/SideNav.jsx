@@ -71,7 +71,7 @@ export default function SideNav({ activePath }) {
   if (collapsed) {
     return (
       <aside className="sticky top-14 h-[calc(100vh-56px)] w-10 shrink-0 border-r border-slate-200 bg-white">
-        <button type="button" onClick={() => setCollapsed(false)} className="mt-2 w-full text-slate-400 hover:text-slate-700" title="展開導覽">»</button>
+        <button type="button" onClick={() => setCollapsed(false)} className="mt-2 w-full text-slate-500 hover:text-slate-700" title="展開導覽">»</button>
       </aside>
     );
   }
@@ -79,11 +79,11 @@ export default function SideNav({ activePath }) {
   return (
     <aside className="sticky top-14 h-[calc(100vh-56px)] w-60 shrink-0 overflow-y-auto border-r border-slate-200 bg-white pb-6">
       <div className="flex justify-end px-2 pt-2">
-        <button type="button" onClick={() => setCollapsed(true)} className="text-slate-300 hover:text-slate-600" title="收合導覽">«</button>
+        <button type="button" onClick={() => setCollapsed(true)} className="text-slate-500 hover:text-slate-600" title="收合導覽">«</button>
       </div>
       {groups.map((g) => (
         <div key={g.title} className="px-3 pb-1 pt-3">
-          <div className="px-2 pb-1 text-[11px] font-semibold tracking-wide text-slate-400">{g.title}</div>
+          <div className="px-2 pb-1 text-[11px] font-semibold tracking-wide text-slate-500">{g.title}</div>
           {g.items.map((item) => {
             const active = activePath === item.path
               || (item.path === 'plays' && activePath === 'plays')
@@ -98,7 +98,7 @@ export default function SideNav({ activePath }) {
                 }`}
               >
                 <span className="truncate">{item.label}</span>
-                {item.hint ? <span className="shrink-0 text-[11px] text-slate-400">{item.hint}</span> : null}
+                {item.hint ? <span className="shrink-0 text-[11px] text-slate-500">{item.hint}</span> : null}
               </button>
             );
           })}

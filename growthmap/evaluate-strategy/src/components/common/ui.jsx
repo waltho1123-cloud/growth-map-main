@@ -108,32 +108,32 @@ export function useDraft(value, commit) {
   };
 }
 
-export function TextInput({ value, onCommit, disabled, placeholder, className = '', type = 'text' }) {
+export function TextInput({ value, onCommit, disabled, placeholder, className = '', type = 'text', ariaLabel }) {
   const d = useDraft(value, onCommit);
   return (
     <input type={type} value={d.value} onChange={d.onChange} onFocus={d.onFocus} onBlur={d.onBlur}
-      disabled={disabled} placeholder={placeholder}
+      disabled={disabled} placeholder={placeholder} aria-label={ariaLabel}
       className={`w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 ${className}`} />
   );
 }
 
-export function NumInput({ value, onCommit, disabled, placeholder, className = '' }) {
+export function NumInput({ value, onCommit, disabled, placeholder, className = '', ariaLabel }) {
   const d = useDraft(value === 0 || value == null ? (value === 0 ? '0' : '') : String(value), (v) => {
     const n = Number(v);
     onCommit(v === '' || !Number.isFinite(n) ? 0 : n);
   });
   return (
     <input type="number" inputMode="decimal" value={d.value} onChange={d.onChange} onFocus={d.onFocus} onBlur={d.onBlur}
-      disabled={disabled} placeholder={placeholder}
+      disabled={disabled} placeholder={placeholder} aria-label={ariaLabel}
       className={`w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-right text-sm tabular-nums text-slate-800 focus:border-indigo-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 ${className}`} />
   );
 }
 
-export function TextArea({ value, onCommit, disabled, placeholder, rows = 3, className = '' }) {
+export function TextArea({ value, onCommit, disabled, placeholder, rows = 3, className = '', ariaLabel }) {
   const d = useDraft(value, onCommit);
   return (
     <textarea rows={rows} value={d.value} onChange={d.onChange} onFocus={d.onFocus} onBlur={d.onBlur}
-      disabled={disabled} placeholder={placeholder}
+      disabled={disabled} placeholder={placeholder} aria-label={ariaLabel}
       className={`w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm leading-relaxed text-slate-800 focus:border-indigo-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 ${className}`} />
   );
 }
@@ -155,7 +155,7 @@ export function ListEditor({ items, onCommit, disabled, placeholder = '新增一
           <span className="flex-1 text-sm leading-relaxed text-slate-800">{item}</span>
           {renderBadge?.(item)}
           {!disabled && (
-            <button type="button" className="text-xs text-slate-400 hover:text-red-600"
+            <button type="button" className="text-xs text-slate-500 hover:text-red-600"
               onClick={() => onCommit(list.filter((_, j) => j !== i))}>✕</button>
           )}
         </div>
@@ -179,7 +179,7 @@ export function Modal({ open, title, onClose, children, wide = false }) {
       <div className={`max-h-[85vh] w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl`}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700">✕</button>
+          <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-700">✕</button>
         </div>
         {children}
       </div>

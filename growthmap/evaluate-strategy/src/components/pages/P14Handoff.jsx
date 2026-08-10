@@ -238,20 +238,20 @@ export default function P14Handoff({ ctx }) {
               <div key={h.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
                 <span className="font-medium text-slate-800">v{h.version} · {h.plays?.length || 0} 個方案 · 達成率 {h.rollup?.attainmentPct ?? '—'}%</span>
                 <span className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">{fmtTime(h.frozenAt)}</span>
+                  <span className="text-xs text-slate-500">{fmtTime(h.frozenAt)}</span>
                   <Btn kind="ghost" onClick={() => downloadJson(`評估策略_${project.name}_v${h.version}.json`, h)}>JSON</Btn>
                 </span>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-slate-400">交付後的修改會產生新版本，不影響已交付快照（安全規則禁止改寫）。</p>
+          <p className="mt-2 text-xs text-slate-500">交付後的修改會產生新版本，不影響已交付快照（安全規則禁止改寫）。</p>
         </Section>
       )}
 
       {/* 區 2 輸出內容預覽（PDF 擷取範圍） */}
       <div ref={reportRef} className="space-y-4 rounded-xl bg-white p-6 shadow-sm">
         <div className="border-b border-slate-200 pb-4 text-center">
-          <div className="text-xs tracking-widest text-slate-400">成長藍圖 · 第四堂 評估策略 EVALUATE</div>
+          <div className="text-xs tracking-widest text-slate-500">成長藍圖 · 第四堂 評估策略 EVALUATE</div>
           <h3 className="mt-1 text-xl font-bold text-slate-900">{project.name}</h3>
           <div className="mt-1 text-xs text-slate-500">
             {project.targetSnapshot ? `Aspiration ${fmtAmount(project.targetSnapshot.aspiration)}｜Momentum ${fmtAmount(project.targetSnapshot.momentum)}｜Gap ${fmtAmount(project.targetSnapshot.growthGap)}` : ''}
@@ -321,7 +321,7 @@ export default function P14Handoff({ ctx }) {
             const pnl = p.bizplan?.fin ? derivePnl(p.bizplan.fin, { taxRate }) : null;
             return (
               <div key={p.id} className="mb-3 border-b border-slate-100 pb-3 text-xs">
-                <div className="mb-1 text-sm font-bold text-slate-800">{p.name} <span className="font-normal text-slate-400">EBIT {t3.ebitBand || '—'}｜CAGR {t3.cagrBand || '—'}</span></div>
+                <div className="mb-1 text-sm font-bold text-slate-800">{p.name} <span className="font-normal text-slate-500">EBIT {t3.ebitBand || '—'}｜CAGR {t3.cagrBand || '—'}</span></div>
                 <div className="grid gap-2 md:grid-cols-2">
                   <div>
                     <div><b>理念：</b>{t2.concept || '—'}</div>
@@ -332,7 +332,7 @@ export default function P14Handoff({ ctx }) {
                     <div><b>可行性：</b>{['resources', 'regulation', 'culture', 'time'].map((k) => ({ yes: '是', partial: '部分', no: '否' }[p.bizplan?.feasibility?.[k]?.answer] || '—')).join('／')}</div>
                   </div>
                   <table className="w-full text-[11px]">
-                    <thead><tr className="border-b border-slate-200 text-left text-slate-400">
+                    <thead><tr className="border-b border-slate-200 text-left text-slate-500">
                       <th className="py-0.5 pr-1">財務</th>{yls.map((y) => <th key={y} className="py-0.5 pr-1 text-right">{y}</th>)}
                     </tr></thead>
                     <tbody>
@@ -407,7 +407,7 @@ export default function P14Handoff({ ctx }) {
           </div>
         </ReportBlock>
 
-        <div className="pt-2 text-center text-[10px] text-slate-400">
+        <div className="pt-2 text-center text-[10px] text-slate-500">
           短名單 {shortlist.length} 個 · 策略方案 {plays.length} 個 · 投影片估算 {plays.length * 3 + 1} + 固定頁 · 產出於 {fmtTime(Date.now())}
         </div>
       </div>

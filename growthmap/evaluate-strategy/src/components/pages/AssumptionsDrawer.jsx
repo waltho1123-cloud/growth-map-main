@@ -53,14 +53,14 @@ export default function AssumptionsDrawer({ ctx }) {
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">假設與驗證登錄</h3>
-            <p className="text-[11px] text-slate-400">{drawer.ref ? `鎖定：${drawer.label || drawer.ref}` : `全部假設（${assumptions.length}）`}</p>
+            <p className="text-[11px] text-slate-500">{drawer.ref ? `鎖定：${drawer.label || drawer.ref}` : `全部假設（${assumptions.length}）`}</p>
           </div>
           <div className="flex items-center gap-2">
             {drawer.ref && (
               <button type="button" className="text-[11px] text-indigo-600 hover:underline"
                 onClick={() => useUiStore.getState().openAssumptions(null, '')}>看全部</button>
             )}
-            <button type="button" onClick={close} className="text-slate-400 hover:text-slate-700">✕</button>
+            <button type="button" onClick={close} className="text-slate-500 hover:text-slate-700">✕</button>
           </div>
         </div>
 
@@ -81,14 +81,14 @@ export default function AssumptionsDrawer({ ctx }) {
                   信心{{ high: '高', medium: '中', low: '低' }[a.confidence]}
                 </Chip>
                 {!disabled ? (
-                  <select value={a.status} onChange={(e) => updateSubDoc(project.id, 'assumptions', a.id, { status: e.target.value })}
+                  <select value={a.status} aria-label="假設狀態" onChange={(e) => updateSubDoc(project.id, 'assumptions', a.id, { status: e.target.value })}
                     className="rounded border border-slate-200 px-1 py-0.5 text-[11px] text-slate-600">
                     {Object.entries(STATUS_LABEL).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                   </select>
                 ) : (
                   <Chip tone={a.status === 'verified' ? 'ok' : a.status === 'refuted' ? 'fail' : 'idle'}>{STATUS_LABEL[a.status]}</Chip>
                 )}
-                <span className="ml-auto text-[10px] text-slate-400">{a.authorName}</span>
+                <span className="ml-auto text-[10px] text-slate-500">{a.authorName}</span>
               </div>
 
               {(a.evidence || []).length > 0 && (
@@ -105,7 +105,7 @@ export default function AssumptionsDrawer({ ctx }) {
               {!disabled && (
                 evidenceFor === a.id ? (
                   <div className="mt-2 space-y-1.5 rounded-lg bg-indigo-50/60 p-2">
-                    <select value={evi.method} onChange={(e) => setEvi({ ...evi, method: e.target.value })}
+                    <select value={evi.method} aria-label="驗證方法" onChange={(e) => setEvi({ ...evi, method: e.target.value })}
                       className="w-full rounded border border-slate-300 px-2 py-1 text-xs">
                       {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
                     </select>
@@ -122,7 +122,7 @@ export default function AssumptionsDrawer({ ctx }) {
                 ) : (
                   <div className="mt-2 flex justify-between">
                     <button type="button" className="text-[11px] text-indigo-600 hover:underline" onClick={() => setEvidenceFor(a.id)}>＋ 掛驗證證據</button>
-                    <button type="button" className="text-[11px] text-slate-300 hover:text-red-600" onClick={() => deleteSubDoc(project.id, 'assumptions', a.id)}>刪除</button>
+                    <button type="button" className="text-[11px] text-slate-500 hover:text-red-600" onClick={() => deleteSubDoc(project.id, 'assumptions', a.id)}>刪除</button>
                   </div>
                 )
               )}
@@ -135,10 +135,10 @@ export default function AssumptionsDrawer({ ctx }) {
             <TextArea rows={2} value={text} onCommit={setText}
               placeholder={drawer.ref ? '這個數字的假設（描述、依據、怎麼推的）…' : '新增一筆全案假設…'} />
             <div className="mt-1.5 flex items-center gap-1.5">
-              <select value={source} onChange={(e) => setSource(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1 text-xs">
+              <select value={source} aria-label="假設來源" onChange={(e) => setSource(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1 text-xs">
                 {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-              <select value={confidence} onChange={(e) => setConfidence(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1 text-xs">
+              <select value={confidence} aria-label="信心度" onChange={(e) => setConfidence(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1 text-xs">
                 <option value="high">信心高</option><option value="medium">信心中</option><option value="low">信心低</option>
               </select>
               <Btn kind="primary" className="ml-auto" onClick={add}>登錄假設</Btn>

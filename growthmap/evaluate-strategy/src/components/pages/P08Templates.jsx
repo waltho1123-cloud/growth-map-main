@@ -116,11 +116,11 @@ export default function P08Templates({ ctx, playId }) {
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs text-slate-500">起點評估（企業原型，自第二堂帶入可覆寫）</label>
-              <TextInput value={tpl.content?.companyType || ''} disabled={disabled} onCommit={(v) => patchContent({ companyType: v })} />
+              <TextInput value={tpl.content?.companyType || ''} disabled={disabled} ariaLabel="企業原型" onCommit={(v) => patchContent({ companyType: v })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">成長面向</label>
-              <TextInput value={tpl.content?.growthDimension || ''} disabled={disabled} onCommit={(v) => patchContent({ growthDimension: v })} />
+              <TextInput value={tpl.content?.growthDimension || ''} disabled={disabled} ariaLabel="成長面向" onCommit={(v) => patchContent({ growthDimension: v })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">成長類型</label>
@@ -141,7 +141,7 @@ export default function P08Templates({ ctx, playId }) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">成長槓桿</label>
-              <select value={tpl.content?.growthLever || ''} disabled={disabled}
+              <select value={tpl.content?.growthLever || ''} disabled={disabled} aria-label="成長槓桿"
                 onChange={(e) => patchContent({ growthLever: e.target.value })}
                 className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                 <option value="">—</option>
@@ -152,7 +152,7 @@ export default function P08Templates({ ctx, playId }) {
               <label className="mb-1 block text-xs text-slate-500">使用工具（來源機會之工具聯集，唯讀追溯）</label>
               <div className="flex flex-wrap gap-1.5">
                 {(tpl.content?.usedToolNames || []).map((t) => <Chip key={t} tone="idle">{t}</Chip>)}
-                {(tpl.content?.usedToolNames || []).length === 0 && <span className="text-xs text-slate-400">—</span>}
+                {(tpl.content?.usedToolNames || []).length === 0 && <span className="text-xs text-slate-500">—</span>}
               </div>
             </div>
             <div className="md:col-span-2">
@@ -166,11 +166,11 @@ export default function P08Templates({ ctx, playId }) {
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs text-slate-500">增長理念敘述</label>
-              <TextArea rows={4} value={tpl.content?.concept || ''} disabled={disabled} onCommit={(v) => patchContent({ concept: v })} />
+              <TextArea rows={4} value={tpl.content?.concept || ''} disabled={disabled} ariaLabel="增長理念敘述" onCommit={(v) => patchContent({ concept: v })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">增長方法</label>
-              <TextArea rows={4} value={tpl.content?.method || ''} disabled={disabled} onCommit={(v) => patchContent({ method: v })} />
+              <TextArea rows={4} value={tpl.content?.method || ''} disabled={disabled} ariaLabel="增長方法" onCommit={(v) => patchContent({ method: v })} />
             </div>
             {[['targetCustomers', '目標客戶'], ['goToMarket', '市場進入策略'], ['usp', '獨特賣點（USP）'], ['steps', '實施步驟（有序）']].map(([key, label]) => (
               <div key={key}>
@@ -186,7 +186,7 @@ export default function P08Templates({ ctx, playId }) {
             <div className="flex gap-3 md:col-span-2">
               <div className="flex-1">
                 <label className="mb-1 block text-xs text-slate-500">EBIT 利潤率區間</label>
-                <select value={tpl.content?.ebitBand || ''} disabled={disabled}
+                <select value={tpl.content?.ebitBand || ''} disabled={disabled} aria-label="EBIT 利潤率區間"
                   onChange={(e) => patchContent({ ebitBand: e.target.value })}
                   className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                   <option value="">—</option>
@@ -195,7 +195,7 @@ export default function P08Templates({ ctx, playId }) {
               </div>
               <div className="flex-1">
                 <label className="mb-1 block text-xs text-slate-500">CAGR ’30</label>
-                <select value={tpl.content?.cagrBand || ''} disabled={disabled}
+                <select value={tpl.content?.cagrBand || ''} disabled={disabled} aria-label="CAGR 區間"
                   onChange={(e) => patchContent({ cagrBand: e.target.value })}
                   className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
                   <option value="">—</option>
@@ -205,13 +205,13 @@ export default function P08Templates({ ctx, playId }) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">1 市場規模 & 競爭：現有規模／成長潛力</label>
-              <TextArea rows={3} value={tpl.content?.currentScale || ''} disabled={disabled} onCommit={(v) => patchContent({ currentScale: v })} placeholder="現有規模（單位價格或 $ 市場規模）" />
-              <TextArea rows={2} className="mt-1.5" value={tpl.content?.growthPotential || ''} disabled={disabled} onCommit={(v) => patchContent({ growthPotential: v })} placeholder="成長潛力（含年份）" />
+              <TextArea rows={3} value={tpl.content?.currentScale || ''} disabled={disabled} ariaLabel="現有規模" onCommit={(v) => patchContent({ currentScale: v })} placeholder="現有規模（單位價格或 $ 市場規模）" />
+              <TextArea rows={2} className="mt-1.5" value={tpl.content?.growthPotential || ''} disabled={disabled} ariaLabel="成長潛力" onCommit={(v) => patchContent({ growthPotential: v })} placeholder="成長潛力（含年份）" />
             </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">競爭環境（飽和／集中／分散）與前 X 大市佔</label>
-              <TextArea rows={3} value={tpl.content?.competitiveEnvironment || ''} disabled={disabled} onCommit={(v) => patchContent({ competitiveEnvironment: v })} />
-              <TextInput className="mt-1.5" value={tpl.content?.topBrandsShare || ''} disabled={disabled} onCommit={(v) => patchContent({ topBrandsShare: v })} placeholder="前 X 大品牌市佔率" />
+              <TextArea rows={3} value={tpl.content?.competitiveEnvironment || ''} disabled={disabled} ariaLabel="競爭環境" onCommit={(v) => patchContent({ competitiveEnvironment: v })} />
+              <TextInput className="mt-1.5" value={tpl.content?.topBrandsShare || ''} disabled={disabled} ariaLabel="前 X 大品牌市佔率" onCommit={(v) => patchContent({ topBrandsShare: v })} placeholder="前 X 大品牌市佔率" />
             </div>
             <div className="md:col-span-2">
               <label className="mb-1 block text-xs text-slate-500">2 操作潛力：綜效條列（建議依 生產／產品／跨域 分類書寫）</label>

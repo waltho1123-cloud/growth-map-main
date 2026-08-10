@@ -108,7 +108,7 @@ export default function AiDrawer({ ctx }) {
         <div className="border-b border-slate-100 px-4 py-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">AI 協作（四模式）</h3>
-            <button type="button" onClick={close} className="text-slate-400 hover:text-slate-700">✕</button>
+            <button type="button" onClick={close} className="text-slate-500 hover:text-slate-700">✕</button>
           </div>
           {/* 常駐警語（PRD P-15 強制文案） */}
           <p className="mt-1 rounded-lg bg-violet-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-violet-800">
@@ -137,13 +137,13 @@ export default function AiDrawer({ ctx }) {
               {busy ? '生成中…' : '生成假說'}
             </Btn>
           </div>
-          {!ctx.editable && <p className="mt-1 text-[11px] text-slate-400">coach 角色可檢視，不可採納（PRD §7.7）。</p>}
+          {!ctx.editable && <p className="mt-1 text-[11px] text-slate-500">coach 角色可檢視，不可採納（PRD §7.7）。</p>}
           {error && <p className="mt-1.5 rounded bg-red-50 px-2 py-1 text-[11px] text-red-700">{error}</p>}
         </div>
 
         <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3">
           {cards.length === 0 && !busy && (
-            <p className="pt-8 text-center text-xs text-slate-400">選一個模式，生成 3–5 則假說卡。</p>
+            <p className="pt-8 text-center text-xs text-slate-500">選一個模式，生成 3–5 則假說卡。</p>
           )}
           {cards.map((card) => (
             <div key={card.id} className={`rounded-xl border-l-4 p-3 ${card.adopted ? 'border-emerald-400 bg-emerald-50/50' : 'border-violet-400 bg-violet-50/40'}`}>
@@ -180,7 +180,7 @@ export default function AiDrawer({ ctx }) {
           ))}
         </div>
 
-        <div className="border-t border-slate-100 px-4 py-2 text-[10px] leading-relaxed text-slate-400">
+        <div className="border-t border-slate-100 px-4 py-2 text-[10px] leading-relaxed text-slate-500">
           採納的假說會成為一筆「AI 假說」來源的假設（信心低、未驗證），請到假設庫掛驗證證據。
           每次生成的 prompt／模型／用量已寫入稽核（aiLogs）。
         </div>

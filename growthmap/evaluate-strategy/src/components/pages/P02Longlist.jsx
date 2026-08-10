@@ -150,17 +150,17 @@ export default function P02Longlist({ ctx }) {
                   <tr key={o.id} className={`border-b border-slate-100 align-top ${o.excluded?.flag ? 'opacity-50' : ''}`}>
                     <td className="py-2 pr-2 tabular-nums text-slate-500">{o.no}</td>
                     <td className="py-2 pr-2">
-                      <TextInput value={o.opportunityName} disabled={!ctx.editable}
+                      <TextInput value={o.opportunityName} disabled={!ctx.editable} ariaLabel={`機會 ${o.no} 增長機會描述`}
                         onCommit={(v) => patchOpp(o, { opportunityName: v })} className="min-w-64" />
                       {f.gr1 && <div className="mt-1"><GuardBadge code="GR-1" reason={f.gr1Reason || checkGr1(o.opportunityName).reason} /></div>}
                     </td>
                     <td className="max-w-40 py-2 pr-2 text-xs text-slate-500">
                       {(o.sourceToolNames || []).join('、') || (o.origin === 'manual' ? '手動建立' : '—')}
                     </td>
-                    <td className="w-24 py-2 pr-2"><NumInput value={o.tam ?? ''} disabled={!ctx.editable} onCommit={(v) => patchOpp(o, { tam: v || null })} /></td>
-                    <td className="w-24 py-2 pr-2"><NumInput value={o.sam ?? ''} disabled={!ctx.editable} onCommit={(v) => patchOpp(o, { sam: v || null })} /></td>
+                    <td className="w-24 py-2 pr-2"><NumInput value={o.tam ?? ''} disabled={!ctx.editable} ariaLabel={`機會 ${o.no} TAM`} onCommit={(v) => patchOpp(o, { tam: v || null })} /></td>
+                    <td className="w-24 py-2 pr-2"><NumInput value={o.sam ?? ''} disabled={!ctx.editable} ariaLabel={`機會 ${o.no} SAM`} onCommit={(v) => patchOpp(o, { sam: v || null })} /></td>
                     <td className="py-2 pr-2">
-                      <select value={o.growthType || ''} disabled={!ctx.editable}
+                      <select value={o.growthType || ''} disabled={!ctx.editable} aria-label={`機會 ${o.no} 成長類型`}
                         onChange={(e) => patchOpp(o, { growthType: e.target.value })}
                         className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
                         <option value="">—</option>
@@ -168,7 +168,7 @@ export default function P02Longlist({ ctx }) {
                       </select>
                     </td>
                     <td className="py-2 pr-2">
-                      <select value={o.ownerUid || ''} disabled={!ctx.editable}
+                      <select value={o.ownerUid || ''} disabled={!ctx.editable} aria-label={`機會 ${o.no} 負責人`}
                         onChange={(e) => patchOpp(o, { ownerUid: e.target.value || null })}
                         className="max-w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
                         <option value="">未指派</option>
@@ -189,7 +189,7 @@ export default function P02Longlist({ ctx }) {
                               <>
                                 <button type="button" className="text-[11px] text-indigo-600 hover:underline"
                                   onClick={() => applyUpstreamUpdate(project.id, o)}>套用上游</button>
-                                <button type="button" className="text-[11px] text-slate-400 hover:underline"
+                                <button type="button" className="text-[11px] text-slate-500 hover:underline"
                                   onClick={() => dismissUpstreamUpdate(project.id, o)}>保留本地</button>
                               </>
                             )}
@@ -274,7 +274,7 @@ function ImportModal({ open, versions, busy, onClose, onImport }) {
             <button key={v.version} type="button" disabled={busy} onClick={() => onImport(v.version)}
               className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:border-indigo-300 disabled:opacity-50">
               <span>版本 v{v.version} · {v.opportunityCount} 個機會</span>
-              <span className="text-xs text-slate-400">{fmtTime(v.frozenAt)}</span>
+              <span className="text-xs text-slate-500">{fmtTime(v.frozenAt)}</span>
             </button>
           ))}
         </div>

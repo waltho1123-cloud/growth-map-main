@@ -32,7 +32,7 @@ export default function P01Dashboard() {
   const countStatus = playCountStatus(plays.length, { warnAt: settings.playWarn || 3, max: settings.playMax || 5 });
 
   const att = rollup.attainmentPct;
-  const attTone = att == null ? 'text-slate-400' : att >= 100 ? 'text-emerald-600' : att >= 80 ? 'text-amber-600' : 'text-red-600';
+  const attTone = att == null ? 'text-slate-500' : att >= 100 ? 'text-emerald-700' : att >= 80 ? 'text-amber-700' : 'text-red-600';
 
   const steps = [
     { title: '① 承接長清單', metric: `${opportunities.length} 個機會`, path: 'longlist', done: opportunities.length > 0 },
@@ -50,9 +50,9 @@ export default function P01Dashboard() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-wrap gap-6">
               <Meter label="加速增長目標 Aspiration" value={target.aspiration} />
-              <div className="self-center text-xl text-slate-300">−</div>
+              <div className="self-center text-xl text-slate-500">−</div>
               <Meter label="自然增長 Momentum" value={target.momentum} />
-              <div className="self-center text-xl text-slate-300">=</div>
+              <div className="self-center text-xl text-slate-500">=</div>
               <Meter label="成長差距 Gap" value={target.growthGap} accent />
             </div>
             <div className="min-w-56 flex-1">

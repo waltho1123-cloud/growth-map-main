@@ -69,7 +69,7 @@ export default function P03Criteria({ ctx }) {
             <p className="mb-1 text-sm font-medium text-slate-700">{d.oneLiner}</p>
             <p className="mb-3 text-xs leading-relaxed text-slate-500">{d.points}</p>
             <label className="mb-1 block text-xs text-slate-500">本公司加註（選填）</label>
-            <TextArea rows={2} disabled={disabled} value={criteria.annotations?.[d.key] || ''}
+            <TextArea rows={2} disabled={disabled} value={criteria.annotations?.[d.key] || ''} ariaLabel={`${d.name} 本公司加註`}
               onCommit={(v) => patchField(`annotations.${d.key}`, v)}
               placeholder="用自家語言補充這一維在本事業的判讀重點…" />
 
@@ -78,7 +78,7 @@ export default function P03Criteria({ ctx }) {
               {[5, 4, 3, 2, 1].map((score) => (
                 <div key={score} className="flex items-center gap-2">
                   <span className="w-6 shrink-0 text-center text-xs font-bold text-indigo-600">{score}</span>
-                  <TextInput disabled={disabled} value={criteria.anchors?.[d.key]?.[score] || ''}
+                  <TextInput disabled={disabled} value={criteria.anchors?.[d.key]?.[score] || ''} ariaLabel={`${d.name} ${score} 分錨點`}
                     onCommit={(v) => patchField(`anchors.${d.key}.${score}`, v)} />
                 </div>
               ))}
@@ -121,18 +121,18 @@ export default function P03Criteria({ ctx }) {
             </label>
             {criteria.weighting?.enabled && (
               <div className="mt-2 space-y-2">
-                <TextInput disabled={disabled} value={criteria.weighting?.reason || ''} placeholder="啟用理由（必填）"
+                <TextInput disabled={disabled} value={criteria.weighting?.reason || ''} placeholder="啟用理由（必填）" ariaLabel="加權啟用理由"
                   onCommit={(v) => patchField('weighting.reason', v)} />
                 <div className="grid grid-cols-4 gap-1">
                   {DIMENSIONS.map((d) => (
                     <div key={d.key}>
-                      <div className="text-center text-[10px] text-slate-400">{d.name.slice(0, 4)}</div>
-                      <TextInput disabled={disabled} value={String(criteria.weighting?.weights?.[d.key] ?? 25)}
+                      <div className="text-center text-[10px] text-slate-500">{d.name.slice(0, 4)}</div>
+                      <TextInput disabled={disabled} value={String(criteria.weighting?.weights?.[d.key] ?? 25)} ariaLabel={`${d.name} 權重`}
                         onCommit={(v) => patchField(`weighting.weights.${d.key}`, Number(v) || 0)} />
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-slate-400">四維權重總和須為 100。</p>
+                <p className="text-xs text-slate-500">四維權重總和須為 100。</p>
               </div>
             )}
           </div>

@@ -79,11 +79,11 @@ export default function P11Sequencing({ ctx }) {
                     <tr key={p.id} className="border-b border-slate-100 align-middle">
                       <td className="max-w-44 truncate py-2 pr-2 font-medium text-slate-800">{p.name || '未命名'}</td>
                       <td className="py-2 pr-2">
-                        <NumInput disabled={disabled} value={seq.startYear}
+                        <NumInput disabled={disabled} value={seq.startYear} ariaLabel={`${p.name || '方案'} 起始年`}
                           onCommit={(v) => patchSeq(p, { startYear: Math.max(1, Math.min(years, Math.round(v) || 1)) })} />
                       </td>
                       <td className="py-2 pr-2">
-                        <NumInput disabled={disabled} value={seq.endYear}
+                        <NumInput disabled={disabled} value={seq.endYear} ariaLabel={`${p.name || '方案'} 結束年`}
                           onCommit={(v) => patchSeq(p, { endYear: Math.max(1, Math.min(years, Math.round(v) || 1)) })} />
                       </td>
                       <td className="py-2 pr-2">
@@ -100,7 +100,7 @@ export default function P11Sequencing({ ctx }) {
                               {x.name || '未命名'}
                             </label>
                           ))}
-                          {plays.length === 1 && <span className="text-[11px] text-slate-300">—</span>}
+                          {plays.length === 1 && <span className="text-[11px] text-slate-500">—</span>}
                         </div>
                       </td>
                       <td className="py-2">
@@ -159,7 +159,7 @@ export default function P11Sequencing({ ctx }) {
                 <td className="py-1.5 pr-2 font-medium text-teal-800">綜效 — 收入綜效</td>
                 {Array.from({ length: years }, (_, yi) => (
                   <td key={yi} className="py-1 pr-2">
-                    <NumInput disabled={disabled} value={synergies?.revenue?.[yi] ?? 0} onCommit={(v) => patchSynergy('revenue', yi, v)} />
+                    <NumInput disabled={disabled} value={synergies?.revenue?.[yi] ?? 0} ariaLabel={`收入綜效 ${yls[yi]}`} onCommit={(v) => patchSynergy('revenue', yi, v)} />
                   </td>
                 ))}
               </tr>
@@ -167,7 +167,7 @@ export default function P11Sequencing({ ctx }) {
                 <td className="py-1.5 pr-2 font-medium text-teal-800">綜效 — 成本綜效（省下的成本，正值）</td>
                 {Array.from({ length: years }, (_, yi) => (
                   <td key={yi} className="py-1 pr-2">
-                    <NumInput disabled={disabled} value={synergies?.cost?.[yi] ?? 0} onCommit={(v) => patchSynergy('cost', yi, v)} />
+                    <NumInput disabled={disabled} value={synergies?.cost?.[yi] ?? 0} ariaLabel={`成本綜效 ${yls[yi]}`} onCommit={(v) => patchSynergy('cost', yi, v)} />
                   </td>
                 ))}
               </tr>
@@ -177,7 +177,7 @@ export default function P11Sequencing({ ctx }) {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-slate-500">
           綜效受益對象備註：<input
             className="ml-1 w-72 rounded border border-slate-200 px-2 py-0.5 text-xs"
             disabled={disabled}

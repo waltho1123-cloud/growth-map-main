@@ -134,7 +134,7 @@ export default function P04Scoring({ ctx }) {
           <p className="text-xs text-slate-500">每維 1–5 分（可用數字鍵），總分 20；評分對象只能是機會點（GR-2 由資料模型限定）。</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={activeRoundN ?? ''} onChange={(e) => setRoundN(Number(e.target.value))}
+          <select value={activeRoundN ?? ''} aria-label="評分輪次" onChange={(e) => setRoundN(Number(e.target.value))}
             className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
             {rounds.map((r) => <option key={r.id} value={r.n}>第 {r.n} 輪{r.status === 'open' ? '（進行中）' : ''}</option>)}
           </select>
@@ -184,9 +184,9 @@ export default function P04Scoring({ ctx }) {
                     <tr key={o.id} className="border-b border-slate-100 align-top">
                       <td className="max-w-72 py-2 pr-3">
                         <div className="text-[13px] font-medium leading-snug text-slate-800">{o.opportunityName || '（未命名）'}</div>
-                        {o.qualityFlags?.tamMissing && <div className="mt-0.5 text-[11px] text-amber-600">缺 TAM／SAM：維度①依據必填</div>}
+                        {o.qualityFlags?.tamMissing && <div className="mt-0.5 text-[11px] text-amber-700">缺 TAM／SAM：維度①依據必填</div>}
                         {plays.some((p) => (p.sourceOppIds || []).includes(o.id)) && (
-                          <div className="mt-0.5 text-[11px] text-indigo-500" title="PD-05：系統只提示、不自動填分——分數只抓七八成，最後由討論拍板">
+                          <div className="mt-0.5 text-[11px] text-indigo-600" title="PD-05：系統只提示、不自動填分——分數只抓七八成，最後由討論拍板">
                             本項已編入策略方案，操作潛力可視為滿分（仍需人工點選）
                           </div>
                         )}
@@ -211,14 +211,14 @@ export default function P04Scoring({ ctx }) {
                       })}
                       <td className="py-2 pr-3">
                         <div className="text-base font-bold tabular-nums text-slate-900">{mine ? totalOf(mine.dims) : '—'}</div>
-                        {axes && <div className="text-[11px] text-slate-400">Y {axes.y}｜X {axes.x}</div>}
+                        {axes && <div className="text-[11px] text-slate-500">Y {axes.y}｜X {axes.x}</div>}
                       </td>
                       <td className="py-2">
                         {mine?.submitted ? (
                           <div className="space-y-1">
                             <Chip tone="ok">已提交</Chip>
                             {isFacil && roundOpen && (
-                              <button type="button" className="block text-[11px] text-slate-400 hover:text-indigo-600"
+                              <button type="button" className="block text-[11px] text-slate-500 hover:text-indigo-600"
                                 onClick={() => updateSubDoc(project.id, 'scores', scoreDocId(o.id, activeRoundN, mine.scorerUid), { submitted: false })}>
                                 解鎖
                               </button>
@@ -321,7 +321,7 @@ function ScorePicker({ value, disabled, onPick }) {
           className={`h-7 w-7 rounded text-xs font-semibold transition ${
             value === n ? 'bg-indigo-600 text-white'
             : value > n ? 'bg-indigo-200 text-indigo-800'
-            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           } disabled:cursor-not-allowed`}
         >
           {n}

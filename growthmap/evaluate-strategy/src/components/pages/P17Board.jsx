@@ -109,7 +109,7 @@ export default function P17Board({ ctx }) {
                   className={`flex-1 rounded py-1 text-[11px] font-semibold transition ${
                     maturity[s.key] === pct
                       ? pct >= 90 ? 'bg-emerald-600 text-white' : pct >= 70 ? 'bg-indigo-600 text-white' : 'bg-amber-500 text-white'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200' /* slate-600：slate-100 底上 5.9:1 */
                   } disabled:cursor-not-allowed`}>
                   {pct}
                 </button>

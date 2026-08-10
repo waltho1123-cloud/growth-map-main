@@ -16,3 +16,4 @@ Thumbs.db
 
 # Claude local settings
 .claude/
+.playwright-cli/

@@ -24,7 +24,7 @@ export default function P13Check({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">綜合檢查</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             檢查為即時計算；「記錄本次結果」會存檔供交付快照與歷史比較。
             {project?.lastCheckRun ? ` 上次記錄：${fmtTime(project.lastCheckRun.ranAt)}` : ''}
           </p>

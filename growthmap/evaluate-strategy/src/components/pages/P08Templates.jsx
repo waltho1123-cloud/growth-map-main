@@ -81,7 +81,7 @@ export default function P08Templates({ ctx, playId }) {
         <div>
           <button type="button" className="text-xs text-indigo-600 hover:underline" onClick={() => navigate('plays')}>← 回方案編組</button>
           <h2 className="text-lg font-bold text-slate-900">三模板重整 · {play.name || '未命名方案'}</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             左為來源底稿自動彙整（標【來源】者），請針對本方案改寫後逐張確認。全案進度：已確認 {confirmedAll}／{totalCards - 1} 張（+1 彙總頁於交付產出）。
           </p>
         </div>
@@ -152,7 +152,7 @@ export default function P08Templates({ ctx, playId }) {
               <label className="mb-1 block text-xs text-slate-500">使用工具（來源機會之工具聯集，唯讀追溯）</label>
               <div className="flex flex-wrap gap-1.5">
                 {(tpl.content?.usedToolNames || []).map((t) => <Chip key={t} tone="idle">{t}</Chip>)}
-                {(tpl.content?.usedToolNames || []).length === 0 && <span className="text-xs text-slate-500">—</span>}
+                {(tpl.content?.usedToolNames || []).length === 0 && <span className="text-xs text-slate-600">—</span>}
               </div>
             </div>
             <div className="md:col-span-2">

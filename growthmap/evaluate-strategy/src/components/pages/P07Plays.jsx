@@ -57,7 +57,7 @@ export default function P07Plays({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">策略方案編組</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             整合＝「手機殼＋行動電源＋螢幕保護貼 → 手機周邊商品」；延伸＝「相機模組市場 → 視覺解決方案市場」。
             統一稱「策略方案（Strategic Play）」。
           </p>
@@ -110,7 +110,7 @@ export default function P07Plays({ ctx }) {
                 )}
               </div>
             ))}
-            {pool.length === 0 && <p className="text-xs text-slate-500">短名單機會都已編入方案。</p>}
+            {pool.length === 0 && <p className="text-xs text-slate-600">短名單機會都已編入方案。</p>}
           </div>
 
           {reserve.length > 0 && (

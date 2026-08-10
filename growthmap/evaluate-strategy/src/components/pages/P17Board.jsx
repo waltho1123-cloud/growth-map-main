@@ -89,7 +89,7 @@ export default function P17Board({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">協作與進度看板</h2>
-          <p className="text-xs text-slate-500">誰卡在哪一步、還差多少。成熟度標示呼應鐵則 8：先做出 50 分版本，再迭代到 70／90。</p>
+          <p className="text-xs text-slate-600">誰卡在哪一步、還差多少。成熟度標示呼應鐵則 8：先做出 50 分版本，再迭代到 70／90。</p>
         </div>
         <Btn onClick={() => openComments()}>開評論抽屜</Btn>
       </div>

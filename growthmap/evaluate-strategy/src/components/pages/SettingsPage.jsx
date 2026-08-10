@@ -122,7 +122,7 @@ export default function SettingsPage({ ctx }) {
       </div>
 
       <Section title={`成員（${project.memberUids?.length || 0}）`}
-        aside={<span className="text-xs text-slate-500">coach 角色由安全規則強制唯讀</span>}>
+        aside={<span className="text-xs text-slate-600">coach 角色由安全規則強制唯讀</span>}>
         <div className="space-y-2">
           {Object.entries(project.members || {}).map(([uid, m]) => (
             <div key={uid} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2">
@@ -156,7 +156,7 @@ export default function SettingsPage({ ctx }) {
             <div className="mb-1 text-xs font-semibold text-slate-500">待接受邀請</div>
             {(project.invitedEmails || []).map((e) => (
               <div key={e} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
-                <span>{e} <span className="text-xs text-slate-500">（{ROLES[project.inviteRoles?.[e]]?.label || '成員'}）</span></span>
+                <span>{e} <span className="text-xs text-slate-600">（{ROLES[project.inviteRoles?.[e]]?.label || '成員'}）</span></span>
                 {canInvite && <Btn kind="ghost" onClick={() => revokeInvite(project, e)}>撤回</Btn>}
               </div>
             ))}

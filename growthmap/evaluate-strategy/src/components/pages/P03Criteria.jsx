@@ -50,7 +50,7 @@ export default function P03Criteria({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">評估標準設定</h2>
-          <p className="text-xs text-slate-500">四維定義沿用 BCG 原文（不可刪除），可加註本公司語言；預設不加權（PD-01）。</p>
+          <p className="text-xs text-slate-600">四維定義沿用 BCG 原文（不可刪除），可加註本公司語言；預設不加權（PD-01）。</p>
         </div>
         <div className="flex items-center gap-2">
           {approved
@@ -132,7 +132,7 @@ export default function P03Criteria({ ctx }) {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500">四維權重總和須為 100。</p>
+                <p className="text-xs text-slate-600">四維權重總和須為 100。</p>
               </div>
             )}
           </div>

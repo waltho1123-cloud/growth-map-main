@@ -131,7 +131,7 @@ export default function P04Scoring({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">機會評分工作區</h2>
-          <p className="text-xs text-slate-500">每維 1–5 分（可用數字鍵），總分 20；評分對象只能是機會點（GR-2 由資料模型限定）。</p>
+          <p className="text-xs text-slate-600">每維 1–5 分（可用數字鍵），總分 20；評分對象只能是機會點（GR-2 由資料模型限定）。</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select value={activeRoundN ?? ''} aria-label="評分輪次" onChange={(e) => setRoundN(Number(e.target.value))}

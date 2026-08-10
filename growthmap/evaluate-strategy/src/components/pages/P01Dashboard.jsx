@@ -57,7 +57,7 @@ export default function P01Dashboard() {
             </div>
             <div className="min-w-56 flex-1">
               <div className="mb-1 flex items-baseline justify-between">
-                <span className="text-xs text-slate-500">目前疊加效益（Y{years} 營收口徑）</span>
+                <span className="text-xs text-slate-600">目前疊加效益（Y{years} 營收口徑）</span>
                 <span className={`text-2xl font-bold tabular-nums ${attTone}`}>{att == null ? '—' : `${att}%`}</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-slate-100">
@@ -142,7 +142,7 @@ export default function P01Dashboard() {
 function Meter({ label, value, accent }) {
   return (
     <div>
-      <div className="text-xs text-slate-500">{label}</div>
+      <div className="text-xs text-slate-600">{label}</div>
       <div className={`text-2xl font-bold tabular-nums ${accent ? 'text-indigo-700' : 'text-slate-900'}`}>{fmtAmount(value)}</div>
     </div>
   );

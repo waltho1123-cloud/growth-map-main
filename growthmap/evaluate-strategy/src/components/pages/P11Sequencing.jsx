@@ -53,7 +53,7 @@ export default function P11Sequencing({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">時序與資源彙總</h2>
-          <p className="text-xs text-slate-500">數字自各方案財務表自動帶入；僅「綜效」兩列在本頁輸入（PD-06：收入／成本分列，不得只填合計）。</p>
+          <p className="text-xs text-slate-600">數字自各方案財務表自動帶入；僅「綜效」兩列在本頁輸入（PD-06：收入／成本分列，不得只填合計）。</p>
         </div>
         <Chip tone={checks.allPass ? 'ok' : 'fail'}>{checks.allPass ? '三項硬檢查全綠' : '尚不可交付'}</Chip>
       </div>

@@ -35,7 +35,7 @@ export default function P12Consensus({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">定位衝擊與共識</h2>
-          <p className="text-xs text-slate-500">拍板前的 Sanity Check——本頁刻意放在流程最後，避免提早鉗制發想。</p>
+          <p className="text-xs text-slate-600">拍板前的 Sanity Check——本頁刻意放在流程最後，避免提早鉗制發想。</p>
         </div>
         <div className="flex gap-2">
           <Chip tone={answered === sanity.length ? 'ok' : 'idle'}>七問 {answered}/{sanity.length}</Chip>

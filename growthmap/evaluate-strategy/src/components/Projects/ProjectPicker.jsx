@@ -77,7 +77,7 @@ export default function ProjectPicker({ user, onSelect }) {
               <div key={p.id} className="flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
                 <div>
                   <div className="text-sm font-medium text-slate-900">{p.name}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-slate-600">
                     角色：{ROLES[p.inviteRoles?.[(user.email || '').toLowerCase()]]?.label || '成員'}
                   </div>
                 </div>

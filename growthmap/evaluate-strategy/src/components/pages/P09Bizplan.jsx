@@ -105,7 +105,7 @@ export default function P09Bizplan({ ctx, playId }) {
         <div>
           <button type="button" className="text-xs text-indigo-600 hover:underline" onClick={() => navigate('bizplan')}>← 回商業計劃總覽</button>
           <h2 className="text-lg font-bold text-slate-900">高階商業計劃 · {play.name}</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             單位：{settings.currency || 'TWD'} {settings.unit || 'M'}（單表不混用）。沒有假設，就沒有數字（鐵則 5）——關鍵欄位請掛假設。
           </p>
         </div>
@@ -220,7 +220,7 @@ export default function P09Bizplan({ ctx, playId }) {
                 </button>
               ))}
               {assumptions.filter((a) => (a.target?.ref || '').includes(`fin:${play.id}:`)).length === 0 && (
-                <p className="text-xs text-slate-500">尚無假設。點關鍵欄位旁的黃點，或用「估算」建立第一筆。</p>
+                <p className="text-xs text-slate-600">尚無假設。點關鍵欄位旁的黃點，或用「估算」建立第一筆。</p>
               )}
             </div>
           </Section>

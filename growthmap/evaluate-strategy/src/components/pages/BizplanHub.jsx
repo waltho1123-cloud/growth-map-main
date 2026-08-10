@@ -20,7 +20,7 @@ export default function BizplanHub() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-slate-900">三模板與商業計劃</h2>
-        <p className="text-xs text-slate-500">每個方案：先重整三模板（GR-6 逐張確認）→ 再填三年財務三表與可行性（GR-5 掛假設）。</p>
+        <p className="text-xs text-slate-600">每個方案：先重整三模板（GR-6 逐張確認）→ 再填三年財務三表與可行性（GR-5 掛假設）。</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {plays.map((p) => {

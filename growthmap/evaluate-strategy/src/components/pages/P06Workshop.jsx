@@ -248,7 +248,7 @@ export default function P06Workshop({ ctx, n }) {
           <Section title="匿名投票"
             aside={isFacil && ws.status !== 'ended' ? <Btn kind="ghost" onClick={() => setNewVote({ title: '', optionsText: '' })}>＋ 發起投票</Btn> : null}>
             {Object.entries(ws.votes || {}).length === 0 && (
-              <p className="text-xs text-slate-500">尚無投票。介面匿名呈現；系統留存投票紀錄以防重投（PD-08 半記名——僅主持人可查原始票）。</p>
+              <p className="text-xs text-slate-600">尚無投票。介面匿名呈現；系統留存投票紀錄以防重投（PD-08 半記名——僅主持人可查原始票）。</p>
             )}
             <div className="space-y-3">
               {Object.entries(ws.votes || {}).sort(([, a], [, b]) => (a.createdAt || 0) - (b.createdAt || 0)).map(([key, v]) => {
@@ -344,7 +344,7 @@ function Header({ n, aside }) {
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <h2 className="text-lg font-bold text-slate-900">第{n === 1 ? '一' : '二'}次評估策略工作坊</h2>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-600">
           {n === 1 ? '任務 1.3：評估、排序、投票——三小時取得優先排序共識。' : '任務 3.4：確認最終策略方案與執行時序——最終拍板。'}
         </p>
       </div>

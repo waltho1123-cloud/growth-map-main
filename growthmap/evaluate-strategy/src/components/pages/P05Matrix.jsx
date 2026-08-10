@@ -131,12 +131,12 @@ export default function P05Matrix({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">優先排序矩陣與短名單</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             這是<b>相對判讀</b>，不是機械切線（PD-02：分隔線預設取資料中位數，可拖曳）。泡泡必須顯示機會點名稱（GR-3）。
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">泡泡大小＝</span>
+          <span className="text-xs text-slate-600">泡泡大小＝</span>
           <div className="flex overflow-hidden rounded-lg border border-slate-300">
             {[['tam', 'TAM'], ['estRevenue', '預估營收']].map(([v, label]) => (
               <button key={v} type="button" onClick={() => setSizeBy(v)}

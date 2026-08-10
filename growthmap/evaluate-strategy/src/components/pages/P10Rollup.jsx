@@ -63,7 +63,7 @@ export default function P10Rollup({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">疊加效益（Waterfall）</h2>
-          <p className="text-xs text-slate-500">數字自各方案 P-09 財務表即時計算；綜效於「時序與資源」輸入（收入／成本分列，PD-06）。</p>
+          <p className="text-xs text-slate-600">數字自各方案 P-09 財務表即時計算；綜效於「時序與資源」輸入（收入／成本分列，PD-06）。</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex overflow-hidden rounded-lg border border-slate-300">

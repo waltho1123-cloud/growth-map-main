@@ -202,7 +202,7 @@ export default function P14Handoff({ ctx }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900">交付輸出</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             依 BCG 五步驟模板結構輸出（PD-10：先求結構與欄位正確）。核定後凍結不可變快照，供第五堂讀取。
           </p>
         </div>
@@ -238,7 +238,7 @@ export default function P14Handoff({ ctx }) {
               <div key={h.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
                 <span className="font-medium text-slate-800">v{h.version} · {h.plays?.length || 0} 個方案 · 達成率 {h.rollup?.attainmentPct ?? '—'}%</span>
                 <span className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">{fmtTime(h.frozenAt)}</span>
+                  <span className="text-xs text-slate-600">{fmtTime(h.frozenAt)}</span>
                   <Btn kind="ghost" onClick={() => downloadJson(`評估策略_${project.name}_v${h.version}.json`, h)}>JSON</Btn>
                 </span>
               </div>

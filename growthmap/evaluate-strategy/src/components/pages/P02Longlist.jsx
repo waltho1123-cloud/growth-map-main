@@ -224,7 +224,7 @@ function PageHeader({ project, onImport, onManual, onRefreshTarget, editable }) 
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <h2 className="text-lg font-bold text-slate-900">長清單承接與盤點</h2>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-600">
           {project.source
             ? `已承接第三堂快照 v${project.source.version}（凍結於 ${fmtTime(project.source.frozenAt)}）`
             : '尚未承接第三堂交付快照'}
@@ -274,7 +274,7 @@ function ImportModal({ open, versions, busy, onClose, onImport }) {
             <button key={v.version} type="button" disabled={busy} onClick={() => onImport(v.version)}
               className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:border-indigo-300 disabled:opacity-50">
               <span>版本 v{v.version} · {v.opportunityCount} 個機會</span>
-              <span className="text-xs text-slate-500">{fmtTime(v.frozenAt)}</span>
+              <span className="text-xs text-slate-600">{fmtTime(v.frozenAt)}</span>
             </button>
           ))}
         </div>

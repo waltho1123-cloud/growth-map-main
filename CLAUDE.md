@@ -115,8 +115,8 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 | `MODEL_OPUS` / `MODEL_SONNET` / `MODEL_HAIKU` | 模型字串，預設 `claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5` |
 | `ALLOWED_ORIGINS` | CORS 白名單 CSV（fail-closed）。線上＝`https://growth-map-main.zeabur.app`（staging 建立後追加其 origin） |
 | `REQUIRE_AUTH` | `true` 時強制 Firebase 登入 |
-| `ALLOWED_EMAILS` | AI 端點 email 白名單 CSV（選填）。與 `ALLOWED_EMAIL_DOMAINS` 任一有設即強制：名單外帳號回 403（堵「任何有效登入都能燒 Anthropic 額度」的成本洞）；皆未設＝不限制（啟動時 console.warn） |
-| `ALLOWED_EMAIL_DOMAINS` | AI 端點 email 網域白名單 CSV（選填，如 `corp.tw`；嚴格比對、子網域不放行） |
+| `ALLOWED_EMAILS` | AI 端點 email 白名單 CSV——**保底名單**（日常增刪走管理頁 `pages/admin.html` 的 AI 白名單卡，存 Firestore `platform/aiAllowlist`，後端以呼叫者 token 走 REST 讀取＋60s 快取，兩者**聯集**生效）。聯集非空即強制：名單外 403 IDO_FORBIDDEN；聯集為空＝不限制（啟動 console.warn）。環境變數至少留管理員 email，防管理頁誤清空後限制整個關掉 |
+| `ALLOWED_EMAIL_DOMAINS` | AI 端點 email 網域白名單 CSV（保底；如 `corp.tw`，嚴格比對、子網域不放行；管理頁亦可設網域） |
 | `FIREBASE_PROJECT_ID` | 驗 token aud/iss 用 |
 | `PORT` | 預設 8787（線上由平台給 8080） |
 

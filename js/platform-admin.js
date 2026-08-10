@@ -26,8 +26,10 @@ const fmt = (ms) => (ms ? new Date(ms).toLocaleString('zh-TW', { hour12: false }
 let me = null;
 let users = [];
 let adminEmails = [];
+let aiAllowlist = { emails: [], domains: [] };
 let unsubUsers = null;
 let unsubMeta = null;
+let unsubAi = null;
 
 function show(sectionId) {
   for (const id of ['view-login', 'view-denied', 'view-admin']) {
@@ -94,6 +96,35 @@ function renderAdmins() {
   });
 }
 
+function renderAiAllowlist() {
+  const saveAi = (patch) => setDoc(doc(db, 'platform', 'aiAllowlist'), { ...aiAllowlist, ...patch })
+    .catch((e) => window.alert(`儲存失敗：${e.message}`));
+  $('ai-email-list').innerHTML = aiAllowlist.emails.length
+    ? aiAllowlist.emails.map((e) => `<li>${esc(e)} <button class="btn-small" data-ai-email="${esc(e)}">移除</button></li>`).join('')
+    : '<li class="muted">（此處尚無 email——僅環境變數保底名單生效）</li>';
+  $('ai-domain-list').innerHTML = aiAllowlist.domains.length
+    ? aiAllowlist.domains.map((d) => `<li>@${esc(d)}（整網域） <button class="btn-small" data-ai-domain="${esc(d)}">移除</button></li>`).join('')
+    : '';
+  $('ai-email-list').querySelectorAll('button[data-ai-email]').forEach((b) => {
+    b.onclick = () => saveAi({ emails: aiAllowlist.emails.filter((x) => x !== b.dataset.aiEmail) });
+  });
+  $('ai-domain-list').querySelectorAll('button[data-ai-domain]').forEach((b) => {
+    b.onclick = () => saveAi({ domains: aiAllowlist.domains.filter((x) => x !== b.dataset.aiDomain) });
+  });
+  $('btn-add-ai-email').onclick = () => {
+    const email = $('new-ai-email').value.trim().toLowerCase();
+    if (!email || !email.includes('@')) return;
+    saveAi({ emails: [...new Set([...aiAllowlist.emails, email])] });
+    $('new-ai-email').value = '';
+  };
+  $('btn-add-ai-domain').onclick = () => {
+    const domain = $('new-ai-domain').value.trim().toLowerCase().replace(/^@/, '');
+    if (!domain || !domain.includes('.')) return;
+    saveAi({ domains: [...new Set([...aiAllowlist.domains, domain])] });
+    $('new-ai-domain').value = '';
+  };
+}
+
 function startAdminView() {
   show('view-admin');
   $('me-line').textContent = `管理員：${me.displayName || ''}（${me.email}）`;
@@ -105,7 +136,7 @@ function startAdminView() {
     renderUsers();
   }, () => {
     // 讀整個目錄被拒＝非管理員
-    unsubUsers?.(); unsubMeta?.();
+    unsubUsers?.(); unsubMeta?.(); unsubAi?.();
     show('view-denied');
   });
 
@@ -113,6 +144,12 @@ function startAdminView() {
     adminEmails = (snap.exists() ? snap.data().adminEmails : []) || [];
     renderAdmins();
   }, () => { adminEmails = []; renderAdmins(); });
+
+  unsubAi = onSnapshot(doc(db, 'platform', 'aiAllowlist'), (snap) => {
+    const data = snap.exists() ? snap.data() : {};
+    aiAllowlist = { emails: data.emails || [], domains: data.domains || [] };
+    renderAiAllowlist();
+  }, () => { aiAllowlist = { emails: [], domains: [] }; renderAiAllowlist(); });
 
   $('btn-add-admin').onclick = async () => {
     const email = $('new-admin-email').value.trim().toLowerCase();
@@ -136,7 +173,7 @@ $('btn-login').onclick = async () => {
 document.querySelectorAll('.btn-logout').forEach((b) => { b.onclick = () => signOut(auth); });
 
 onAuthStateChanged(auth, (u) => {
-  unsubUsers?.(); unsubMeta?.();
+  unsubUsers?.(); unsubMeta?.(); unsubAi?.();
   me = u;
   if (!u) {
     show('view-login');

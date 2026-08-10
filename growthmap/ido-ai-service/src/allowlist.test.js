@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAllowlist, allowlistEnabled, isEmailAllowed } from './allowlist.js';
+import {
+  parseAllowlist, allowlistEnabled, isEmailAllowed, mergeAllowlists, parseFirestoreAllowlistDoc,
+} from './allowlist.js';
 
 test('parseAllowlist：CSV 去空白、轉小寫、網域去前導 @', () => {
   const al = parseAllowlist({
@@ -37,4 +39,27 @@ test('僅設網域：子網域不得混過（嚴格比對最後一段網域）',
   const al = parseAllowlist({ ALLOWED_EMAIL_DOMAINS: 'corp.tw' });
   assert.equal(isEmailAllowed('a@corp.tw', al), true);
   assert.equal(isEmailAllowed('a@sub.corp.tw', al), false);
+});
+
+test('mergeAllowlists：環境變數保底 ∪ 遠端名單、去重', () => {
+  const merged = mergeAllowlists(
+    { emails: ['a@x.com'], domains: [] },
+    { emails: ['a@x.com', 'b@y.com'], domains: ['corp.tw'] }
+  );
+  assert.deepEqual(merged, { emails: ['a@x.com', 'b@y.com'], domains: ['corp.tw'] });
+  // 遠端為空/未取得 → 等同僅環境變數
+  assert.deepEqual(mergeAllowlists({ emails: ['a@x.com'], domains: [] }, null).emails, ['a@x.com']);
+});
+
+test('parseFirestoreAllowlistDoc：REST typed value → 名單；缺欄/壞型別回空', () => {
+  const doc = {
+    fields: {
+      emails: { arrayValue: { values: [{ stringValue: ' A@B.com ' }, { stringValue: '' }] } },
+      domains: { arrayValue: { values: [{ stringValue: '@Corp.TW' }] } },
+    },
+  };
+  assert.deepEqual(parseFirestoreAllowlistDoc(doc), { emails: ['a@b.com'], domains: ['corp.tw'] });
+  assert.deepEqual(parseFirestoreAllowlistDoc({}), { emails: [], domains: [] });
+  assert.deepEqual(parseFirestoreAllowlistDoc({ fields: { emails: { stringValue: 'junk' } } }),
+    { emails: [], domains: [] });
 });

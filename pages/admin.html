@@ -90,6 +90,25 @@
       </div>
 
       <div class="card">
+        <h2>AI 功能白名單</h2>
+        <p class="sub" style="margin-bottom:12px">名單外的帳號呼叫 AI（洞察／評分／四模式／教練）會被後端拒絕（403）。</p>
+        <ul id="ai-email-list" class="admin-list"></ul>
+        <div class="add-admin" style="margin-bottom:14px">
+          <input id="new-ai-email" type="email" placeholder="允許使用 AI 的 Google email">
+          <button id="btn-add-ai-email" class="btn-small">新增 email</button>
+        </div>
+        <ul id="ai-domain-list" class="admin-list"></ul>
+        <div class="add-admin">
+          <input id="new-ai-domain" type="text" placeholder="整個網域放行（例：corp.tw；子網域不含）">
+          <button id="btn-add-ai-domain" class="btn-small">新增網域</button>
+        </div>
+        <p class="note">
+          後端每 60 秒重讀此名單（改動最慢一分鐘生效）。另有部署環境變數的「保底名單」
+          （目前含 root 管理員）與此處聯集生效——此頁清空也不會把限制整個關掉。
+        </p>
+      </div>
+
+      <div class="card">
         <h2>平台管理員</h2>
         <ul id="admin-list" class="admin-list"></ul>
         <div class="add-admin">

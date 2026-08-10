@@ -7,7 +7,7 @@ import { callClaude, streamClaude } from './anthropic.js';
 import { sanitizeObject, sanitizeText } from './sanitize.js';
 import { TASKS } from './prompts.js';
 import { verifyFirebaseIdToken } from './firebase-auth.js';
-import { parseAllowlist, allowlistEnabled, isEmailAllowed } from './allowlist.js';
+import { parseAllowlist, allowlistEnabled, isEmailAllowed, mergeAllowlists, getRemoteAllowlist } from './allowlist.js';
 
 const app = new Hono();
 
@@ -43,9 +43,10 @@ app.use('/api/*', async (c, next) => {
       console.warn('[auth]', e?.message);
       return c.json({ error: { code: 'IDO_TOKEN_INVALID', message: '登入憑證無效或已過期' } }, 401);
     }
-    // 白名單（啟用時）：token 有效仍須 email 在名單內
+    // 白名單（啟用時）：環境變數保底 ∪ 管理頁名單（platform/aiAllowlist，60s 快取）
     const email = c.get('user')?.email;
-    if (!isEmailAllowed(email, allowlist)) {
+    const remote = await getRemoteAllowlist(token, config.firebaseProjectId);
+    if (!isEmailAllowed(email, mergeAllowlists(allowlist, remote))) {
       console.warn('[auth] 白名單拒絕：', email || '(token 無 email)');
       return c.json({ error: { code: 'IDO_FORBIDDEN', message: '此帳號未獲授權使用 AI 功能，請聯絡平台管理員' } }, 403);
     }

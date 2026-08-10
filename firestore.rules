@@ -46,6 +46,19 @@ service cloud.firestore {
         && request.resource.data.adminEmails is list;
     }
 
+    // AI 白名單（管理頁編輯；與後端環境變數保底名單「聯集」生效）。
+    // read 開放給所有登入者——ido-ai-service 以「呼叫者自己的 ID token」走
+    // Firestore REST 讀這份文件做授權判斷（刻意不引入 firebase-admin）。
+    match /platform/aiAllowlist {
+      allow read: if request.auth != null;
+      allow write: if isPlatformAdmin()
+        && request.resource.data.keys().hasOnly(['emails', 'domains'])
+        && request.resource.data.emails is list
+        && request.resource.data.domains is list
+        && request.resource.data.emails.size() <= 200
+        && request.resource.data.domains.size() <= 50;
+    }
+
     // ── 單人工作簿（單元一～三）：本人限定；封鎖帳號禁寫 ─────────────────────
     match /users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;

@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { getFirebase } from './cloud/firebase';
 import { createProjectDoc } from '../domain/model';
+import { trackWrite } from '../store/useSyncStatus';
 
 async function db() {
   const { db: instance } = await getFirebase();
@@ -62,14 +63,14 @@ export async function createProject(user, name) {
     email: (user.email || '').toLowerCase(),
     displayName: user.displayName || '',
   });
-  const ref = await addDoc(collection(d, EVAL_PROJECTS_COLLECTION), payload);
+  const ref = await trackWrite(addDoc(collection(d, EVAL_PROJECTS_COLLECTION), payload));
   return ref.id;
 }
 
 export async function deleteProject(pid) {
   // 註：子集合文件不會被父文件刪除連帶清掉；內部工具接受殘留（無讀取路徑）。
   const d = await db();
-  await deleteDoc(projRef(d, pid));
+  await trackWrite(deleteDoc(projRef(d, pid)));
 }
 
 // ── 成員與邀請 ───────────────────────────────────────────────────────────────
@@ -82,17 +83,17 @@ export async function inviteMember(project, email, role) {
   const invitedEmails = [...new Set([...(project.invitedEmails || []), norm])];
   // inviteRoles 的 key 含「.」：不可用欄位路徑逐鍵更新，必須整張 map 覆寫
   const inviteRoles = { ...(project.inviteRoles || {}), [norm]: role || 'member' };
-  await updateDoc(projRef(d, project.id), { invitedEmails, inviteRoles });
+  await trackWrite(updateDoc(projRef(d, project.id), { invitedEmails, inviteRoles }));
 }
 
 export async function revokeInvite(project, email) {
   const d = await db();
   const inviteRoles = { ...(project.inviteRoles || {}) };
   delete inviteRoles[email];
-  await updateDoc(projRef(d, project.id), {
+  await trackWrite(updateDoc(projRef(d, project.id), {
     invitedEmails: (project.invitedEmails || []).filter((e) => e !== email),
     inviteRoles,
-  });
+  }));
 }
 
 // 受邀者自助加入。交易內重讀最新成員陣列，寫入形狀須與 firestore.rules 的
@@ -101,7 +102,7 @@ export async function revokeInvite(project, email) {
 export async function joinProject(pid, user) {
   const d = await db();
   const email = (user.email || '').toLowerCase();
-  await runTransaction(d, async (tx) => {
+  await trackWrite(runTransaction(d, async (tx) => {
     const snap = await tx.get(projRef(d, pid));
     if (!snap.exists()) throw new Error('專案不存在');
     const data = snap.data();
@@ -119,7 +120,7 @@ export async function joinProject(pid, user) {
       invitedEmails: (data.invitedEmails || []).filter((e) => e !== email),
       inviteRoles,
     });
-  });
+  }));
 }
 
 export async function updateMemberRole(project, uid, role) {
@@ -127,17 +128,17 @@ export async function updateMemberRole(project, uid, role) {
   const members = { ...(project.members || {}) };
   if (!members[uid]) throw new Error('成員不存在');
   members[uid] = { ...members[uid], role };
-  await updateDoc(projRef(d, project.id), { members });
+  await trackWrite(updateDoc(projRef(d, project.id), { members }));
 }
 
 export async function removeMember(project, uid) {
   const d = await db();
   const members = { ...(project.members || {}) };
   delete members[uid];
-  await updateDoc(projRef(d, project.id), {
+  await trackWrite(updateDoc(projRef(d, project.id), {
     members,
     memberUids: (project.memberUids || []).filter((x) => x !== uid),
-  });
+  }));
 }
 
 // ── 專案文件與子集合的即時訂閱 ─────────────────────────────────────────────────
@@ -172,28 +173,28 @@ export function subscribeSubcollection(pid, sub, onChange, onError) {
 
 export async function updateProject(pid, patch) {
   const d = await db();
-  await updateDoc(projRef(d, pid), patch);
+  await trackWrite(updateDoc(projRef(d, pid), patch));
 }
 
 export async function addSubDoc(pid, sub, data) {
   const d = await db();
-  const ref = await addDoc(subCol(d, pid, sub), data);
+  const ref = await trackWrite(addDoc(subCol(d, pid, sub), data));
   return ref.id;
 }
 
 export async function setSubDoc(pid, sub, id, data, { merge = false } = {}) {
   const d = await db();
-  await setDoc(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id), data, { merge });
+  await trackWrite(setDoc(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id), data, { merge }));
 }
 
 export async function updateSubDoc(pid, sub, id, patch) {
   const d = await db();
-  await updateDoc(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id), patch);
+  await trackWrite(updateDoc(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id), patch));
 }
 
 export async function deleteSubDoc(pid, sub, id) {
   const d = await db();
-  await deleteDoc(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id));
+  await trackWrite(deleteDoc(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id)));
 }
 
 export async function getSubDocIds(pid, sub) {
@@ -215,7 +216,7 @@ export async function batchSetSubDocs(pid, sub, entries) {
   for (const { id, data } of entries) {
     batch.set(doc(d, EVAL_PROJECTS_COLLECTION, pid, sub, id), data);
   }
-  await batch.commit();
+  await trackWrite(batch.commit());
 }
 
 // 讀單一使用者 app 文件（承接單元三／二資料用；只讀自己的）

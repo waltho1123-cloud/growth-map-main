@@ -1,10 +1,34 @@
 import { useProjectStore } from '../../store/useProjectStore';
 import { useUiStore } from '../../store/useUiStore';
+import { useSyncStatus } from '../../store/useSyncStatus';
 import { useDerived } from '../../hooks/useDerived';
 import { navigate } from '../../lib/useHashRoute';
 import { signOut } from '../../lib/cloud/auth';
 import { ROLES } from '../../domain/model';
 import { Lamp, Chip } from '../common/ui';
+
+// 同其他單元的「頭像＋已同步」膠囊；狀態來自在途寫入計數（useSyncStatus）
+function SyncPill({ user }) {
+  const pending = useSyncStatus((s) => s.pending);
+  const lastError = useSyncStatus((s) => s.lastError);
+  const tone = lastError
+    ? { text: '同步失敗', cls: 'border-red-200 bg-red-50 text-red-700', dot: '⚠' }
+    : pending > 0
+      ? { text: '同步中…', cls: 'border-amber-200 bg-amber-50 text-amber-700', dot: '⟳' }
+      : { text: '已同步', cls: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: '✓' };
+  return (
+    <span title={lastError || '雲端寫入狀態'} className={`flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2.5 text-xs font-medium ${tone.cls}`}>
+      {user.photoURL ? (
+        <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="h-6 w-6 rounded-full" />
+      ) : (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-bold text-white">
+          {(user.displayName || user.email || '?').slice(0, 1).toUpperCase()}
+        </span>
+      )}
+      <span>{tone.dot} {tone.text}</span>
+    </span>
+  );
+}
 
 // 頂欄（PRD 7.2.1 區 A）：專案切換 · 達標水位徽章 · CHK 燈號群 · 假設庫 · 使用者
 export default function TopBar({ ctx, onExit }) {
@@ -58,10 +82,8 @@ export default function TopBar({ ctx, onExit }) {
         </button>
 
         <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+          <SyncPill user={ctx.user} />
           <Chip tone={ctx.editable ? 'brand' : 'idle'}>{ROLES[ctx.role]?.label || ctx.role}</Chip>
-          <span className="hidden max-w-[140px] truncate text-xs text-slate-500 md:inline">
-            {ctx.user.displayName || ctx.user.email}
-          </span>
           <button type="button" onClick={() => signOut()} className="text-xs text-slate-400 hover:text-slate-700">登出</button>
         </div>
       </div>

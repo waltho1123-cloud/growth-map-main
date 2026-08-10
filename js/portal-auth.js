@@ -1,23 +1,12 @@
 // Portal 全站登入膠囊 —— 在入口站登入一次，四個單元同源共享 Firebase session。
-//
-// 注意：portal 是無建置的純靜態頁，無法 import @growthmap/firebase（npm workspace 包），
-// 因此 Firebase 以官方 CDN ESM 載入、config 為 packages/firebase/index.js 的複本
-// （公開值，非祕密）。改 config 時兩處要一起改。
-// 版本必須與 workspace 實際安裝版一致（packages/firebase/config-sync.test.js 會驗）。
+// config 正本說明見 js/firebase-config.js；CDN URL 的版本字串必須與該檔
+// FIREBASE_SDK_VERSION 一致（ESM import 需字面 URL，config-sync.test 會驗）。
 
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyANpkc1-X1-1VMiPjZLkw_2CeOhc2BVzfk',
-  authDomain: 'growth-map-main.firebaseapp.com',
-  projectId: 'growth-map-main',
-  storageBucket: 'growth-map-main.firebasestorage.app',
-  messagingSenderId: '421192696889',
-  appId: '1:421192696889:web:ea0d2b14a63709207c79e8',
-};
+import { firebaseConfig } from './firebase-config.js';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);

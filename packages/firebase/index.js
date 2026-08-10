@@ -62,6 +62,31 @@ export async function signOut() {
   await fbSignOut(auth);
 }
 
+// 平台帳號目錄（platformUsers/{uid}）：登入時 fire-and-forget upsert 本人 profile，
+// 供 pages/admin.html 管理頁列出「誰在用平台」。失敗一律靜默——目錄寫入
+// （含被平台封鎖時的規則拒絕）不得影響登入與單元功能。
+async function touchPlatformProfile(user) {
+  try {
+    const { db } = await getFirebase();
+    if (!db || !user) return;
+    const { doc, getDoc, setDoc } = await import('firebase/firestore');
+    const ref = doc(db, 'platformUsers', user.uid);
+    const base = {
+      email: (user.email || '').toLowerCase(),
+      displayName: user.displayName || '',
+      photoURL: user.photoURL || '',
+      lastSeenAt: Date.now(),
+      lastPath: (typeof location !== 'undefined' ? location.pathname : '').slice(0, 100),
+    };
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      await setDoc(ref, base, { merge: true });
+    } else {
+      await setDoc(ref, { ...base, firstSeenAt: Date.now(), blocked: false });
+    }
+  } catch { /* 目錄失敗不影響登入 */ }
+}
+
 export function useAuth() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +103,7 @@ export function useAuth() {
       unsub = onAuthStateChanged(auth, (u) => {
         setUser(u);
         setLoading(false);
+        if (u) touchPlatformProfile(u); // 帳號目錄：不 await、不擋 UI
       });
     })();
     return () => { if (unsub) unsub(); };

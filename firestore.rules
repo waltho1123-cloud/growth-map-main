@@ -1,12 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ── 單人工作簿（單元一～三）：本人限定 ─────────────────────────────────
+    // ── 平台層：帳號目錄與管理（2026-08-11）─────────────────────────────────
+    // root 管理員寫死於規則（變更＝改此處＋重新部署）；可於 platform/meta 增補。
+    function isPlatformAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'waltho1123@gmail.com'
+        || (exists(/databases/$(database)/documents/platform/meta)
+            && request.auth.token.email in get(/databases/$(database)/documents/platform/meta).data.adminEmails)
+      );
+    }
+    // 平台封鎖：blocked 帳號全平台禁「寫」（讀不擋——避免介面整片炸紅；
+    // 要全面斷頭請到 Firebase Console 停用該帳號）。每次寫入多一次 get，內部規模可承受。
+    function isBlocked() {
+      return exists(/databases/$(database)/documents/platformUsers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/platformUsers/$(request.auth.uid)).data.blocked == true;
+    }
+
+    // 帳號目錄：登入時各單元自動 upsert 本人 profile；管理員可讀全部並切換封鎖
+    match /platformUsers/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isPlatformAdmin());
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+             ['email', 'displayName', 'photoURL', 'firstSeenAt', 'lastSeenAt', 'lastPath', 'blocked'])
+        && request.resource.data.blocked == false;
+      allow update: if request.auth != null && (
+        // 本人：只准更新活動欄位（不得自改 blocked/firstSeenAt）
+        (request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['email', 'displayName', 'photoURL', 'lastSeenAt', 'lastPath']))
+        // 管理員：只准切換封鎖狀態
+        || (isPlatformAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['blocked', 'blockedAt', 'blockedBy'])
+          && request.resource.data.blocked is bool)
+      );
+      allow delete: if false;
+    }
+
+    // 平台設定（增補管理員名單）
+    match /platform/meta {
+      allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin()
+        && request.resource.data.keys().hasOnly(['adminEmails'])
+        && request.resource.data.adminEmails is list;
+    }
+
+    // ── 單人工作簿（單元一～三）：本人限定；封鎖帳號禁寫 ─────────────────────
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid && !isBlocked();
 
       match /apps/{doc=**} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if request.auth != null && request.auth.uid == uid && !isBlocked();
       }
     }
 
@@ -66,23 +113,23 @@ service cloud.firestore {
       }
 
       // 建立者必須把自己登記為唯一成員＋owner，且邀請清單從空開始
-      allow create: if isSignedIn()
+      allow create: if isSignedIn() && !isBlocked()
         && request.resource.data.memberUids == [request.auth.uid]
         && request.resource.data.members[request.auth.uid].role == 'owner'
         && request.resource.data.invitedEmails is list
         && request.resource.data.invitedEmails.size() == 0;
       allow read: if isMember() || isInvited();
-      allow update: if isSelfJoin()
+      allow update: if !isBlocked() && (isSelfJoin()
         || isOwner()
-        || (isEditor() && !membershipChanged() && (!invitesChanged() || isFacil()));
-      allow delete: if isOwner();
+        || (isEditor() && !membershipChanged() && (!invitesChanged() || isFacil())));
+      allow delete: if isOwner() && !isBlocked();
 
       // ── 子集合 ────────────────────────────────────────────────────────────
       function projData() { return get(/databases/$(database)/documents/evalProjects/$(pid)).data; }
       function parentMember() { return isSignedIn() && request.auth.uid in projData().memberUids; }
       function parentRole() { return projData().members[request.auth.uid].role; }
-      function parentEditor() { return parentMember() && parentRole() != 'coach'; }
-      function parentFacil() { return parentMember() && (parentRole() == 'owner' || parentRole() == 'facilitator'); }
+      function parentEditor() { return parentMember() && parentRole() != 'coach' && !isBlocked(); }
+      function parentFacil() { return parentMember() && (parentRole() == 'owner' || parentRole() == 'facilitator') && !isBlocked(); }
 
       // 業務子集合（trusted-editor 邊界，見上方裁定）：成員可讀、非 coach 可寫。
       // rounds／scores／handoffs／comments／wsVotes 各有專屬規則，不走這條泛用寫入。
@@ -114,31 +161,31 @@ service cloud.firestore {
         }
         allow read: if parentFacil()
           || (parentMember() && resource.data.voterUid == request.auth.uid);
-        allow create, update: if parentMember()
+        allow create, update: if parentMember() && !isBlocked()
           && request.resource.data.voterUid == request.auth.uid
           && voteId == string(request.resource.data.workshopN) + '__' + request.resource.data.voteKey + '__' + request.auth.uid
           && voteOpen(string(request.resource.data.workshopN), request.resource.data.voteKey);
-        allow delete: if parentMember()
+        allow delete: if parentMember() && !isBlocked()
           && resource.data.voterUid == request.auth.uid
           && voteOpen(string(resource.data.workshopN), resource.data.voteKey);
       }
 
       // 匿名意見板：本人建立/編輯；任何成員可按讚（只准動 likes 欄位）
       match /wsOpinions/{opId} {
-        allow create: if parentMember() && request.resource.data.authorUid == request.auth.uid;
-        allow update: if
+        allow create: if parentMember() && !isBlocked() && request.resource.data.authorUid == request.auth.uid;
+        allow update: if !isBlocked() && (
           (parentMember() && resource.data.authorUid == request.auth.uid)
           || (parentMember()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])));
         allow delete: if parentFacil()
-          || (parentMember() && resource.data.authorUid == request.auth.uid);
+          || (parentMember() && !isBlocked() && resource.data.authorUid == request.auth.uid);
       }
 
       // 評論（FR-11-04）：coach 也可評論（PRD §7.7 唯讀＋評論的唯一例外）。
       // 因為這是 coach 唯一可寫面，欄位採白名單＋型別＋長度硬化（對抗式審查 P2：
       // 防偽造 metadata/巨量文字污染看板）；內容只有作者可改，resolved 開放編輯角色。
       match /comments/{commentId} {
-        allow create: if parentMember()
+        allow create: if parentMember() && !isBlocked()
           && request.resource.data.authorUid == request.auth.uid
           && request.resource.data.keys().hasOnly(
                ['targetRef', 'targetLabel', 'text', 'authorUid', 'authorName', 'resolved', 'createdAt'])
@@ -154,7 +201,7 @@ service cloud.firestore {
           && request.resource.data.resolved == false
           && request.resource.data.createdAt is int;
         allow update: if
-          (parentMember() && resource.data.authorUid == request.auth.uid
+          (parentMember() && !isBlocked() && resource.data.authorUid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'resolved'])
             && request.resource.data.text is string
             && request.resource.data.text.size() > 0
@@ -163,7 +210,7 @@ service cloud.firestore {
           || (parentEditor()
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved'])
             && request.resource.data.resolved is bool);
-        allow delete: if parentMember() && resource.data.authorUid == request.auth.uid;
+        allow delete: if parentMember() && !isBlocked() && resource.data.authorUid == request.auth.uid;
       }
 
       // AI 稽核（FR-10-04）與量測事件（§8.1）：append-only
@@ -174,7 +221,7 @@ service cloud.firestore {
         allow delete: if false;
       }
       match /events/{eventId} {
-        allow create: if parentMember();
+        allow create: if parentMember() && !isBlocked();
         allow update, delete: if false;
       }
 
@@ -222,7 +269,7 @@ service cloud.firestore {
       // 交付快照：只有 owner（R-LEAD 核定，CFM-05）能建立；docId 綁版本號；
       // 建立後不可改寫、不可刪除（FR-11-07）
       match /handoffs/{version} {
-        allow create: if parentRole() == 'owner'
+        allow create: if parentRole() == 'owner' && !isBlocked()
           && request.resource.data.version is int
           && request.resource.data.version > 0
           && version == string(request.resource.data.version)

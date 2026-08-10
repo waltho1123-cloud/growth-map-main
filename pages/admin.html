@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>平台帳號管理 | 成長藍圖</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/portal.css">
+  <style>
+    .admin-page { max-width: 960px; margin: 0 auto; padding: 48px 24px; font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif; }
+    .admin-page__back { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; font-weight: 600; color: #4338ca; text-decoration: none; margin-bottom: 24px; }
+    .admin-page__back:hover { text-decoration: underline; }
+    .admin-page h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; color: #0f172a; }
+    .admin-page .sub { color: #475569; font-size: .875rem; margin-bottom: 24px; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(15,23,42,.06); }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; color: #0f172a; }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    th { text-align: left; color: #475569; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #1e293b; }
+    .muted { color: #64748b; }
+    .cell-id { display: flex; align-items: center; gap: 10px; min-width: 220px; }
+    .cell-id img, .avatar-fallback { width: 32px; height: 32px; border-radius: 9999px; flex-shrink: 0; }
+    .avatar-fallback { display: inline-flex; align-items: center; justify-content: center; background: #4338ca; color: #fff; font-weight: 700; font-size: .8rem; }
+    .badge { display: inline-block; border-radius: 9999px; padding: 2px 10px; font-size: .75rem; font-weight: 600; }
+    .badge-ok { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .badge-blocked { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .row-blocked td { opacity: .65; }
+    .btn, .btn-small { border: 0; cursor: pointer; border-radius: 10px; font-weight: 600; }
+    .btn { background: #4338ca; color: #fff; padding: 10px 20px; font-size: .9rem; }
+    .btn:hover { background: #3730a3; }
+    .btn-small { background: #f1f5f9; color: #334155; padding: 4px 12px; font-size: .75rem; }
+    .btn-small:hover { background: #e2e8f0; }
+    .btn-danger { background: #fef2f2; color: #b91c1c; }
+    .btn-danger:hover { background: #fee2e2; }
+    .btn-logout { background: none; border: 0; color: #64748b; font-size: .8rem; cursor: pointer; }
+    .btn-logout:hover { color: #0f172a; }
+    .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: .85rem; color: #475569; }
+    .err { color: #b91c1c; font-size: .85rem; margin-top: 10px; }
+    .admin-list { list-style: none; padding: 0; margin: 0 0 12px; font-size: .875rem; color: #1e293b; }
+    .admin-list li { padding: 6px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+    .add-admin { display: flex; gap: 8px; }
+    .add-admin input { flex: 1; max-width: 320px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; font-size: .875rem; }
+    .note { font-size: .78rem; color: #64748b; line-height: 1.6; margin-top: 10px; }
+    .table-wrap { overflow-x: auto; }
+    .center { text-align: center; padding: 64px 0; }
+  </style>
+</head>
+<body>
+  <main class="admin-page">
+    <a class="admin-page__back" href="../index.html"><span>←</span><span>返回藍圖</span></a>
+    <h1>平台帳號管理</h1>
+    <p class="sub">帳號目錄與平台封鎖——僅平台管理員可用（權限由 Firestore 安全規則強制）。</p>
+
+    <section id="view-login" class="card center" style="display:none">
+      <p style="margin-bottom:16px;color:#475569">請以平台管理員帳號登入。</p>
+      <button id="btn-login" class="btn">使用 Google 帳號登入</button>
+      <p id="login-err" class="err"></p>
+    </section>
+
+    <section id="view-denied" class="card center" style="display:none">
+      <p style="color:#b91c1c;font-weight:600;margin-bottom:8px">此帳號沒有平台管理權限。</p>
+      <p class="muted" style="margin-bottom:16px">如需權限，請洽 root 管理員。</p>
+      <button class="btn-logout">登出換帳號</button>
+    </section>
+
+    <section id="view-admin" style="display:none">
+      <div class="topline">
+        <span id="me-line"></span>
+        <button class="btn-logout">登出</button>
+      </div>
+
+      <div class="card">
+        <h2>帳號目錄 <span id="user-count" class="muted" style="font-weight:400"></span></h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>帳號</th><th>首次使用</th><th>最後活動</th><th>最後位置</th><th>狀態</th><th>操作</th></tr>
+            </thead>
+            <tbody id="user-rows"></tbody>
+          </table>
+        </div>
+        <p class="note">
+          「封鎖」＝全平台禁止寫入（單元一～四；已登入者的畫面仍可讀）。要完全停用帳號（連登入都擋），
+          請至 Firebase Console → Authentication → Users 停用。目錄自本功能上線後的登入開始累積。
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>平台管理員</h2>
+        <ul id="admin-list" class="admin-list"></ul>
+        <div class="add-admin">
+          <input id="new-admin-email" type="email" placeholder="增補管理員的 Google email">
+          <button id="btn-add-admin" class="btn-small">新增</button>
+        </div>
+        <p class="note">root 管理員寫死於安全規則；此處名單為增補（存於 platform/meta，即時生效）。</p>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="../js/platform-admin.js"></script>
+</body>
+</html>

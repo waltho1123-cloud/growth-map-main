@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { updateProject } from '../../lib/db';
 import { computeRollup, waterfallSegments, FALLBACK_PATHS } from '../../domain/rollup';
+import { logEvent } from '../../lib/events';
 import { fmtAmount, yearLabels } from '../../lib/format';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, EmptyState, Modal, TextArea } from '../common/ui';
@@ -50,6 +51,7 @@ export default function P10Rollup({ ctx }) {
         decidedAt: Date.now(),
       },
     });
+    logEvent(project.id, 'rollup.fallback_taken', { path: fallbackModal, attainmentPct: rollup.attainmentPct }, ctx.user.uid); // EVT-12
     const dest = { longlist: 'matrix', unit3: 'longlist', unit2: 'dashboard' }[fallbackModal];
     setFallbackModal(null);
     setFallbackNote('');

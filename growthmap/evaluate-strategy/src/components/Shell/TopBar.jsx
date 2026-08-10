@@ -4,6 +4,7 @@ import { useSyncStatus } from '../../store/useSyncStatus';
 import { useDerived } from '../../hooks/useDerived';
 import { navigate } from '../../lib/useHashRoute';
 import { signOut } from '../../lib/cloud/auth';
+import { aiEnabled } from '../../lib/ai';
 import { ROLES } from '../../domain/model';
 import { Lamp, Chip } from '../common/ui';
 
@@ -34,6 +35,8 @@ function SyncPill({ user }) {
 export default function TopBar({ ctx, onExit }) {
   const project = useProjectStore((s) => s.project);
   const openAssumptions = useUiStore((s) => s.openAssumptions);
+  const openAi = useUiStore((s) => s.openAi);
+  const openComments = useUiStore((s) => s.openComments);
   const { rollup, checkRun } = useDerived();
 
   const att = rollup.attainmentPct;
@@ -76,9 +79,19 @@ export default function TopBar({ ctx, onExit }) {
           {checkRun.results.map((r) => <Lamp key={r.code} lamp={r.lamp} />)}
         </button>
 
+        {aiEnabled && (
+          <button type="button" onClick={() => openAi()}
+            className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100">
+            AI 協作
+          </button>
+        )}
         <button type="button" onClick={() => openAssumptions()}
           className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
           假設庫
+        </button>
+        <button type="button" onClick={() => openComments()}
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+          評論
         </button>
 
         <div className="flex items-center gap-2 border-l border-slate-200 pl-3">

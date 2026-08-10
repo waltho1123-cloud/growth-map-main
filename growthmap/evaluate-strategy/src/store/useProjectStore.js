@@ -12,18 +12,19 @@ const SUB_SORTERS = {
   plays: (a, b) => (a.createdAt || 0) - (b.createdAt || 0),
   assumptions: (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
   handoffs: (a, b) => (b.version || 0) - (a.version || 0),
+  workshops: (a, b) => (a.n || 0) - (b.n || 0),
+  wsOpinions: (a, b) => (a.createdAt || 0) - (b.createdAt || 0),
+  comments: (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
+  aiLogs: (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
 };
+
+const EMPTY_SUBS = Object.fromEntries(Object.keys(SUB_SORTERS).map((k) => [k, []]));
 
 export const useProjectStore = create((set, get) => ({
   pid: null,
   project: null,      // null＝載入中或不存在；ready 後仍 null＝已被刪除/無權限
   projectLoaded: false,
-  opportunities: [],
-  rounds: [],
-  scores: [],
-  plays: [],
-  assumptions: [],
-  handoffs: [],
+  ...EMPTY_SUBS,
   error: null,
   _unsubs: [],
 
@@ -32,10 +33,7 @@ export const useProjectStore = create((set, get) => ({
     if (state.pid === pid) return;
     state._unsubs.forEach((u) => u?.());
     if (!pid) {
-      set({
-        pid: null, project: null, projectLoaded: false, error: null, _unsubs: [],
-        opportunities: [], rounds: [], scores: [], plays: [], assumptions: [], handoffs: [],
-      });
+      set({ pid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
       return;
     }
     const onError = (err) => set({ error: err?.message || String(err) });
@@ -48,18 +46,12 @@ export const useProjectStore = create((set, get) => ({
         }, onError)
       ),
     ];
-    set({
-      pid, project: null, projectLoaded: false, error: null, _unsubs: unsubs,
-      opportunities: [], rounds: [], scores: [], plays: [], assumptions: [], handoffs: [],
-    });
+    set({ pid, project: null, projectLoaded: false, error: null, _unsubs: unsubs, ...EMPTY_SUBS });
   },
 
   unbind() {
     get()._unsubs.forEach((u) => u?.());
-    set({
-      pid: null, project: null, projectLoaded: false, error: null, _unsubs: [],
-      opportunities: [], rounds: [], scores: [], plays: [], assumptions: [], handoffs: [],
-    });
+    set({ pid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
   },
 }));
 

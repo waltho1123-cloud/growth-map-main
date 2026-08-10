@@ -191,6 +191,18 @@ export default function P09Bizplan({ ctx, playId }) {
             </Section>
           </div>
 
+          {/* NPV／FCF 選填（FR-07-07 Could；方法論明言不必做上帝的事——僅供參考） */}
+          <Section title="NPV（選填，僅供參考）">
+            <div className="flex items-center gap-3">
+              <div className="w-40">
+                <NumInput disabled={disabled} value={play.bizplan?.npv ?? ''} onCommit={(v) => patchBizplan('npv', v || null)} placeholder="淨現值" />
+              </div>
+              <p className="text-xs leading-relaxed text-slate-400">
+                方法論已降規為「三表＋疊加圖」；NPV/DCF 不是必填，填了也不進任何檢查。
+              </p>
+            </div>
+          </Section>
+
           {/* 本方案假設列 */}
           <Section title="本方案的假設" aside={<Btn kind="ghost" onClick={() => openAssumptions(null, '')}>開啟假設庫</Btn>}>
             <div className="flex gap-2 overflow-x-auto pb-1">

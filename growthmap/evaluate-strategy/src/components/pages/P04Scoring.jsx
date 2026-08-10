@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { setSubDoc, updateSubDoc } from '../../lib/db';
 import { DIMENSIONS } from '../../domain/criteria';
 import { totalOf, isComplete, axesOf, aggregateScores, rationaleRequired, scoreDocId } from '../../domain/scoring';
+import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, EmptyState, Modal } from '../common/ui';
 
@@ -12,6 +13,7 @@ export default function P04Scoring({ ctx }) {
   const opportunities = useProjectStore((s) => s.opportunities);
   const rounds = useProjectStore((s) => s.rounds);
   const scores = useProjectStore((s) => s.scores);
+  const plays = useProjectStore((s) => s.plays);
   const [view, setView] = useState('mine'); // mine | all
   const [roundN, setRoundN] = useState(null);
   const [anchorHint, setAnchorHint] = useState(null); // {dimKey}
@@ -91,6 +93,10 @@ export default function P04Scoring({ ctx }) {
       return;
     }
     await updateSubDoc(project.id, 'scores', scoreDocId(opp.id, activeRoundN, ctx.user.uid), { submitted: true, updatedAt: Date.now() });
+    logEvent(project.id, 'score.submitted', { // EVT-04
+      oppId: opp.id, round: activeRoundN,
+      hasRationales: Object.values(mine.rationales || {}).some((r) => (r || '').trim()),
+    }, ctx.user.uid);
   };
 
   const closeRound = async () => {
@@ -179,6 +185,11 @@ export default function P04Scoring({ ctx }) {
                       <td className="max-w-72 py-2 pr-3">
                         <div className="text-[13px] font-medium leading-snug text-slate-800">{o.opportunityName || '（未命名）'}</div>
                         {o.qualityFlags?.tamMissing && <div className="mt-0.5 text-[11px] text-amber-600">缺 TAM／SAM：維度①依據必填</div>}
+                        {plays.some((p) => (p.sourceOppIds || []).includes(o.id)) && (
+                          <div className="mt-0.5 text-[11px] text-indigo-500" title="PD-05：系統只提示、不自動填分——分數只抓七八成，最後由討論拍板">
+                            本項已編入策略方案，操作潛力可視為滿分（仍需人工點選）
+                          </div>
+                        )}
                       </td>
                       {DIMENSIONS.map((d) => {
                         const v = mine?.dims?.[d.key] || 0;

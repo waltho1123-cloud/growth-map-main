@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { updateProject, updateSubDoc } from '../../lib/db';
 import { defaultDividers, quadrantOf } from '../../domain/matrix';
 import { checkGr3 } from '../../domain/guards';
+import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, EmptyState, Modal, TextArea } from '../common/ui';
 
@@ -19,8 +20,26 @@ export default function P05Matrix({ ctx }) {
   const [excludeTarget, setExcludeTarget] = useState(null);
   const [excludeReason, setExcludeReason] = useState('');
   const svgRef = useRef(null);
+  const matrixBoxRef = useRef(null);
   const [dragAxis, setDragAxis] = useState(null);
   const [dragDividers, setDragDividers] = useState(null);
+  const [exporting, setExporting] = useState(false);
+
+  // FR-04-08 矩陣快照匯出（PNG，供投影片/報告）
+  const exportPng = async () => {
+    if (!matrixBoxRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas-pro');
+      const canvas = await html2canvas(matrixBoxRef.current, { scale: 2, backgroundColor: '#ffffff' });
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `優先排序矩陣_${project?.name || ''}.png`;
+      a.click();
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const scored = opportunities.filter((o) => o.lastAggregate?.axes && !o.excluded?.flag);
   const excluded = opportunities.filter((o) => o.excluded?.flag);
@@ -92,6 +111,7 @@ export default function P05Matrix({ ctx }) {
       excluded: { flag: false, reason: '', decidedBy: null, decidedAt: null },
       status: 'shortlisted',
     });
+    logEvent(project.id, 'matrix.shortlist_changed', { oppId: o.id, included: true }, ctx.user.uid); // EVT-06
   };
 
   const confirmExclude = async () => {
@@ -128,12 +148,14 @@ export default function P05Matrix({ ctx }) {
           {ctx.editable && project?.matrixDividers && (
             <Btn kind="ghost" onClick={() => updateProject(project.id, { matrixDividers: null })}>重設分隔線</Btn>
           )}
+          <Btn onClick={exportPng} disabled={exporting}>{exporting ? '匯出中…' : '匯出 PNG'}</Btn>
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
         {/* 區 1 矩陣畫布 */}
         <Section className="xl:col-span-3">
+          <div ref={matrixBoxRef}>
           <svg
             ref={svgRef}
             viewBox={`0 0 ${W} ${H}`}
@@ -194,6 +216,7 @@ export default function P05Matrix({ ctx }) {
               );
             })}
           </svg>
+          </div>
           <p className="mt-1 text-center text-[11px] text-slate-400">點擊泡泡＝納入／移出短名單（粗框＝已入短名單；紅點＝GR-3 名稱無效）</p>
         </Section>
 

@@ -3,6 +3,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { addSubDoc, updateSubDoc, deleteSubDoc } from '../../lib/db';
 import { createPlayDoc, MERGE_CRITERIA_OPTIONS } from '../../domain/model';
 import { playCountStatus } from '../../domain/guards';
+import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, EmptyState, Modal, TextInput, TextArea } from '../common/ui';
 
@@ -309,6 +310,7 @@ function CreatePlayModal({ open, onClose, ctx, project, sourceOpps, afterCreate 
         oneLiner: '',
       }, sourceOpps, { forecastYears: project?.settings?.forecastYears || 3 });
       await addSubDoc(project.id, 'plays', doc);
+      logEvent(project.id, 'play.created', { formation, sourceCount: sourceOpps.length }, ctx.user.uid); // EVT-07
       afterCreate();
       setName(''); setCriteria([]); setTheme('');
     } finally {

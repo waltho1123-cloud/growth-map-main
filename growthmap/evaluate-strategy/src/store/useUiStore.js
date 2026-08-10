@@ -3,9 +3,15 @@
 import { create } from 'zustand';
 
 export const useUiStore = create((set) => ({
-  drawer: null, // null | { type: 'assumptions', ref, label }
+  drawer: null, // null | { type: 'assumptions', ref, label } | { type: 'ai' } | { type: 'comments', ref, label }
   openAssumptions(ref = null, label = '') {
     set({ drawer: { type: 'assumptions', ref, label } });
+  },
+  openAi() {
+    set({ drawer: { type: 'ai' } });
+  },
+  openComments(ref = null, label = '') {
+    set({ drawer: { type: 'comments', ref, label } });
   },
   closeDrawer() {
     set({ drawer: null });

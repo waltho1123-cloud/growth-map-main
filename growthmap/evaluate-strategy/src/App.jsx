@@ -8,11 +8,15 @@ import ProjectPicker from './components/Projects/ProjectPicker';
 import TopBar from './components/Shell/TopBar';
 import SideNav from './components/Shell/SideNav';
 import AssumptionsDrawer from './components/pages/AssumptionsDrawer';
+import AiDrawer from './components/pages/AiDrawer';
+import CommentsDrawer from './components/pages/CommentsDrawer';
+import P17Board from './components/pages/P17Board';
 import P01Dashboard from './components/pages/P01Dashboard';
 import P02Longlist from './components/pages/P02Longlist';
 import P03Criteria from './components/pages/P03Criteria';
 import P04Scoring from './components/pages/P04Scoring';
 import P05Matrix from './components/pages/P05Matrix';
+import P06Workshop from './components/pages/P06Workshop';
 import P07Plays from './components/pages/P07Plays';
 import P08Templates from './components/pages/P08Templates';
 import P09Bizplan from './components/pages/P09Bizplan';
@@ -76,6 +80,7 @@ function Workspace({ pid, user, onExit }) {
       case 'criteria': return <P03Criteria ctx={ctx} />;
       case 'scoring': return <P04Scoring ctx={ctx} />;
       case 'matrix': return <P05Matrix ctx={ctx} />;
+      case 'workshop': return <P06Workshop ctx={ctx} n={Number(route.parts[1]) === 2 ? 2 : 1} />;
       case 'plays':
         if (route.parts[1] && route.parts[2] === 'templates') return <P08Templates ctx={ctx} playId={route.parts[1]} />;
         if (route.parts[1] && route.parts[2] === 'bizplan') return <P09Bizplan ctx={ctx} playId={route.parts[1]} />;
@@ -86,6 +91,7 @@ function Workspace({ pid, user, onExit }) {
       case 'consensus': return <P12Consensus ctx={ctx} />;
       case 'check': return <P13Check ctx={ctx} />;
       case 'handoff': return <P14Handoff ctx={ctx} />;
+      case 'board': return <P17Board ctx={ctx} />;
       case 'settings': return <SettingsPage ctx={ctx} />;
       default: return <P01Dashboard ctx={ctx} />;
     }
@@ -106,6 +112,8 @@ function Workspace({ pid, user, onExit }) {
         </main>
       </div>
       <AssumptionsDrawer ctx={ctx} />
+      <AiDrawer ctx={ctx} />
+      <CommentsDrawer ctx={ctx} />
     </div>
   );
 }

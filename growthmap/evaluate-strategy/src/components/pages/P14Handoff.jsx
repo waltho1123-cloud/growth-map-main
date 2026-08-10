@@ -8,6 +8,7 @@ import { waterfallSegments } from '../../domain/rollup';
 import { derivePnl } from '../../domain/finance';
 import { captureElementToPdf } from '@growthmap/pdf';
 import { fmtAmount, fmtTime, yearLabels } from '../../lib/format';
+import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, Modal } from '../common/ui';
 
@@ -63,6 +64,9 @@ export default function P14Handoff({ ctx }) {
         lastCheckRun: checkRun,
         stage: 'delivered',
       });
+      logEvent(project.id, 'handoff.approved', { // EVT-18（BG-01 週期終點）
+        version: nextVersion, plays: plays.length, attainmentPct: rollup.attainmentPct,
+      }, ctx.user.uid);
       setConfirming(false);
     } finally {
       setBusy(false);
@@ -80,6 +84,118 @@ export default function P14Handoff({ ctx }) {
     }
   };
 
+  // PPTX（PD-10：先求結構與欄位正確，精排另議）——依 BCG 五步驟模板順序
+  const exportPptx = async () => {
+    setExporting(true);
+    try {
+      const { default: PptxGen } = await import('pptxgenjs');
+      const pptx = new PptxGen();
+      pptx.defineLayout({ name: 'W16x9', width: 13.33, height: 7.5 });
+      pptx.layout = 'W16x9';
+      const T = { x: 0.5, y: 1.1, w: 12.3, fontSize: 10, border: { pt: 0.5, color: 'CBD5E1' }, color: '1E293B' };
+      const addTitle = (slide, text) => slide.addText(text, { x: 0.5, y: 0.3, w: 12.3, h: 0.6, fontSize: 20, bold: true, color: '1E293B' });
+
+      const cover = pptx.addSlide();
+      cover.addText('評估策略 Evaluate', { x: 0.5, y: 2.4, w: 12.3, fontSize: 34, bold: true, align: 'center', color: '4338CA' });
+      cover.addText(project.name, { x: 0.5, y: 3.4, w: 12.3, fontSize: 20, align: 'center', color: '334155' });
+      cover.addText(
+        project.targetSnapshot
+          ? `Aspiration ${fmtAmount(project.targetSnapshot.aspiration)}｜Momentum ${fmtAmount(project.targetSnapshot.momentum)}｜Gap ${fmtAmount(project.targetSnapshot.growthGap)}｜疊加達成率 ${rollup.attainmentPct ?? '—'}%`
+          : '',
+        { x: 0.5, y: 4.2, w: 12.3, fontSize: 12, align: 'center', color: '64748B' }
+      );
+
+      const s1 = pptx.addSlide();
+      addTitle(s1, '步驟一｜新增長機會長清單');
+      s1.addTable([
+        ['No', '增長機會', '來源工具', 'TAM', '狀態'],
+        ...opportunities.map((o) => [String(o.no), o.opportunityName, (o.sourceToolNames || []).join('、'), o.tam ? fmtAmount(o.tam) : '—', o.excluded?.flag ? '保留池' : o.shortlist?.included ? '短名單' : '候選']),
+      ], T);
+
+      const s2 = pptx.addSlide();
+      addTitle(s2, '步驟二｜四維評估與優先排序');
+      s2.addTable([
+        ['機會點', '①規模', '②潛力', '③路徑', '④優勢', '總分', 'Y', 'X', '短名單'],
+        ...scored.map((o) => [
+          o.opportunityName,
+          ...['size', 'potential', 'path', 'rightToWin'].map((k) => String(o.lastAggregate?.perDim?.[k]?.mean ?? '—')),
+          String(o.lastAggregate?.total ?? '—'), String(o.lastAggregate?.axes?.y ?? ''), String(o.lastAggregate?.axes?.x ?? ''),
+          o.shortlist?.included ? '✓' : '',
+        ]),
+      ], T);
+
+      const s3 = pptx.addSlide();
+      addTitle(s3, '步驟三｜整合／延伸為策略方案');
+      s3.addTable([
+        ['策略方案', '形成方式', '來源機會', '一句話'],
+        ...plays.map((p) => [
+          p.name,
+          p.formation === 'merge' ? `整合（${(p.mergeCriteria || []).join('、')}）` : `延伸（${p.extendTheme}）`,
+          (p.sourceOppIds || []).map((id) => opportunities.find((o) => o.id === id)?.opportunityName).filter(Boolean).join('＋'),
+          p.oneLiner || '',
+        ]),
+      ], T);
+
+      for (const p of plays) {
+        const sp = pptx.addSlide();
+        const t3 = p.templates?.t3?.content || {};
+        const pnl = p.bizplan?.fin ? derivePnl(p.bizplan.fin, { taxRate }) : null;
+        addTitle(sp, `步驟四｜${p.name}（EBIT ${t3.ebitBand || '—'}｜CAGR ${t3.cagrBand || '—'}）`);
+        sp.addTable([
+          ['財務', ...yls],
+          ['營收', ...Array.from({ length: years }, (_, i) => fmtAmount(p.bizplan?.fin?.pnl?.revenue?.[i]))],
+          ['EBIT', ...Array.from({ length: years }, (_, i) => fmtAmount(pnl?.ebit?.[i]))],
+          ['CAPEX', ...Array.from({ length: years }, (_, i) => fmtAmount(p.bizplan?.fin?.capex?.[i]))],
+        ], { ...T, w: 6 });
+        sp.addText(
+          [
+            `成功因子：${(t3.successFactors || []).join('；') || '—'}`,
+            `核心能力：${(t3.coreCapabilities || []).join('；') || '—'}`,
+            `必要投資：${(t3.requiredInvestment || []).join('；') || '—'}`,
+            `可行性四問：${['resources', 'regulation', 'culture', 'time'].map((k) => ({ yes: '是', partial: '部分', no: '否' }[p.bizplan?.feasibility?.[k]?.answer] || '—')).join('／')}`,
+          ].join('\n'),
+          { x: 7, y: 1.1, w: 5.8, h: 5.5, fontSize: 10, color: '334155', valign: 'top' }
+        );
+      }
+
+      const s5 = pptx.addSlide();
+      addTitle(s5, '步驟五｜疊加效益與分年時序彙總');
+      s5.addText(
+        waterfallSegments(rollup).map((s) => `${s.label} ${fmtAmount(s.value)}`).join(' → ') + `｜目標 ${fmtAmount(rollup.aspiration)}（達成率 ${rollup.attainmentPct ?? '—'}%）`,
+        { x: 0.5, y: 1.0, w: 12.3, h: 0.5, fontSize: 11, color: '334155' }
+      );
+      s5.addTable([
+        ['項目', ...yls],
+        ...totalsTable.rows.map((r) => [
+          `${r.playName}（收/成/利/資）`,
+          ...Array.from({ length: years }, (_, i) => `${fmtAmount(r.revenue[i])}/${fmtAmount(r.cost[i])}/${fmtAmount(r.profit[i])}/${fmtAmount(r.capex[i])}`),
+        ]),
+        ['綜效（收入/成本）', ...Array.from({ length: years }, (_, i) => `${fmtAmount(totalsTable.synergyRevenue[i])}/${fmtAmount(totalsTable.synergyCost[i])}`)],
+        ['總計（收/成/利/資）', ...Array.from({ length: years }, (_, i) => `${fmtAmount(totalsTable.totals.revenue[i])}/${fmtAmount(totalsTable.totals.cost[i])}/${fmtAmount(totalsTable.totals.profit[i])}/${fmtAmount(totalsTable.totals.capex[i])}`)],
+      ], { ...T, y: 1.6 });
+
+      const s6 = pptx.addSlide();
+      addTitle(s6, '附錄｜Sanity Check・WHY/WHAT/HOW');
+      s6.addText(
+        [
+          ...SANITY_QUESTIONS.map((q, i) => {
+            const a = project.consensus?.sanity?.[i];
+            return `${i + 1}. ${q} — ${{ positive: '正面', neutral: '中性', negative: '負面', severe: '高度負面' }[a?.impact] || '未答'}${a?.note ? `（${a.note}）` : ''}`;
+          }),
+          '',
+          `WHY：${(project.consensus?.why || []).join('；') || '—'}`,
+          `WHAT：${(project.consensus?.what || []).join('；') || '—'}`,
+          `HOW：${(project.consensus?.how || []).join('；') || '—'}`,
+        ].join('\n'),
+        { x: 0.5, y: 1.1, w: 12.3, h: 5.8, fontSize: 10, color: '334155', valign: 'top' }
+      );
+
+      await pptx.writeFile({ fileName: `評估策略_${project.name}_v${handoffs[0]?.version || '草稿'}.pptx` });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -90,6 +206,7 @@ export default function P14Handoff({ ctx }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Btn onClick={exportPptx} disabled={exporting}>{exporting ? '匯出中…' : '匯出 PPTX'}</Btn>
           <Btn onClick={exportPdf} disabled={exporting}>{exporting ? '匯出中…' : '匯出 PDF'}</Btn>
           <Btn onClick={() => downloadJson(
             `評估策略_${project.name}.json`,

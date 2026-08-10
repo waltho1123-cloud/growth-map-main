@@ -1,6 +1,7 @@
 import { useDerived } from '../../hooks/useDerived';
 import { useProjectStore } from '../../store/useProjectStore';
 import { updateProject } from '../../lib/db';
+import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
 import { fmtTime } from '../../lib/format';
 import { Section, Btn, Chip, Lamp } from '../common/ui';
@@ -12,6 +13,10 @@ export default function P13Check({ ctx }) {
 
   const record = async () => {
     await updateProject(project.id, { lastCheckRun: checkRun });
+    logEvent(project.id, 'check.executed', { // EVT-17
+      lamps: Object.fromEntries(checkRun.results.map((r) => [r.code, r.lamp])),
+      canDeliver: checkRun.canDeliver,
+    }, ctx.user.uid);
   };
 
   return (

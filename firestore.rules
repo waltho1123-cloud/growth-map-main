@@ -85,12 +85,67 @@ service cloud.firestore {
       function parentFacil() { return parentMember() && (parentRole() == 'owner' || parentRole() == 'facilitator'); }
 
       // 業務子集合（trusted-editor 邊界，見上方裁定）：成員可讀、非 coach 可寫。
-      // rounds／scores／handoffs 各有更嚴的專屬規則，不走這條泛用寫入。
+      // rounds／scores／handoffs／comments／wsVotes 各有專屬規則，不走這條泛用寫入。
+      // wsVotes 刻意不在泛用讀取清單（PD-08 半記名：原始票僅主持人與本人可讀）。
       match /{sub}/{docId} {
         allow read: if parentMember()
-          && sub in ['opportunities', 'rounds', 'plays', 'assumptions', 'scores', 'handoffs'];
+          && sub in ['opportunities', 'rounds', 'plays', 'assumptions', 'scores', 'handoffs',
+                     'workshops', 'wsOpinions', 'comments', 'aiLogs', 'events'];
         allow write: if parentEditor()
           && sub in ['opportunities', 'plays', 'assumptions'];
+      }
+
+      // 工作坊（P-06）：docId＝場次號；議程/計時/決議/彙總由主持人（owner/facilitator）控制
+      match /workshops/{wsId} {
+        allow create, update: if parentFacil()
+          && request.resource.data.n is int
+          && string(request.resource.data.n) == wsId;
+        allow delete: if false;
+      }
+
+      // 匿名投票（PD-08 半記名）：docId 綁 {場次}__{投票題}__{uid} 防重投；
+      // 原始票只有主持人與投票者本人可讀，參與者看的是主持人彙總回寫的 tally
+      match /wsVotes/{voteId} {
+        allow read: if parentFacil()
+          || (parentMember() && resource.data.voterUid == request.auth.uid);
+        allow create, update: if parentMember()
+          && request.resource.data.voterUid == request.auth.uid
+          && voteId == string(request.resource.data.workshopN) + '__' + request.resource.data.voteKey + '__' + request.auth.uid;
+        allow delete: if parentMember() && resource.data.voterUid == request.auth.uid;
+      }
+
+      // 匿名意見板：本人建立/編輯；任何成員可按讚（只准動 likes 欄位）
+      match /wsOpinions/{opId} {
+        allow create: if parentMember() && request.resource.data.authorUid == request.auth.uid;
+        allow update: if
+          (parentMember() && resource.data.authorUid == request.auth.uid)
+          || (parentMember()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']));
+        allow delete: if parentFacil()
+          || (parentMember() && resource.data.authorUid == request.auth.uid);
+      }
+
+      // 評論（FR-11-04）：coach 也可評論（PRD §7.7 唯讀＋評論的唯一例外）；
+      // 內容只有作者可改；resolved 旗標開放編輯角色處理
+      match /comments/{commentId} {
+        allow create: if parentMember() && request.resource.data.authorUid == request.auth.uid;
+        allow update: if
+          (parentMember() && resource.data.authorUid == request.auth.uid)
+          || (parentEditor()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved']));
+        allow delete: if parentMember() && resource.data.authorUid == request.auth.uid;
+      }
+
+      // AI 稽核（FR-10-04）與量測事件（§8.1）：append-only
+      match /aiLogs/{logId} {
+        allow create: if parentEditor();
+        allow update: if parentEditor()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adopted', 'adoptedAt', 'adoptedWithoutEdit']);
+        allow delete: if false;
+      }
+      match /events/{eventId} {
+        allow create: if parentMember();
+        allow update, delete: if false;
       }
 
       // 輪次：docId 即輪次號（score 規則靠它查輪次狀態）；生命週期由主持人/負責人控制

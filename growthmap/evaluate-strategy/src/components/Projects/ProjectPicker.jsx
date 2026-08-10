@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { subscribeMyProjects, subscribeMyInvites, createProject, joinProject } from '../../lib/db';
+import { logEvent } from '../../lib/events';
 import { ROLES } from '../../domain/model';
 import { fmtTime } from '../../lib/format';
 import { Btn, Chip, Modal } from '../common/ui';
@@ -26,6 +27,7 @@ export default function ProjectPicker({ user, onSelect }) {
     setError('');
     try {
       const pid = await createProject(user, name.trim());
+      logEvent(pid, 'evaluate.project_started', {}, user.uid); // EVT-01（BG-01 週期起點）
       onSelect(pid);
     } catch (e) {
       setError(`建立失敗：${e.message}`);

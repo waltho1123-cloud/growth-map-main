@@ -10,6 +10,7 @@ export default function SideNav({ activePath }) {
   const rounds = useProjectStore((s) => s.rounds);
   const plays = useProjectStore((s) => s.plays);
   const handoffs = useProjectStore((s) => s.handoffs);
+  const workshops = useProjectStore((s) => s.workshops);
   const project = useProjectStore((s) => s.project);
   const { rollup, checkRun } = useDerived();
 
@@ -30,6 +31,7 @@ export default function SideNav({ activePath }) {
         { path: 'criteria', label: '評估標準設定', hint: project?.criteria?.approved ? '已核定' : '未核定' },
         { path: 'scoring', label: '機會評分工作區', hint: rounds.length ? `第 ${rounds.length} 輪` : '未開始' },
         { path: 'matrix', label: '優先排序矩陣', hint: shortlisted ? `短名單 ${shortlisted}` : '—' },
+        { path: 'workshop/1', label: '工作坊一（主持台）', hint: workshops.find((w) => w.n === 1)?.status === 'ended' ? '已結束' : '' },
       ],
     },
     {
@@ -49,6 +51,7 @@ export default function SideNav({ activePath }) {
         { path: 'rollup', label: '疊加效益 Waterfall', hint: rollup.attainmentPct == null ? '—' : `${rollup.attainmentPct}%` },
         { path: 'sequencing', label: '時序與資源彙總', hint: '' },
         { path: 'consensus', label: '定位衝擊與共識', hint: '' },
+        { path: 'workshop/2', label: '工作坊二（主持台）', hint: workshops.find((w) => w.n === 2)?.status === 'ended' ? '已結束' : '' },
       ],
     },
     {
@@ -57,6 +60,10 @@ export default function SideNav({ activePath }) {
         { path: 'check', label: '綜合檢查', hint: checkRun.canDeliver ? '可交付' : '未過' },
         { path: 'handoff', label: '交付輸出', hint: handoffs.length ? `v${handoffs[0].version}` : '' },
       ],
+    },
+    {
+      title: '協作',
+      items: [{ path: 'board', label: '進度看板與稽核', hint: '' }],
     },
     { title: '設定', items: [{ path: 'settings', label: '設定與成員', hint: '' }] },
   ];

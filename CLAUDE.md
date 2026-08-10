@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
-| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站（單元卡片資料驅動自 `data/unit-registry.json`；全站登入膠囊 `js/portal-auth.js`——CDN ESM 載 Firebase，config 是 `packages/firebase` 的複本，**改 config 兩處一起改**；同源共享 session，portal 登入＝四單元登入） | 純靜態，Caddy 提供 | 無需建置 |
+| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站（單元卡片資料驅動自 `data/unit-registry.json`；全站登入膠囊 `js/portal-auth.js`；**平台帳號管理頁 `pages/admin.html`**——帳號目錄＋平台封鎖＋增補管理員，root 管理員寫死於 firestore.rules；portal 層 Firebase config 唯一複本在 `js/firebase-config.js`（正本 `packages/firebase`，config-sync.test 驗一致＋CDN 版本＝安裝版）；同源共享 session，portal 登入＝四單元登入。**登入會自動寫 `platformUsers/{uid}` 帳號目錄**（useAuth 內 fire-and-forget）；封鎖帳號＝全平台禁寫（isBlocked 織入所有寫入規則），完全停用走 Firebase Console | 純靜態，Caddy 提供 | 無需建置 |
 | `growthmap/opportunity-system/` | 識別機會（第三堂） | Vite 8 + React + Tailwind | `build/`（**要 commit**） |
 | `growthmap/aspiration-case/` | 願景 | Vite 8 + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Vite 8 + React + TS | `out/`（要 commit） |

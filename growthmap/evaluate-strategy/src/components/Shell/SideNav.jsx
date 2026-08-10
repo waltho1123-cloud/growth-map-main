@@ -98,7 +98,8 @@ export default function SideNav({ activePath }) {
                 }`}
               >
                 <span className="truncate">{item.label}</span>
-                {item.hint ? <span className="shrink-0 text-[11px] text-slate-500">{item.hint}</span> : null}
+                {/* slate-600：在白底與選中態 indigo-50 底上都 ≥4.5:1（slate-500 在 indigo-50 上 4.4 差一線） */}
+                {item.hint ? <span className="shrink-0 text-[11px] text-slate-600">{item.hint}</span> : null}
               </button>
             );
           })}

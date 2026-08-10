@@ -42,6 +42,8 @@ VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 三單元全�
 npm test                                     # 全 workspace 測試（contracts/cloud/opportunity）
 npm run lint                                 # 三單元 lint（基線全綠）
 VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run preflight   # 部署前必跑：test+lint+build 全綠才准 deploy
+# preflight 開頭有兩個前置 gate（scripts/）：check:env 未帶 VITE_AI_BASE_URL 直接 fail（防 GD-06 靜默停用）；
+# check:react 掃全 workspace 任意深度的巢狀 react/react-dom 副本（防兩個 React 實例白屏，修法 npm explain react）
 
 # opportunity-system（在 growthmap/opportunity-system/）
 npm start                                    # Vite dev server :5173

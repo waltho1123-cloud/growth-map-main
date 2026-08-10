@@ -38,10 +38,11 @@ export default function P11Sequencing({ ctx }) {
   const patchSeq = (play, patch) =>
     updateSubDoc(project.id, 'plays', play.id, { sequencing: { ...(play.sequencing || {}), ...patch } });
 
+  // field-path 寫入單一綜效列，不整包覆寫 synergies（防並行 lost-update）
   const patchSynergy = (kind, yi, value) => {
     const arr = Array.from({ length: years }, (_, i) => Number(synergies?.[kind]?.[i]) || 0);
     arr[yi] = value;
-    updateProject(project.id, { synergies: { ...synergies, [kind]: arr } });
+    updateProject(project.id, { [`synergies.${kind}`]: arr });
   };
 
   const fteSum = plays.reduce((s, p) => s + (Number(p.bizplan?.resources?.fte) || 0), 0);
@@ -181,7 +182,7 @@ export default function P11Sequencing({ ctx }) {
             className="ml-1 w-72 rounded border border-slate-200 px-2 py-0.5 text-xs"
             disabled={disabled}
             defaultValue={synergies?.beneficiary || ''}
-            onBlur={(e) => updateProject(project.id, { synergies: { ...synergies, beneficiary: e.target.value } })}
+            onBlur={(e) => updateProject(project.id, { 'synergies.beneficiary': e.target.value })}
             placeholder="這些綜效掛在既有事業／哪個方案？（防重複計算）"
           />
         </p>

@@ -18,7 +18,13 @@ export default function P12Consensus({ ctx }) {
   const sanity = consensus.sanity || SANITY_QUESTIONS.map(() => ({ impact: '', note: '' }));
   const disabled = !ctx.editable;
 
-  const patch = (p) => updateProject(project.id, { consensus: { ...consensus, ...p } });
+  // field-path 寫入（consensus.xxx），不整包覆寫 consensus——七問/三欄/敘事各自獨立
+  // 提交，兩人並行編輯不同區塊不互蓋。sanity 是陣列，Firestore 無法按索引更新，
+  // 退而求其次以「整個 sanity 欄位」為粒度（仍窄於整包 consensus）。
+  const patch = (p) => updateProject(
+    project.id,
+    Object.fromEntries(Object.entries(p).map(([k, v]) => [`consensus.${k}`, v]))
+  );
   const patchSanity = (i, item) => patch({ sanity: sanity.map((x, j) => (j === i ? { ...x, ...item } : x)) });
 
   const answered = sanity.filter((x) => x.impact).length;

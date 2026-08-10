@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
-import { setSubDoc, updateSubDoc, addSubDoc } from '../../lib/db';
+import { setSubDoc, updateSubDoc } from '../../lib/db';
 import { DIMENSIONS } from '../../domain/criteria';
 import { totalOf, isComplete, axesOf, aggregateScores, rationaleRequired, scoreDocId } from '../../domain/scoring';
 import { navigate } from '../../lib/useHashRoute';
@@ -112,7 +112,9 @@ export default function P04Scoring({ ctx }) {
   };
 
   const reopenNewRound = async () => {
-    await addSubDoc(project.id, 'rounds', { n: rounds.length + 1, status: 'open', createdAt: Date.now(), createdBy: ctx.user.uid });
+    // 輪次文件以輪次號為 docId（rules 的 score 規則靠它查輪次狀態）
+    const n = (rounds.at(-1)?.n || 0) + 1;
+    await setSubDoc(project.id, 'rounds', String(n), { n, status: 'open', createdAt: Date.now(), createdBy: ctx.user.uid });
   };
 
   const isFacil = ctx.role === 'owner' || ctx.role === 'facilitator';

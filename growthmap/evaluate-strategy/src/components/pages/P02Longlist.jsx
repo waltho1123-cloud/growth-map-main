@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
-import { importHandoff, listMyHandoffVersions, refreshTargetSnapshot } from '../../lib/import';
+import { importHandoff, listMyHandoffVersions, refreshTargetSnapshot, applyUpstreamUpdate, dismissUpstreamUpdate } from '../../lib/import';
 import { addSubDoc, updateSubDoc } from '../../lib/db';
 import { createManualOpportunity } from '../../domain/model';
 import { checkGr1, computeOpportunityFlags, longlistCountStatus } from '../../domain/guards';
@@ -57,7 +57,13 @@ export default function P02Longlist({ ctx }) {
     try {
       const r = await importHandoff(project.id, ctx.user.uid, version);
       if (!r.ok) setNotice(r.message);
-      else setNotice(`承接完成：新增 ${r.imported} 個機會${r.skipped ? `（${r.skipped} 個已存在，未覆寫）` : ''}${r.contractOk ? '' : '；⚠ 快照契約違約，請檢查主控台'}${r.hasTarget ? '' : '；⚠ 未取得第二堂差距值'}`);
+      else setNotice(
+        `承接完成：新增 ${r.imported} 個機會`
+        + (r.staleMarked ? `；${r.staleMarked} 個既有機會偵測到上游修正（已標記，請逐列決定套用或保留）` : '')
+        + (r.skipped ? `（${r.skipped} 個已存在且無上游變動）` : '')
+        + (r.contractOk ? '' : '；⚠ 快照契約違約，請檢查主控台')
+        + (r.hasTarget ? '' : '；⚠ 未取得第二堂差距值')
+      );
       setImporting(false);
     } catch (e) {
       setNotice(`承接失敗：${e.message}`);
@@ -176,6 +182,19 @@ export default function P02Longlist({ ctx }) {
                         {f.tamMissing && <Chip tone="warn">缺 TAM/SAM</Chip>}
                         {f.templateIncomplete && <Chip tone="idle">模板不全</Chip>}
                         {o.excluded?.flag && <Chip tone="idle">保留池</Chip>}
+                        {o.staleUpstream && (
+                          <span className="inline-flex items-center gap-1">
+                            <Chip tone="warn" title="第三堂已修正這個機會，與本頁目前的內容不同">上游已修正</Chip>
+                            {ctx.editable && (
+                              <>
+                                <button type="button" className="text-[11px] text-indigo-600 hover:underline"
+                                  onClick={() => applyUpstreamUpdate(project.id, o)}>套用上游</button>
+                                <button type="button" className="text-[11px] text-slate-400 hover:underline"
+                                  onClick={() => dismissUpstreamUpdate(project.id, o)}>保留本地</button>
+                              </>
+                            )}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-2 text-right">

@@ -202,6 +202,12 @@ export async function getSubDocIds(pid, sub) {
   return snap.docs.map((x) => x.id);
 }
 
+export async function getSubDocs(pid, sub) {
+  const d = await db();
+  const snap = await getDocs(subCol(d, pid, sub));
+  return snap.docs.map((x) => ({ id: x.id, ...x.data() }));
+}
+
 // 批次寫入（承接匯入用）
 export async function batchSetSubDocs(pid, sub, entries) {
   const d = await db();

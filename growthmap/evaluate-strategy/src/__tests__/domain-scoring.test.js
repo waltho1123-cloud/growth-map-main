@@ -94,6 +94,12 @@ describe('guards', () => {
     expect(checkGr1('').flagged).toBe(false);
   });
 
+  test('GR-1（審查加嚴）：含市場名詞但無策略機制仍標黃——「提升通路效率」', () => {
+    expect(checkGr1('提升通路效率').flagged).toBe(true); // 對抗式審查反例
+    expect(checkGr1('提高既有市場市佔率').flagged).toBe(true); // 目標，非機會
+    expect(checkGr1('切入寵物鮮食市場：以訂閱制商模經營都會客群').flagged).toBe(false);
+  });
+
   test('GR-3：空名稱/純編號/工具名樣式 → 無效泡泡標籤', () => {
     expect(checkGr3('').flagged).toBe(true);
     expect(checkGr3('#6').flagged).toBe(true);
@@ -112,6 +118,12 @@ describe('guards', () => {
     expect(checkGr7('AI 應用').flagged).toBe(true);
     expect(checkGr7('大數據分析').flagged).toBe(true);
     expect(checkGr7('取得 ISO 14644 無塵室驗證').flagged).toBe(false);
+  });
+
+  test('GR-7（審查加嚴）：泛用詞串珠句標黃；帶數字/認證的長句不標', () => {
+    expect(checkGr7('導入AI應用提升客戶體驗與數位轉型').flagged).toBe(true); // 對抗式審查反例：≥2 泛用詞、無具體性
+    expect(checkGr7('數位轉型：三年內導入 MES 系統於 2 條產線').flagged).toBe(false); // 有數字＝具體
+    expect(checkGr7('增聘並培育技術開發人員').flagged).toBe(false);
   });
 
   test('longlistCountStatus：<7 警示、7–10 綠、>15 警示', () => {

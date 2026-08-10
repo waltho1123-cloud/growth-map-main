@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useDerived } from '../../hooks/useDerived';
 import { setSubDoc, updateProject } from '../../lib/db';
-import { buildEvalHandoffSnapshot, SANITY_QUESTIONS } from '../../domain/model';
+import { buildEvalHandoffSnapshot, SANITY_QUESTIONS, approxJsonBytes, FIRESTORE_DOC_SOFT_LIMIT } from '../../domain/model';
 import { yearlyTotals } from '../../domain/sequencing';
 import { waterfallSegments } from '../../domain/rollup';
 import { derivePnl } from '../../domain/finance';
@@ -50,6 +50,13 @@ export default function P14Handoff({ ctx }) {
       const snap = buildEvalHandoffSnapshot({
         project, opportunities, plays, rollup, totalsTable, checkRun,
       }, nextVersion);
+      // 文件大小護欄：快照複製全部方案內容，逼近 Firestore 1MiB 上限前擋下
+      const bytes = approxJsonBytes(snap);
+      if (bytes > FIRESTORE_DOC_SOFT_LIMIT) {
+        alert(`交付快照約 ${(bytes / 1024).toFixed(0)} KB，超過安全上限（${(FIRESTORE_DOC_SOFT_LIMIT / 1024).toFixed(0)} KB）。請精簡各方案的模板條列與風險描述後再交付。`);
+        setBusy(false);
+        return;
+      }
       await setSubDoc(project.id, 'handoffs', String(nextVersion), snap);
       await updateProject(project.id, {
         lastHandoff: { version: nextVersion, frozenAt: snap.frozenAt },

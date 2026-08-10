@@ -3,17 +3,19 @@
 // 阻擋型規則（GR-4 >5）由呼叫端依回傳狀態停用按鈕。
 
 // ── GR-1：機會點必須是「市場／賽道＋商模或策略」，不得是方法或目標 ────────────
-// 啟發式：能力強化型動詞開頭、或以度量型名詞結尾，且全文缺少市場/賽道/商模語彙。
+// 啟發式（對抗式審查後加嚴）：方法動詞開頭或目標型名詞出現時，必須「同時」具備
+// 市場語彙＋策略機制語彙才放行——「提升通路效率」含市場名詞但無策略機制，仍標黃。
 const METHOD_VERB = /^(提升|強化|增加|改善|優化|提高|降低|加強|深化|擴大)/;
-const GOAL_NOUN = /(知名度|指名度|滿意度|忠誠度|曝光度|市佔率|能力|效率|形象)/;
-const MARKET_HINT = /(市場|賽道|通路|客群|客戶群|場域|事業|產業|領域|服務|產品線|商模|商業模式|平台|解決方案|入股|併購|合資|據點|海外|市占)/;
+const GOAL_NOUN = /(知名度|指名度|滿意度|忠誠度|曝光度|市佔率|能力|效率|產能|良率|形象)/;
+const MARKET_HINT = /(市場|賽道|通路|客群|客戶群|場域|事業|產業|領域|服務|產品線|商模|商業模式|平台|解決方案|據點|海外|市占)/;
+const STRATEGY_HINT = /(透過|藉由|入股|併購|合資|自建|建立|推出|開發|切入|進軍|跨足|拓展|經營|打造|成立|佈局|代理|授權|訂閱)/;
 
 export function checkGr1(text) {
   const t = String(text || '').trim();
   if (!t) return { flagged: false, reason: '' };
   const looksMethodOrGoal = METHOD_VERB.test(t) || GOAL_NOUN.test(t);
-  const hasMarket = MARKET_HINT.test(t);
-  if (looksMethodOrGoal && !hasMarket) {
+  const hasMarketAndStrategy = MARKET_HINT.test(t) && STRATEGY_HINT.test(t);
+  if (looksMethodOrGoal && !hasMarketAndStrategy) {
     return {
       flagged: true,
       reason: '這看起來像「方法」或「目標」，不是增長機會。試著先寫市場或賽道，再補商模與策略。' +
@@ -49,17 +51,29 @@ export function playCountStatus(n, { warnAt = 3, max = 5 } = {}) {
 }
 
 // ── GR-7：評估內容不得過於簡略／通用 ─────────────────────────────────────────
-// 泛用詞字典：換成別家公司也成立的詞，單獨出現（或只加了標點）就標黃。
+// 泛用詞字典：換成別家公司也成立的詞。判定（對抗式審查後加嚴）：
+// (a) 全句即泛用詞；(b) 短句含泛用詞且無具體性標記；(c) 命中 ≥2 個泛用詞
+//     且無具體性標記（「導入AI應用提升客戶體驗與數位轉型」這類串珠句）。
 const GENERIC_TERMS = [
-  'AI 應用', 'AI應用', '大數據分析', '大數據', '數位轉型', '品牌曝光度', '品牌曝光',
-  '品牌行銷', '數位行銷', '異業合作', '策略合作', '合作', '創新', '差異化',
-  '提升品質', '人才培育', '顧客體驗', '客戶關係', '整合資源', '資源整合', '綜效',
+  'AI 應用', 'AI應用', '導入AI', '導入 AI', '大數據分析', '大數據', '數位轉型', '智慧化',
+  '品牌曝光度', '品牌曝光', '品牌行銷', '數位行銷', '異業合作', '策略合作', '合作',
+  '創新', '差異化', '提升品質', '人才培育', '顧客體驗', '客戶體驗', '客戶關係',
+  '整合資源', '資源整合', '綜效', '平台化', '生態系',
 ];
+// 具體性標記：數字、規格/認證——有這些通常代表寫的是可驗證的具體項目。
+// 量詞（位/家/萬…）必須跟在數字後才算數，否則「數位轉型」的「位」會誤判為具體。
+const CONCRETE_HINT = /[0-9０-９]|ISO|GMP|HACCP|FDA|UL|專利|認證|驗證|證照/;
 
 export function checkGr7(text) {
   const t = String(text || '').trim().replace(/[。.!！\s]+$/, '');
   if (!t) return { flagged: false, reason: '' };
-  const generic = GENERIC_TERMS.some((g) => t === g) || (t.length <= 6 && GENERIC_TERMS.some((g) => t.includes(g) || g.includes(t)));
+  const hits = GENERIC_TERMS.filter((g) => t.includes(g));
+  const concrete = CONCRETE_HINT.test(t);
+  const generic =
+    GENERIC_TERMS.some((g) => t === g)
+    || (t.length <= 6 && GENERIC_TERMS.some((g) => t.includes(g) || g.includes(t)))
+    || (!concrete && t.length <= 12 && hits.length >= 1)
+    || (!concrete && hits.length >= 2);
   if (generic) {
     return {
       flagged: true,

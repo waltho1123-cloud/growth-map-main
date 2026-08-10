@@ -3,7 +3,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useUiStore } from '../../store/useUiStore';
 import { addSubDoc, updateSubDoc } from '../../lib/db';
 import { derivePnl, deriveCf, deriveBs, crossChecks, finCellRef } from '../../domain/finance';
-import { createAssumptionDoc } from '../../domain/model';
+import { createAssumptionDoc, approxJsonBytes, FIRESTORE_DOC_SOFT_LIMIT } from '../../domain/model';
 import { fmtAmount, yearLabels } from '../../lib/format';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, EmptyState, Modal, TextInput, TextArea, NumInput, ListEditor } from '../common/ui';
@@ -123,6 +123,12 @@ export default function P09Bizplan({ ctx, playId }) {
           </button>
         ))}
       </div>
+
+      {approxJsonBytes(play) > FIRESTORE_DOC_SOFT_LIMIT * 0.7 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          這個方案文件已達 {(approxJsonBytes(play) / 1024).toFixed(0)} KB（Firestore 單文件上限 1024 KB）——模板與風險描述請避免貼入大段長文。
+        </div>
+      )}
 
       {tab === 'fin' && (
         <div className="space-y-4">

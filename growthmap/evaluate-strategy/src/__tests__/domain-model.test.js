@@ -2,6 +2,7 @@ import { describe, test, expect } from 'vitest';
 import {
   createProjectDoc, opportunityDocFromHandoff, createManualOpportunity,
   buildTemplateDrafts, contentFingerprint, createPlayDoc, buildEvalHandoffSnapshot,
+  normalizeUpstreamFields, upstreamFingerprintOf, approxJsonBytes,
   ROLES, canEdit, SANITY_QUESTIONS,
 } from '../domain/model';
 import { createDefaultCriteria, DIMENSIONS, DEFAULT_ANCHORS } from '../domain/criteria';
@@ -81,6 +82,33 @@ describe('model factories', () => {
     expect(contentFingerprint(edited)).not.toBe(t1.draftFingerprint); // 已編輯
     expect(play.bizplan.fin.pnl.revenue).toHaveLength(3);
     expect(play.sequencing).toEqual({ startYear: 1, endYear: 1, dependsOn: [] });
+  });
+
+  test('上游修正偵測：正規化形穩定；名稱/模板變動 → 指紋改變（重同步 stale 標記依據）', () => {
+    const opp = {
+      id: 'o1', opportunityName: '寵物鮮食市場', estRevenue: 100, currency: 'TWD',
+      sourceToolCodes: [17], sourceToolNames: ['A'], aiScore: 10,
+      template1: { insights: 'x' }, template2: null, template3: null,
+    };
+    const fp1 = upstreamFingerprintOf(opp);
+    // 相同上游內容（即使物件順序/多餘欄位不同）→ 同指紋
+    expect(upstreamFingerprintOf({ ...opp, somethingLocal: 'ignored' })).toBe(fp1);
+    // 上游改名 → 指紋不同
+    expect(upstreamFingerprintOf({ ...opp, opportunityName: '寵物鮮食市場（修正版）' })).not.toBe(fp1);
+    // 上游改模板 → 指紋不同
+    expect(upstreamFingerprintOf({ ...opp, template1: { insights: 'y' } })).not.toBe(fp1);
+    // normalize 只留上游欄位
+    expect(Object.keys(normalizeUpstreamFields(opp))).not.toContain('somethingLocal');
+    // 承接文件帶初始指紋
+    const doc = opportunityDocFromHandoff(opp, 0);
+    expect(doc.upstreamFingerprint).toBe(fp1);
+    expect(doc.staleUpstream).toBe(null);
+  });
+
+  test('approxJsonBytes：以 UTF-8 位元組計（中文 3 bytes/字），供 1MiB 護欄用', () => {
+    expect(approxJsonBytes({ a: 1 })).toBe(JSON.stringify({ a: 1 }).length);
+    const cn = { t: '中文' };
+    expect(approxJsonBytes(cn)).toBeGreaterThan(JSON.stringify(cn).length); // 多位元組比 length 大
   });
 
   test('buildEvalHandoffSnapshot：凍結方案模板內容與檢查結果（交付第五堂）', () => {

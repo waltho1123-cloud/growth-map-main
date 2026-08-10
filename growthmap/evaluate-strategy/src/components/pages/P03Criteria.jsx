@@ -1,10 +1,12 @@
 import { useProjectStore } from '../../store/useProjectStore';
-import { updateProject, addSubDoc, updateSubDoc } from '../../lib/db';
+import { updateProject, setSubDoc, updateSubDoc } from '../../lib/db';
 import { DIMENSIONS, DEFAULT_ANCHORS } from '../../domain/criteria';
 import { fmtTime } from '../../lib/format';
 import { Section, Btn, Chip, TextInput, TextArea } from '../common/ui';
 
 // P-03 評估標準設定：四維定義（BCG 預設不可刪、可加註）＋量表錨點＋輪次＋核定
+// 寫入一律走 field-path（criteria.xxx.yyy），不整包覆寫——兩人並行編輯不同錨點
+// 不得互相蓋寫（對抗式審查 P2：stale 物件整包 updateDoc 的 lost-update）。
 export default function P03Criteria({ ctx }) {
   const project = useProjectStore((s) => s.project);
   const rounds = useProjectStore((s) => s.rounds);
@@ -16,20 +18,31 @@ export default function P03Criteria({ ctx }) {
   const canApprove = ctx.editable && (ctx.role === 'owner' || ctx.role === 'facilitator');
   const openRound = rounds.find((r) => r.status === 'open');
 
-  const patchCriteria = (patch) => updateProject(project.id, { criteria: { ...criteria, ...patch } });
+  const patchField = (path, value) => updateProject(project.id, { [`criteria.${path}`]: value });
+
+  // 輪次文件以輪次號為 docId（firestore.rules 的 score 規則靠它查輪次狀態）
+  const createRound = (n) => setSubDoc(project.id, 'rounds', String(n), {
+    n, status: 'open', createdAt: Date.now(), createdBy: ctx.user.uid,
+  });
 
   const approve = async () => {
-    await patchCriteria({ approved: true, approvedBy: ctx.user.uid, approvedAt: Date.now() });
-    if (rounds.length === 0) {
-      await addSubDoc(project.id, 'rounds', { n: 1, status: 'open', createdAt: Date.now(), createdBy: ctx.user.uid });
-    }
+    await updateProject(project.id, {
+      'criteria.approved': true,
+      'criteria.approvedBy': ctx.user.uid,
+      'criteria.approvedAt': Date.now(),
+    });
+    if (rounds.length === 0) await createRound(1);
   };
 
   const newRound = async () => {
     // 開新輪次＝解鎖標準修改；既有輪次關閉、分數保留供比較（P-03 互動規格）
     if (openRound) await updateSubDoc(project.id, 'rounds', openRound.id, { status: 'closed', closedAt: Date.now() });
-    await addSubDoc(project.id, 'rounds', { n: rounds.length + 1, status: 'open', createdAt: Date.now(), createdBy: ctx.user.uid });
-    await patchCriteria({ approved: false, approvedBy: null, approvedAt: null });
+    await createRound((rounds.at(-1)?.n || 0) + 1);
+    await updateProject(project.id, {
+      'criteria.approved': false,
+      'criteria.approvedBy': null,
+      'criteria.approvedAt': null,
+    });
   };
 
   return (
@@ -57,7 +70,7 @@ export default function P03Criteria({ ctx }) {
             <p className="mb-3 text-xs leading-relaxed text-slate-500">{d.points}</p>
             <label className="mb-1 block text-xs text-slate-500">本公司加註（選填）</label>
             <TextArea rows={2} disabled={disabled} value={criteria.annotations?.[d.key] || ''}
-              onCommit={(v) => patchCriteria({ annotations: { ...criteria.annotations, [d.key]: v } })}
+              onCommit={(v) => patchField(`annotations.${d.key}`, v)}
               placeholder="用自家語言補充這一維在本事業的判讀重點…" />
 
             {/* 區 2 量表錨點 */}
@@ -66,14 +79,12 @@ export default function P03Criteria({ ctx }) {
                 <div key={score} className="flex items-center gap-2">
                   <span className="w-6 shrink-0 text-center text-xs font-bold text-indigo-600">{score}</span>
                   <TextInput disabled={disabled} value={criteria.anchors?.[d.key]?.[score] || ''}
-                    onCommit={(v) => patchCriteria({
-                      anchors: { ...criteria.anchors, [d.key]: { ...criteria.anchors?.[d.key], [score]: v } },
-                    })} />
+                    onCommit={(v) => patchField(`anchors.${d.key}.${score}`, v)} />
                 </div>
               ))}
               {!disabled && (
                 <div className="pt-1 text-right">
-                  <Btn kind="ghost" onClick={() => patchCriteria({ anchors: { ...criteria.anchors, [d.key]: { ...DEFAULT_ANCHORS } } })}>
+                  <Btn kind="ghost" onClick={() => patchField(`anchors.${d.key}`, { ...DEFAULT_ANCHORS })}>
                     套用 BCG 預設
                   </Btn>
                 </div>
@@ -105,21 +116,19 @@ export default function P03Criteria({ ctx }) {
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" disabled={disabled} checked={!!criteria.weighting?.enabled}
-                onChange={(e) => patchCriteria({ weighting: { ...criteria.weighting, enabled: e.target.checked } })} />
+                onChange={(e) => patchField('weighting.enabled', e.target.checked)} />
               啟用四維加權（啟用需填理由，寫入專案紀錄）
             </label>
             {criteria.weighting?.enabled && (
               <div className="mt-2 space-y-2">
                 <TextInput disabled={disabled} value={criteria.weighting?.reason || ''} placeholder="啟用理由（必填）"
-                  onCommit={(v) => patchCriteria({ weighting: { ...criteria.weighting, reason: v } })} />
+                  onCommit={(v) => patchField('weighting.reason', v)} />
                 <div className="grid grid-cols-4 gap-1">
                   {DIMENSIONS.map((d) => (
                     <div key={d.key}>
                       <div className="text-center text-[10px] text-slate-400">{d.name.slice(0, 4)}</div>
                       <TextInput disabled={disabled} value={String(criteria.weighting?.weights?.[d.key] ?? 25)}
-                        onCommit={(v) => patchCriteria({
-                          weighting: { ...criteria.weighting, weights: { ...criteria.weighting?.weights, [d.key]: Number(v) || 0 } },
-                        })} />
+                        onCommit={(v) => patchField(`weighting.weights.${d.key}`, Number(v) || 0)} />
                     </div>
                   ))}
                 </div>

@@ -11,27 +11,31 @@ service cloud.firestore {
     }
 
     // ── 第四堂（evaluate-strategy）多人共享評估專案 ──────────────────────────
-    // 成員制：memberUids 陣列是唯一存取閘門；members[uid].role 決定可否編輯。
-    // 角色語意：owner／facilitator／member 可編輯；coach 規則層強制唯讀（PRD §7.7）。
-    // 其餘角色細分（誰能核定、誰只能評分）屬 UI 層，內部單租戶工具刻意不下沉到規則。
+    // 授權邊界（2026-08-10 對抗式審查後裁定）：
+    //   規則層強制：成員資格（memberUids）、membership 欄位 owner-only、邀請欄位
+    //   owner/facilitator、coach 全面唯讀、scores 一人一票綁 docId＋輪次開放＋提交鎖定、
+    //   rounds 主持人限定、handoffs owner-only＋不可變。
+    //   刻意不下沉：業務子集合（opportunities/plays/assumptions）的 schema 與數值
+    //   完整性——本系統定位為 trusted-editor 內部工具（單租戶，成員即受信任的資料
+    //   生產者）；財務數字與 CHK 判定在前端計算，防的是「誤操作」不是「惡意成員」。
     match /evalProjects/{pid} {
       function isSignedIn() { return request.auth != null; }
       function isMember() { return isSignedIn() && request.auth.uid in resource.data.memberUids; }
       function myRole() { return resource.data.members[request.auth.uid].role; }
       function isEditor() { return isMember() && myRole() != 'coach'; }
       function isOwner() { return isMember() && myRole() == 'owner'; }
-      // email 邀請自助加入：受邀者只能把「自己」加進成員，且只能動成員/邀請欄位，
-      // 角色以邀請時登錄的 inviteRoles[email] 為準（不能自封 owner）。
-      function isSelfJoin() {
-        return isSignedIn()
-          && request.auth.token.email in resource.data.invitedEmails
-          && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
-          && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['memberUids', 'members', 'invitedEmails', 'inviteRoles'])
-          && request.resource.data.members.diff(resource.data.members).affectedKeys()
-               .hasOnly([request.auth.uid])
-          && request.resource.data.members[request.auth.uid].role
-               == resource.data.inviteRoles[request.auth.token.email];
+      function isFacil() { return isMember() && (myRole() == 'owner' || myRole() == 'facilitator'); }
+
+      // membership 欄位（members/memberUids）只有 owner 能動——一般成員不得自我提權
+      // 或移除他人（Codex P1：member 把自己升 owner、鎖走專案）
+      function membershipChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['members', 'memberUids']);
+      }
+      // 邀請欄位（invitedEmails/inviteRoles）owner 或 facilitator 可動
+      function invitesChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['invitedEmails', 'inviteRoles']);
       }
 
       // 受邀者（尚非成員）可讀專案文件——自助加入需要讀到現有成員陣列；
@@ -40,37 +44,101 @@ service cloud.firestore {
         return isSignedIn() && request.auth.token.email in resource.data.invitedEmails;
       }
 
-      // 建立者必須把自己登記為唯一成員＋owner（防止代建或冒名掛人）
+      // email 邀請自助加入：受邀者只能「把自己加進成員＋消耗自己的邀請」，
+      // 角色以邀請時登錄的 inviteRoles[email] 為準（不能自封 owner），
+      // 且不得增改任何其他人的邀請（Codex P1：同筆 update 夾帶第二個 owner 邀請）。
+      function isSelfJoin() {
+        return isSignedIn()
+          && request.auth.token.email in resource.data.invitedEmails
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['memberUids', 'members', 'invitedEmails', 'inviteRoles'])
+          && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+          && request.resource.data.members.diff(resource.data.members).affectedKeys()
+               .hasOnly([request.auth.uid])
+          && request.resource.data.members[request.auth.uid].role
+               == resource.data.inviteRoles[request.auth.token.email]
+          // 邀請清單只能剛好移除自己的 email；inviteRoles 只能動自己那格且必須移除
+          && request.resource.data.invitedEmails
+               == resource.data.invitedEmails.removeAll([request.auth.token.email])
+          && request.resource.data.inviteRoles.diff(resource.data.inviteRoles).affectedKeys()
+               .hasOnly([request.auth.token.email])
+          && !(request.auth.token.email in request.resource.data.inviteRoles);
+      }
+
+      // 建立者必須把自己登記為唯一成員＋owner，且邀請清單從空開始
       allow create: if isSignedIn()
         && request.resource.data.memberUids == [request.auth.uid]
-        && request.resource.data.members[request.auth.uid].role == 'owner';
+        && request.resource.data.members[request.auth.uid].role == 'owner'
+        && request.resource.data.invitedEmails is list
+        && request.resource.data.invitedEmails.size() == 0;
       allow read: if isMember() || isInvited();
-      allow update: if isEditor() || isSelfJoin();
+      allow update: if isSelfJoin()
+        || isOwner()
+        || (isEditor() && !membershipChanged() && (!invitesChanged() || isFacil()));
       allow delete: if isOwner();
 
-      // 子集合共用：成員可讀；一般業務子集合由可編輯角色寫入
+      // ── 子集合 ────────────────────────────────────────────────────────────
       function projData() { return get(/databases/$(database)/documents/evalProjects/$(pid)).data; }
       function parentMember() { return isSignedIn() && request.auth.uid in projData().memberUids; }
-      function parentEditor() { return parentMember() && projData().members[request.auth.uid].role != 'coach'; }
+      function parentRole() { return projData().members[request.auth.uid].role; }
+      function parentEditor() { return parentMember() && parentRole() != 'coach'; }
+      function parentFacil() { return parentMember() && (parentRole() == 'owner' || parentRole() == 'facilitator'); }
 
+      // 業務子集合（trusted-editor 邊界，見上方裁定）：成員可讀、非 coach 可寫。
+      // rounds／scores／handoffs 各有更嚴的專屬規則，不走這條泛用寫入。
       match /{sub}/{docId} {
         allow read: if parentMember()
           && sub in ['opportunities', 'rounds', 'plays', 'assumptions', 'scores', 'handoffs'];
-        // scores／handoffs 各有更嚴的專屬規則，不走這條泛用寫入
         allow write: if parentEditor()
-          && sub in ['opportunities', 'rounds', 'plays', 'assumptions'];
+          && sub in ['opportunities', 'plays', 'assumptions'];
       }
 
-      // 評分：每位評分者只能寫自己的評分文件（scorerUid 綁定本人）
+      // 輪次：docId 即輪次號（score 規則靠它查輪次狀態）；生命週期由主持人/負責人控制
+      match /rounds/{roundId} {
+        allow create, update: if parentFacil()
+          && request.resource.data.n is int
+          && string(request.resource.data.n) == roundId;
+        allow delete: if false;
+      }
+
+      // 評分：一人一票——docId 綁 {oppId}__r{round}__{uid}、scorerUid 綁本人、
+      // 輪次必須開放、提交後鎖定（僅主持人可解鎖，且只能動 submitted 旗標）
       match /scores/{scoreId} {
-        allow create, update: if parentEditor()
-          && request.resource.data.scorerUid == request.auth.uid;
-        allow delete: if parentEditor() && resource.data.scorerUid == request.auth.uid;
+        function roundOpen(roundStr) {
+          return get(/databases/$(database)/documents/evalProjects/$(pid)/rounds/$(roundStr)).data.status == 'open';
+        }
+        allow create: if parentEditor()
+          && request.resource.data.scorerUid == request.auth.uid
+          && scoreId == request.resource.data.oppId + '__r' + string(request.resource.data.round) + '__' + request.auth.uid
+          && roundOpen(string(request.resource.data.round));
+        allow update: if
+          // 本人編輯自己的草稿（輪次開放、尚未提交；把 submitted 設為 true 即提交）
+          (parentEditor()
+            && resource.data.scorerUid == request.auth.uid
+            && request.resource.data.scorerUid == request.auth.uid
+            && request.resource.data.oppId == resource.data.oppId
+            && request.resource.data.round == resource.data.round
+            && resource.data.submitted != true
+            && roundOpen(string(resource.data.round)))
+          // 主持人解鎖：只能把 submitted 改回 false，不得動分數與依據
+          || (parentFacil()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submitted', 'updatedAt'])
+            && request.resource.data.submitted == false
+            && roundOpen(string(resource.data.round)));
+        allow delete: if parentEditor()
+          && resource.data.scorerUid == request.auth.uid
+          && roundOpen(string(resource.data.round));
       }
 
-      // 交付快照：不可變——只能建立，禁止改寫與刪除（PRD FR-11-07）
+      // 交付快照：只有 owner（R-LEAD 核定，CFM-05）能建立；docId 綁版本號；
+      // 建立後不可改寫、不可刪除（FR-11-07）
       match /handoffs/{version} {
-        allow create: if parentEditor();
+        allow create: if parentRole() == 'owner'
+          && request.resource.data.version is int
+          && request.resource.data.version > 0
+          && version == string(request.resource.data.version)
+          && request.resource.data.frozenAt is int
+          && request.resource.data.plays is list;
         allow update, delete: if false;
       }
     }

@@ -19,8 +19,13 @@ export default function SettingsPage({ ctx }) {
   const s = project.settings || {};
   const disabled = !ctx.editable;
   const isOwner = ctx.role === 'owner';
+  const canInvite = ctx.role === 'owner' || ctx.role === 'facilitator'; // 與 rules 的邀請欄位權限對齊
 
-  const patchSettings = (patch) => updateProject(project.id, { settings: { ...s, ...patch } });
+  // field-path 寫入（settings.xxx），不整包覆寫——防兩人並行改不同設定互相蓋寫
+  const patchSettings = (patch) => updateProject(
+    project.id,
+    Object.fromEntries(Object.entries(patch).map(([k, v]) => [`settings.${k}`, v]))
+  );
 
   // PD-04：年期變更同步遷移所有方案財務表（截斷/補零）
   const changeYears = async (years) => {
@@ -29,10 +34,11 @@ export default function SettingsPage({ ctx }) {
     await Promise.all(plays.map((p) =>
       updateSubDoc(project.id, 'plays', p.id, { 'bizplan.fin': resizeFin(p.bizplan?.fin, y) })
     ));
-    // 綜效陣列同步年期
+    // 綜效陣列同步年期（field-path，不動 beneficiary/note）
     const fit = (arr) => Array.from({ length: y }, (_, i) => Number(arr?.[i]) || 0);
     await updateProject(project.id, {
-      synergies: { ...(project.synergies || {}), revenue: fit(project.synergies?.revenue), cost: fit(project.synergies?.cost) },
+      'synergies.revenue': fit(project.synergies?.revenue),
+      'synergies.cost': fit(project.synergies?.cost),
     });
   };
 
@@ -150,13 +156,13 @@ export default function SettingsPage({ ctx }) {
             {(project.invitedEmails || []).map((e) => (
               <div key={e} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-600">
                 <span>{e} <span className="text-xs text-slate-400">（{ROLES[project.inviteRoles?.[e]]?.label || '成員'}）</span></span>
-                {ctx.editable && <Btn kind="ghost" onClick={() => revokeInvite(project, e)}>撤回</Btn>}
+                {canInvite && <Btn kind="ghost" onClick={() => revokeInvite(project, e)}>撤回</Btn>}
               </div>
             ))}
           </div>
         )}
 
-        {ctx.editable && (
+        {canInvite && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input
               value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}

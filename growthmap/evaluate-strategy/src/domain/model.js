@@ -74,6 +74,28 @@ export function createProjectDoc({ name, uid, email, displayName }) {
 }
 
 // ── 機會點（opportunities 子集合）────────────────────────────────────────────
+
+// 「上游欄位」＝承接自第三堂、可能被上游修正版更新的欄位集合。
+// 重同步時以此正規化形＋指紋比對，偵測上游修正（對抗式審查 P2：
+// 冪等不能只防覆寫本地補件，也要能看見上游改了什麼）。
+export function normalizeUpstreamFields(handoffOpp) {
+  return {
+    opportunityName: handoffOpp.opportunityName || '',
+    estRevenue: handoffOpp.estRevenue || 0,
+    currency: handoffOpp.currency || 'TWD',
+    sourceToolCodes: handoffOpp.sourceToolCodes || [],
+    sourceToolNames: handoffOpp.sourceToolNames || [],
+    aiScore: handoffOpp.aiScore ?? null,
+    template1: handoffOpp.template1 || null,
+    template2: handoffOpp.template2 || null,
+    template3: handoffOpp.template3 || null,
+  };
+}
+
+export function upstreamFingerprintOf(handoffOpp) {
+  return contentFingerprint(normalizeUpstreamFields(handoffOpp));
+}
+
 export function opportunityDocFromHandoff(handoffOpp, index) {
   const doc = {
     schemaVersion: SCHEMA_VERSION,
@@ -98,6 +120,10 @@ export function opportunityDocFromHandoff(handoffOpp, index) {
     shortlist: { included: false, reason: '', decidedBy: null, decidedAt: null },
     excluded: { flag: false, reason: '', decidedBy: null, decidedAt: null }, // 不再列為優先（保留池，不刪除）
     createdAt: Date.now(),
+    // 上游修正偵測（重同步用）
+    upstreamFingerprint: upstreamFingerprintOf(handoffOpp),
+    staleUpstream: null,   // { at } 上游已修正、待人工處置
+    upstreamPending: null, // 上游修正後的欄位快照（「套用上游新值」的來源）
   };
   doc.qualityFlags = computeOpportunityFlags(doc);
   return doc;
@@ -237,6 +263,18 @@ export function createAssumptionDoc({ text, targetRef, targetLabel, source, conf
     authorName: authorName || '',
     createdAt: Date.now(),
   };
+}
+
+// ── 文件大小護欄 ─────────────────────────────────────────────────────────────
+// Firestore 單文件上限 1 MiB。play 文件（templates+bizplan 同倉）與交付快照
+// （複製全部方案內容）理論上可能撞上限——凍結/儲存前估算並擋下，
+// 給明確錯誤而非讓 Firestore 寫入炸出難懂的 INVALID_ARGUMENT。
+export const FIRESTORE_DOC_SOFT_LIMIT = 900_000; // bytes，留 ~12% 餘裕
+
+export function approxJsonBytes(obj) {
+  const str = JSON.stringify(obj ?? null);
+  // TextEncoder 以 UTF-8 計位元組（中文 3 bytes/字），比 str.length 準確
+  return new TextEncoder().encode(str).length;
 }
 
 // ── 交付快照（handoffs 子集合；建立後不可變）──────────────────────────────────

@@ -29,9 +29,16 @@ export default function TopBar({ ctx, onExit }) {
         className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50">
         ⌂ 專案
       </button>
+      <div className="hidden shrink-0 leading-tight lg:block">
+        <div className="text-sm font-bold tracking-tight text-slate-900">
+          <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
+        </div>
+        <div className="text-[11px] leading-none text-slate-400">評估策略 (Evaluate)</div>
+      </div>
+      <div className="hidden h-7 w-px bg-slate-200 lg:block" />
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold text-slate-900">{project?.name}</div>
-        <div className="text-[11px] leading-none text-slate-400">第四堂 · 評估策略 Evaluate</div>
+        <div className="text-[11px] leading-none text-slate-400 lg:hidden">第四堂 · 評估策略 Evaluate</div>
       </div>
 
       <div className="ml-auto flex items-center gap-3">

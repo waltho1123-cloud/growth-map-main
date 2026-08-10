@@ -45,8 +45,11 @@ export default function LoginGate() {
         <span>返回藍圖</span>
       </a>
       <div className="text-center">
-        <div className="mb-1 text-xs font-semibold tracking-widest text-indigo-600">GROWTH BLUEPRINT · 第四堂</div>
-        <h1 className="text-2xl font-bold text-slate-900">評估策略工作台</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">評估策略 (Evaluate)</p>
+        <h2 className="mt-4 text-lg font-bold text-slate-900">評估策略工作台</h2>
         <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-600">
           從 7–10 個機會長清單，收斂出 1–3 個帶高階商業計劃、疊加後可達成加速增長目標的策略方案。
           這是多人協作單元，請先登入。

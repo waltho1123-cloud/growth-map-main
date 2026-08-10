@@ -55,9 +55,12 @@ export default function ProjectPicker({ user, onSelect }) {
             <span>←</span>
             <span>返回藍圖</span>
           </a>
-          <div className="text-xs font-semibold tracking-widest text-indigo-600">GROWTH BLUEPRINT · 第四堂 評估策略</div>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">選擇評估專案</h1>
-          <p className="mt-1 text-sm text-slate-600">{user.displayName || user.email}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <span className="text-[#00A651]">BW</span> 成長藍圖實作平台
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">評估策略 (Evaluate)</p>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">選擇評估專案</h2>
+          <p className="mt-0.5 text-sm text-slate-600">{user.displayName || user.email}</p>
         </div>
         <Btn onClick={() => signOut()}>登出</Btn>
       </div>

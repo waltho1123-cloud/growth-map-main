@@ -5,7 +5,7 @@ import { defaultDividers, quadrantOf } from '../../domain/matrix';
 import { checkGr3 } from '../../domain/guards';
 import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
-import { Section, Btn, Chip, EmptyState, Modal, TextArea } from '../common/ui';
+import { Section, Btn, Chip, EmptyState, Modal, TextArea, NumInput } from '../common/ui';
 
 // P-05 優先排序矩陣與短名單：相對判讀、可拖曳象限線（PD-02）、GR-3、短名單決策
 const PAD = 46;
@@ -88,6 +88,17 @@ export default function P05Matrix({ ctx }) {
     setDragDividers(next);
   };
 
+  // 表單/鍵盤路徑寫入分隔線（與拖曳同一個 matrixDividers；夾在量表值域內）
+  const setDividerValue = (axis, v) => {
+    const clamped = Math.round(Math.min(5, Math.max(0.5, Number(v) || 3)) * 10) / 10;
+    updateProject(project.id, {
+      matrixDividers: {
+        x: axis === 'x' ? clamped : Math.round(dividers.x * 10) / 10,
+        y: axis === 'y' ? clamped : Math.round(dividers.y * 10) / 10,
+      },
+    });
+  };
+
   const onPointerUp = () => {
     if (dragAxis && dragDividers && ctx.editable) {
       updateProject(project.id, { matrixDividers: { x: Math.round(dragDividers.x * 10) / 10, y: Math.round(dragDividers.y * 10) / 10 } });
@@ -144,6 +155,22 @@ export default function P05Matrix({ ctx }) {
                 {label}
               </button>
             ))}
+          </div>
+          {/* 拖曳的鍵盤／表單替代路徑（PRD 7.9）：number input 原生支援方向鍵微調 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-600">分隔線</span>
+            <span className="text-[11px] text-slate-600">X</span>
+            <div className="w-16">
+              <NumInput value={Math.round(dividers.x * 10) / 10} disabled={!ctx.editable}
+                ariaLabel="執行難易度分隔線位置（0.5 到 5，可用方向鍵調整）"
+                onCommit={(v) => setDividerValue('x', v)} />
+            </div>
+            <span className="text-[11px] text-slate-600">Y</span>
+            <div className="w-16">
+              <NumInput value={Math.round(dividers.y * 10) / 10} disabled={!ctx.editable}
+                ariaLabel="機會吸引力分隔線位置（0.5 到 5，可用方向鍵調整）"
+                onCommit={(v) => setDividerValue('y', v)} />
+            </div>
           </div>
           {ctx.editable && project?.matrixDividers && (
             <Btn kind="ghost" onClick={() => updateProject(project.id, { matrixDividers: null })}>重設分隔線</Btn>

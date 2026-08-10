@@ -51,6 +51,10 @@ export default function ProjectPicker({ user, onSelect }) {
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-8 flex items-start justify-between">
         <div>
+          <a href="/" className="mb-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 -ml-2 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-800">
+            <span>←</span>
+            <span>返回藍圖</span>
+          </a>
           <div className="text-xs font-semibold tracking-widest text-indigo-600">GROWTH BLUEPRINT · 第四堂 評估策略</div>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">選擇評估專案</h1>
           <p className="mt-1 text-sm text-slate-600">{user.displayName || user.email}</p>

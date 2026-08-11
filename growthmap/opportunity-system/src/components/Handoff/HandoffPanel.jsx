@@ -31,8 +31,7 @@ export default function HandoffPanel() {
     const version = snapshots.length + 1;
     const snap = buildHandoffSnapshot(state, version);
     dispatch({ type: 'ADD_SNAPSHOT', payload: snap });
-    downloadJson(`growth-longlist-v${version}.json`, snap);
-    toast.success(`已交付第四堂（v${version}）：快照已凍結並下載 JSON`);
+    toast.success(`已交付第四堂（v${version}）：快照已凍結，可至第四堂承接`);
   };
 
   const handleDownload = (snap) => downloadJson(`growth-longlist-v${snap.version}.json`, snap);
@@ -48,7 +47,7 @@ export default function HandoffPanel() {
             <span>←</span><span>返回長清單</span>
           </button>
           <h1 className="text-2xl font-bold tracking-tight text-gray-800">交付輸出</h1>
-          <p className="text-gray-500 mt-1 text-sm">凍結長清單版本並輸出 JSON 給第四堂評估（已交付快照不可變，續編產生新版本）。</p>
+          <p className="text-gray-500 mt-1 text-sm">凍結長清單版本供第四堂承接（已交付快照不可變，續編產生新版本；如需本地副本可於下方逐版下載）。</p>
         </div>
       </header>
 
@@ -91,7 +90,7 @@ export default function HandoffPanel() {
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            交付第四堂並下載 JSON
+            交付第四堂
           </button>
         </div>
 

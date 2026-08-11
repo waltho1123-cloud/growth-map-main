@@ -97,7 +97,17 @@ export default function HandoffPanel() {
 
         {/* 已交付版本（不可變快照） */}
         <div className="glass-card rounded-xl p-5">
-          <h3 className="text-sm font-bold text-gray-800 mb-3">已交付版本</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-800">已交付版本</h3>
+            {snapshots.length > 0 && (
+              <a
+                href="/growthmap/evaluate-strategy/dist/"
+                className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 transition-colors"
+              >
+                前往第四堂評估 →
+              </a>
+            )}
+          </div>
           {snapshots.length === 0 ? (
             <p className="text-sm text-gray-400">尚無交付紀錄。</p>
           ) : (

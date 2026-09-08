@@ -1,8 +1,8 @@
 // Firebase Auth 管理操作（Identity Toolkit REST，服務帳號 OAuth token）。
 // 管理員從 pages/admin.html 建帳號、設密碼、停用／啟用、開關登入方式——學員零 Firebase 接觸。
 // 管理員建立或設密碼的帳號一律 emailVerified=true（管理員背書），讓 firestore.rules 與
-// AI 白名單的 email_verified 守門直接放行，不必寄驗證信。刪除帳號刻意不提供
-//（Firestore 資料會成孤兒；要刪走 Firebase Console）。
+// AI 白名單的 email_verified 守門直接放行，不必寄驗證信。刪除帳號（2026-09-09 補）：
+// Auth 帳號刪除在此；Firestore 連帶清理在 admin-firestore.js（目錄項一定刪、工作簿資料選刪）。
 
 const IDP = 'https://identitytoolkit.googleapis.com';
 
@@ -140,6 +140,14 @@ export function createIdentityToolkitClient({ projectId, getAccessToken, fetchIm
       const json = await call('POST', '/accounts:lookup', { email: [email] });
       const u = (json.users || [])[0];
       return u ? toAdminView(u) : null;
+    },
+    async lookupByUid(uid) {
+      const json = await call('POST', '/accounts:lookup', { localId: [uid] });
+      const u = (json.users || [])[0];
+      return u ? toAdminView(u) : null;
+    },
+    async deleteAccount(uid) {
+      await call('POST', '/accounts:delete', { localId: uid });
     },
     async getAuthConfig() {
       return summarizeAuthConfig(await call('GET', '/config', undefined, { admin: true }));

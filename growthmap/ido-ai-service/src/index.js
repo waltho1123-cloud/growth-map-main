@@ -14,6 +14,7 @@ import {
   ValidationError, AdminUpstreamError,
 } from './admin-accounts.js';
 import { checkPlatformAdmin } from './admin-guard.js';
+import { createFirestoreAdminClient } from './admin-firestore.js';
 
 const app = new Hono();
 
@@ -23,11 +24,14 @@ const allowlist = parseAllowlist(process.env);
 
 // 管理端點的特權層（做法 A）：服務帳號未設定＝/api/admin/* 回 503，其餘功能照常
 const serviceAccount = parseServiceAccount(config.serviceAccountJson);
+const adminTokenProvider = serviceAccount ? createAdminTokenProvider(serviceAccount) : null;
+const adminProjectId = config.firebaseProjectId || serviceAccount?.projectId || '';
 const adminClient = serviceAccount
-  ? createIdentityToolkitClient({
-      projectId: config.firebaseProjectId || serviceAccount.projectId,
-      getAccessToken: createAdminTokenProvider(serviceAccount).getAccessToken,
-    })
+  ? createIdentityToolkitClient({ projectId: adminProjectId, getAccessToken: adminTokenProvider.getAccessToken })
+  : null;
+// 刪除帳號的 Firestore 連帶清理（同一把服務帳號、同一個 token 快取）
+const firestoreAdmin = serviceAccount
+  ? createFirestoreAdminClient({ projectId: adminProjectId, getAccessToken: adminTokenProvider.getAccessToken })
   : null;
 if (serviceAccount) console.log(`[admin] 服務帳號已載入：${serviceAccount.clientEmail}`);
 else console.log('[admin] 未設定 FIREBASE_SERVICE_ACCOUNT_JSON——/api/admin/* 停用（503）');
@@ -194,6 +198,40 @@ app.post('/api/admin/accounts/:uid/disabled', async (c) => {
     await adminClient.setDisabled(uid, body.disabled);
     console.log('[admin]', c.get('user').email, body.disabled ? 'disable' : 'enable', uid);
     return c.json({ ok: true });
+  } catch (e) {
+    return adminError(c, e);
+  }
+});
+
+// 刪除帳號：不能刪自己；請求須重打目標 email（confirmEmail）防誤點；
+// Auth 先刪（成功後才動 Firestore，避免「資料刪了帳號還在」）；platformUsers 目錄項一定刪，
+// users/{uid} 工作簿資料只有 purgeData=true 才遞迴刪。Firestore 清理失敗不回滾 Auth 刪除，
+// 以 purge.error 回報讓管理員知道有殘留。第四堂 evalProjects 的成員資格不動（由專案 owner 處理）。
+app.post('/api/admin/accounts/:uid/delete', async (c) => {
+  try {
+    const uid = validateUid(c.req.param('uid'));
+    const body = await readJson(c);
+    const caller = c.get('user');
+    if (uid === caller.uid) throw new ValidationError('不能刪除自己的帳號');
+    const target = await adminClient.lookupByUid(uid);
+    if (!target) throw new ValidationError('找不到此帳號');
+    const confirmEmail = String(body.confirmEmail || '').trim().toLowerCase();
+    if (!target.email || confirmEmail !== target.email.toLowerCase()) {
+      throw new ValidationError('確認用的 email 與目標帳號不符');
+    }
+    const purgeData = body.purgeData === true;
+    await adminClient.deleteAccount(uid);
+    const purge = { platformProfile: false, userDocs: 0 };
+    try {
+      await firestoreAdmin.deleteDocument(`platformUsers/${uid}`);
+      purge.platformProfile = true;
+      if (purgeData) purge.userDocs = await firestoreAdmin.purgeUserData(uid);
+    } catch (e) {
+      purge.error = String(e?.message || e);
+      console.error('[admin] delete: Firestore 清理失敗', uid, purge.error);
+    }
+    console.log('[admin]', caller.email, 'delete', target.email, uid, JSON.stringify(purge));
+    return c.json({ ok: true, deleted: { uid, email: target.email }, purge });
   } catch (e) {
     return adminError(c, e);
   }

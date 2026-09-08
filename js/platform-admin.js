@@ -224,12 +224,16 @@ function renderAccounts() {
         <button class="btn-small" data-pw="${esc(a.uid)}">設定密碼</button>
         ${a.uid === me?.uid
           ? '<span class="muted">（自己）</span>'
-          : `<button class="btn-small ${a.disabled ? '' : 'btn-danger'}" data-toggle="${esc(a.uid)}" data-disabled="${a.disabled ? '1' : ''}">${a.disabled ? '啟用' : '停用'}</button>`}
+          : `<button class="btn-small ${a.disabled ? '' : 'btn-danger'}" data-toggle="${esc(a.uid)}" data-disabled="${a.disabled ? '1' : ''}">${a.disabled ? '啟用' : '停用'}</button>
+             <button class="btn-small btn-danger" data-del="${esc(a.uid)}">刪除</button>`}
       </td>
     </tr>`).join('');
 
   tbody.querySelectorAll('button[data-pw]').forEach((btn) => {
     btn.onclick = () => openPasswordEditor(btn.dataset.pw);
+  });
+  tbody.querySelectorAll('button[data-del]').forEach((btn) => {
+    btn.onclick = () => openDeleteEditor(btn.dataset.del);
   });
   tbody.querySelectorAll('button[data-toggle]').forEach((btn) => {
     btn.onclick = async () => {
@@ -246,6 +250,49 @@ function renderAccounts() {
       }
     };
   });
+}
+
+// 刪除帳號：內嵌確認列——重打 email 才能送出；工作簿資料預設保留（勾選才連同刪除，不可復原）
+function openDeleteEditor(uid) {
+  document.querySelectorAll('tr.pw-row').forEach((r) => r.remove());
+  const row = document.querySelector(`tr[data-row="${CSS.escape(uid)}"]`);
+  const target = accounts.find((x) => x.uid === uid);
+  if (!row || !target) return;
+  const editor = document.createElement('tr');
+  editor.className = 'pw-row';
+  editor.innerHTML = `
+    <td colspan="6">
+      <div class="pw-editor del-editor">
+        <span>刪除 <b>${esc(target.email)}</b>：帳號將無法登入且不可復原。輸入該 email 確認：</span>
+        <input type="email" class="del-confirm" placeholder="${esc(target.email)}" autocomplete="off">
+        <label class="del-purge"><input type="checkbox" class="del-purge-box"> 同時刪除此帳號的工作簿資料（單元一～三雲端資料，不可復原）</label>
+        <button type="button" class="btn-small btn-danger del-save">確認刪除</button>
+        <button type="button" class="btn-small del-cancel">取消</button>
+        <span class="pw-msg muted"></span>
+      </div>
+    </td>`;
+  row.after(editor);
+  const input = editor.querySelector('.del-confirm');
+  const purgeBox = editor.querySelector('.del-purge-box');
+  const msg = editor.querySelector('.pw-msg');
+  editor.querySelector('.del-cancel').onclick = () => editor.remove();
+  editor.querySelector('.del-save').onclick = async () => {
+    const confirmEmail = input.value.trim().toLowerCase();
+    if (confirmEmail !== target.email.toLowerCase()) { msg.textContent = 'email 不符，未刪除'; return; }
+    const purgeData = purgeBox.checked;
+    if (purgeData && !window.confirm(`確定連同 ${target.email} 的工作簿資料一起刪除？此動作不可復原。`)) return;
+    msg.textContent = '刪除中…';
+    try {
+      const r = await api(`/api/admin/accounts/${uid}/delete`, { method: 'POST', body: { confirmEmail, purgeData } });
+      const purge = r.purge || {};
+      $('create-msg').textContent = `已刪除 ${target.email}；工作簿資料：${purgeData ? `已刪除 ${purge.userDocs || 0} 份文件` : '保留'}`
+        + (purge.error ? `（Firestore 清理未完成：${purge.error}）` : '');
+      await loadAccounts();
+    } catch (e) {
+      msg.textContent = `失敗：${e.message}`;
+    }
+  };
+  input.focus();
 }
 
 function openPasswordEditor(uid) {

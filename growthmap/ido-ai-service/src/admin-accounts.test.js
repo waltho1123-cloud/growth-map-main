@@ -109,3 +109,17 @@ test('上游錯誤 → AdminUpstreamError（繁中訊息＋原始碼＋HTTP 狀�
     e instanceof AdminUpstreamError && e.status === 400 && e.upstream === 'EMAIL_EXISTS' && /已有帳號/.test(e.message)
   ));
 });
+
+test('lookupByUid／deleteAccount：lookup 帶 localId 陣列，delete 打 accounts:delete', async () => {
+  const { client, calls } = mockClient(({ url }) => (
+    url.endsWith('accounts:lookup')
+      ? { json: { users: [{ localId: 'u7', email: 'x@y.z', emailVerified: true }] } }
+      : { json: {} }
+  ));
+  const u = await client.lookupByUid('u7');
+  assert.equal(u.email, 'x@y.z');
+  assert.deepEqual(calls[0].body, { localId: ['u7'] });
+  await client.deleteAccount('u7');
+  assert.match(calls[1].url, /\/v1\/projects\/demo\/accounts:delete$/);
+  assert.deepEqual(calls[1].body, { localId: 'u7' });
+});

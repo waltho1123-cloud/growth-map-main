@@ -37,6 +37,9 @@
     tr.pw-row td { background: #f8fafc; }
     .pw-editor { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem; }
     .pw-editor input { border: 1px solid #cbd5e1; border-radius: 10px; padding: 6px 10px; font-size: .85rem; min-width: 200px; }
+    .del-editor { border-left: 3px solid #ef4444; padding-left: 10px; }
+    .del-purge { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: #b91c1c; }
+    .del-purge input { min-width: 0; }
     .row-blocked td { opacity: .65; }
     .btn, .btn-small { border: 0; cursor: pointer; border-radius: 10px; font-weight: 600; }
     .btn { background: #4338ca; color: #fff; padding: 10px 20px; font-size: .9rem; }
@@ -101,7 +104,7 @@
           </table>
         </div>
         <p id="accounts-err" class="err"></p>
-        <p class="note">「停用」＝無法登入（資料保留），與下方目錄的「封鎖」（可登入但禁寫）不同。刪除帳號請至 Firebase Console（Firestore 資料不會連帶刪除）。</p>
+        <p class="note">「停用」＝無法登入（資料保留），與下方目錄的「封鎖」（可登入但禁寫）不同。「刪除」需重打該 email 確認；預設保留該帳號的工作簿資料（勾選才一併清除，不可復原），活動目錄項會一起移除；第四堂專案的成員資格不會自動移除，請由專案 owner 在單元內處理。</p>
       </div>
 
       <div class="card" id="card-auth-config">

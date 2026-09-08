@@ -15,6 +15,7 @@ import {
 } from './admin-accounts.js';
 import { checkPlatformAdmin } from './admin-guard.js';
 import { createFirestoreAdminClient } from './admin-firestore.js';
+import { createKeyProbe } from './anthropic-probe.js';
 
 const app = new Hono();
 
@@ -35,6 +36,14 @@ const firestoreAdmin = serviceAccount
   : null;
 if (serviceAccount) console.log(`[admin] 服務帳號已載入：${serviceAccount.clientEmail}`);
 else console.log('[admin] 未設定 FIREBASE_SERVICE_ACCOUNT_JSON——/api/admin/* 停用（503）');
+
+// Anthropic 金鑰有效性：啟動探測一次並記 log；健康檢查回 apiKeyValid（1 小時快取）
+const keyProbe = createKeyProbe({ apiKey: config.anthropic.apiKey, baseURL: config.anthropic.baseURL });
+keyProbe.check().then((r) => {
+  if (r.valid === false) console.error(`[anthropic] API key 無效（HTTP ${r.status}）——線上 AI 功能全部會回 401/503，請到 Zeabur 更新 ANTHROPIC_API_KEY`);
+  else if (r.valid === null) console.warn('[anthropic] API key 探測未完成：', r.reason || `HTTP ${r.status}`);
+  else console.log('[anthropic] API key 有效');
+});
 
 if (config.requireAuth && !allowlistEnabled(allowlist)) {
   console.warn('[auth] 未設定 ALLOWED_EMAILS/ALLOWED_EMAIL_DOMAINS——任何有效 Firebase 登入都可呼叫 AI 端點（成本面未上鎖）');
@@ -108,7 +117,16 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-app.get('/', (c) => c.json({ ok: true, service: 'ido-ai-service', hasApiKey: hasApiKey(), adminConfigured: Boolean(adminClient) }));
+app.get('/', async (c) => {
+  const key = await keyProbe.check();
+  return c.json({
+    ok: true,
+    service: 'ido-ai-service',
+    hasApiKey: hasApiKey(),
+    apiKeyValid: key.valid, // true／false／null（探測未完成）
+    adminConfigured: Boolean(adminClient),
+  });
+});
 
 // ── 管理端點（做法 A，2026-09-08）：平台管理員從 pages/admin.html 管 Firebase 帳號 ──────────
 // 守門三層：(1) 有效 Firebase ID token（上方 auth 中介層）(2) email 已驗證且
@@ -314,6 +332,11 @@ app.post('/api/ai/tasks', async (c) => {
     return c.json({ taskCode: body.taskCode, state: 'draft', payload, confidence, model, usage });
   } catch (e) {
     console.error('[ai/tasks]', e?.status, e?.message);
+    // 上游 401/403＝伺服器金鑰無效或無權限：對使用者是「平台設定問題」，不要把原始 JSON 丟到畫面
+    if (e?.status === 401 || e?.status === 403) {
+      keyProbe.check({ force: true }).catch(() => {});
+      return c.json({ error: { code: 'IDO_AI_KEY_INVALID', message: 'AI 服務的金鑰無效或已失效，請聯絡平台管理員（Zeabur 後端 ANTHROPIC_API_KEY）' } }, 503);
+    }
     return c.json({ error: { code: 'IDO_AI_ERROR', message: String(e?.message || e) } }, 502);
   }
 });
@@ -356,7 +379,10 @@ app.post('/api/ai/coach', async (c) => {
       await stream.writeSSE({ event: 'coach.done', data: JSON.stringify({ ok: true, ...(stopReason === 'max_tokens' ? { truncated: true } : {}) }) });
     } catch (e) {
       console.error('[ai/coach]', e?.status, e?.message);
-      await stream.writeSSE({ event: 'coach.error', data: JSON.stringify({ message: String(e?.message || e) }) });
+      const message = (e?.status === 401 || e?.status === 403)
+        ? 'AI 服務的金鑰無效或已失效，請聯絡平台管理員'
+        : String(e?.message || e);
+      await stream.writeSSE({ event: 'coach.error', data: JSON.stringify({ message }) });
     }
   });
 });

@@ -145,7 +145,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 
 | 方法 | 路徑 | 用途 | 串流 |
 | --- | --- | --- | --- |
-| GET | `/` | 健康檢查 → `{ ok, service, hasApiKey }`（沒有 `/health` 路由） | — |
+| GET | `/` | 健康檢查 → `{ ok, service, hasApiKey, apiKeyValid, adminConfigured }`（`apiKeyValid` 以免費的 GET /v1/models 探測、1 小時快取：true／false／null；沒有 `/health` 路由） | — |
 | POST | `/api/ai/tasks` | AI-01 / AI-03 / AI-04（非串流任務） | 否 |
 | POST | `/api/ai/coach` | AI-07 教練對話 | SSE |
 | GET | `/api/admin/accounts` | 帳號清單 `{ accounts:[{uid,email,displayName,emailVerified,disabled,providers,createdAt,lastLoginAt}] }` | 否 |
@@ -171,6 +171,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | `IDO_EMAIL_UNVERIFIED` | 403 | email 在白名單但 token `email_verified` 非 true（email／密碼帳號尚未點驗證信） |
 | `IDO_RATE_LIMIT` | 429 | 超過 20/min |
 | `IDO_AI_NO_KEY` | 503 | 伺服器未設 `ANTHROPIC_API_KEY` |
+| `IDO_AI_KEY_INVALID` | 503 | 上游回 401/403：`ANTHROPIC_API_KEY` 無效或已撤銷（2026-09-09 事故：Zeabur 上的舊金鑰失效，健康檢查 `hasApiKey` 只驗有無設定所以看不出來）；同時強制重探 apiKeyValid |
 | `IDO_VALIDATION` / `IDO_VALIDATION_TASK` | 400 | JSON 解析失敗 / 未知任務 |
 | `IDO_AI_REFUSAL` | 400 | Claude 5 安全分類器拒絕（HTTP 200＋stop_reason refusal＋空 content，非上游錯誤） |
 | `IDO_AI_TRUNCATED` | 502 | 輸出達 max_tokens 截斷（adaptive thinking 與回覆共用上限） |

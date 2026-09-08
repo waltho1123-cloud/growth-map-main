@@ -6,8 +6,16 @@
 	# HTML 被舊分頁當字型/JS 消費會靜默損壞，且可能被快取毒化在資產 URL 底下。
 	@asset path_regexp \.(js|mjs|css|woff2?|ttf|otf|map|json|png|jpe?g|gif|svg|ico|webp|txt)$
 	handle @asset {
+		# 非 hashed 資產（portal 層 /js /css /data、字型穩定路徑）：每次重驗證（ETag，304 很便宜）。
+		# 2026-09-09 事故：沒有 Cache-Control 時瀏覽器依 Last-Modified 啟發式快取數天，
+		# 登入改版部署後首頁仍跑舊的 js/portal-auth.js（顯示 Google 按鈕）。
+		# 兩條 header 都帶互斥 matcher：Caddy 的 header 套用順序不等於書寫順序（2026-09-09 實測，
+		# 無 matcher 的那條會蓋掉 @hashed 的 immutable），不能靠「後寫的覆蓋」。
+		@unhashed {
+			not path_regexp ^/growthmap/.*\.(js|css|woff2?)$
+		}
+		header @unhashed Cache-Control "no-cache"
 		# hashed build 產物 — cache 1 年，僅限實際存在的檔案
-		# （ttf 走穩定路徑刻意不 immutable，靠 ETag 重驗證）
 		@hashed {
 			path_regexp ^/growthmap/.*\.(js|css|woff2?)$
 			file

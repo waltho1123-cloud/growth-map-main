@@ -16,6 +16,7 @@
     <!-- 由 portal.js 資料驅動渲染 -->
   </main>
   <script src="js/portal.js"></script>
-  <script type="module" src="js/portal-auth.js"></script>
+  <!-- ?v= 是一次性快取破壞（2026-09-09）：登入改版後瀏覽器仍啟發式快取舊模組；日後改動靠 Caddyfile 的 no-cache 即可 -->
+  <script type="module" src="js/portal-auth.js?v=20260909"></script>
 </body>
 </html>

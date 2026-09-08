@@ -37,11 +37,11 @@ favicon.ico，404 即部署迴歸，不再是可忽略例外**）、兩個 PDF �
 
 模擬兩台裝置並行編輯**不同 section**，驗證互不覆蓋（whole-doc LWW 年代會後寫全蓋）。
 
-> ⚠️ **Google OAuth 擋所有 CDP 控制的瀏覽器**（chromium 與 --browser=chrome 都會
-> signin/rejected，2026-08-10 實測）——本程序**必須由真人以真瀏覽器手動執行**，
-> Playwright 只能用於無登入的驗證。
+> 2026-09-08 起登入為 email／密碼：Playwright 可用測試帳號 `playwright-cli fill` 直接登入
+> （過去 Google OAuth 擋 CDP 瀏覽器、必須真人手動的限制已不存在）。測試帳號請在
+> Firebase Console → Authentication → Users 建立，勿用真實學員帳號。
 
-1. Chrome **一般視窗**開 staging 單元頁（aspiration 或 momentum）→ Google 登入。
+1. Chrome **一般視窗**開 staging 單元頁（aspiration 或 momentum）→ email／密碼登入。
 2. **無痕視窗**開同一網址 → 登入同一帳號（兩環境的 storage 完全隔離＝兩台裝置）。
 3. 視窗 A 改一個欄位；30 秒內視窗 B 改**另一個 section** 的欄位
    （aspiration：Part A vs Part B；momentum：驅動因子 vs 棘手挑戰——同 section
@@ -49,3 +49,28 @@ favicon.ico，404 即部署迴歸，不再是可忽略例外**）、兩個 PDF �
 4. 等 5 秒（debounce＋雲端確認），兩邊都重新整理。
 5. 驗收:兩邊同時看得到雙方的新值（四值俱存）、右上「已同步」穩定、
    無持續互寫（DevTools Network 的 firestore write 幾秒內停止——防 ping-pong 不變式）。
+
+## 登入表單 smoke（動到 packages/firebase、js/auth-ui.js、各單元 AuthWidget／LoginGate 時必跑）
+
+不需要真帳號：用不存在的帳號登入，驗證表單接線與錯誤翻譯（同時暴露 Firebase Console 供應商狀態）。
+
+```bash
+P=http://localhost:8001
+playwright-cli goto "$P/"                                   # portal 膠囊
+playwright-cli click "text=登入"
+playwright-cli fill "input[name=email]" "nobody@example.invalid"
+playwright-cli fill "input[name=password]" "wrong-password"
+playwright-cli click ".gbp-login-submit"
+playwright-cli eval "document.querySelector('.gbp-login-err')?.textContent"
+# 期望「email 或密碼錯誤。」；若出現「尚未在 Firebase 啟用」＝Console 的 Email/Password 供應商未開，
+# 屬環境未就緒而非程式錯誤。
+
+playwright-cli goto "$P/growthmap/evaluate-strategy/dist/"   # 第四堂 LoginGate（整頁表單）
+playwright-cli fill "input[type=email]" "nobody@example.invalid"
+playwright-cli fill "input[type=password]" "wrong-password"
+playwright-cli click "button[type=submit]"
+playwright-cli eval "document.body.innerText.includes('email 或密碼錯誤') || document.body.innerText.includes('尚未在 Firebase 啟用')"
+playwright-cli console error
+```
+
+有測試帳號時再補：登入成功 → 右上膠囊「✓ 已登入」；未驗證帳號顯示「未驗證 email」→ 寄送驗證信不報錯。

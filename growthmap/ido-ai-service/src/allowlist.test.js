@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  parseAllowlist, allowlistEnabled, isEmailAllowed, mergeAllowlists, parseFirestoreAllowlistDoc,
-} from './allowlist.js';
+import { parseAllowlist, allowlistEnabled, isEmailAllowed, mergeAllowlists, parseFirestoreAllowlistDoc, evaluateCaller } from './allowlist.js';
 
 test('parseAllowlist：CSV 去空白、轉小寫、網域去前導 @', () => {
   const al = parseAllowlist({
@@ -62,4 +60,22 @@ test('parseFirestoreAllowlistDoc：REST typed value → 名單；缺欄/壞型�
   assert.deepEqual(parseFirestoreAllowlistDoc({}), { emails: [], domains: [] });
   assert.deepEqual(parseFirestoreAllowlistDoc({ fields: { emails: { stringValue: 'junk' } } }),
     { emails: [], domains: [] });
+});
+
+// ── evaluateCaller：白名單 ∧ email 已驗證（2026-09-08 登入改 email／密碼）──────
+test('evaluateCaller：名單未啟用 → 一律 ok（含未驗證、無 email）', () => {
+  const none = { emails: [], domains: [] };
+  assert.equal(evaluateCaller({ email: 'x@y.z', emailVerified: false }, none), 'ok');
+  assert.equal(evaluateCaller({ email: null, emailVerified: false }, none), 'ok');
+});
+
+test('evaluateCaller：啟用後——在名單且已驗證 ok；在名單未驗證 unverified；不在名單 forbidden', () => {
+  const list = { emails: ['walt@gmail.com'], domains: ['corp.tw'] };
+  assert.equal(evaluateCaller({ email: 'Walt@Gmail.com', emailVerified: true }, list), 'ok');
+  assert.equal(evaluateCaller({ email: 'ceo@corp.tw', emailVerified: true }, list), 'ok');
+  assert.equal(evaluateCaller({ email: 'walt@gmail.com', emailVerified: false }, list), 'unverified');
+  assert.equal(evaluateCaller({ email: 'walt@gmail.com' }, list), 'unverified'); // 缺 claim 視同未驗證
+  assert.equal(evaluateCaller({ email: 'intruder@other.com', emailVerified: true }, list), 'forbidden');
+  assert.equal(evaluateCaller({ email: null, emailVerified: true }, list), 'forbidden');
+  assert.equal(evaluateCaller(undefined, list), 'forbidden');
 });

@@ -1,4 +1,5 @@
-FROM caddy:2-alpine
+# 基底映像走 Google 的 Docker Hub 鏡像：Zeabur 建置機直拉 docker.io 會被限流（2026-09-08 兩次 429 Too Many Requests）
+FROM mirror.gcr.io/library/caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
 
 # Root landing page

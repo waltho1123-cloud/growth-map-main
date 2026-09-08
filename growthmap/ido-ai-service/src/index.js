@@ -7,13 +7,31 @@ import { callClaude, streamClaude } from './anthropic.js';
 import { sanitizeObject, sanitizeText } from './sanitize.js';
 import { TASKS } from './prompts.js';
 import { verifyFirebaseIdToken } from './firebase-auth.js';
-import { parseAllowlist, allowlistEnabled, isEmailAllowed, mergeAllowlists, getRemoteAllowlist } from './allowlist.js';
+import { parseAllowlist, allowlistEnabled, evaluateCaller, mergeAllowlists, getRemoteAllowlist } from './allowlist.js';
+import { parseServiceAccount, createAdminTokenProvider } from './service-account.js';
+import {
+  createIdentityToolkitClient, validateEmail, validatePassword, validateDisplayName, validateUid,
+  ValidationError, AdminUpstreamError,
+} from './admin-accounts.js';
+import { checkPlatformAdmin } from './admin-guard.js';
 
 const app = new Hono();
 
 // email 白名單（成本洞：任何有效 Firebase 登入都能燒 Anthropic 額度——
 // 設 ALLOWED_EMAILS／ALLOWED_EMAIL_DOMAINS 後僅名單內帳號可用 AI）
 const allowlist = parseAllowlist(process.env);
+
+// 管理端點的特權層（做法 A）：服務帳號未設定＝/api/admin/* 回 503，其餘功能照常
+const serviceAccount = parseServiceAccount(config.serviceAccountJson);
+const adminClient = serviceAccount
+  ? createIdentityToolkitClient({
+      projectId: config.firebaseProjectId || serviceAccount.projectId,
+      getAccessToken: createAdminTokenProvider(serviceAccount).getAccessToken,
+    })
+  : null;
+if (serviceAccount) console.log(`[admin] 服務帳號已載入：${serviceAccount.clientEmail}`);
+else console.log('[admin] 未設定 FIREBASE_SERVICE_ACCOUNT_JSON——/api/admin/* 停用（503）');
+
 if (config.requireAuth && !allowlistEnabled(allowlist)) {
   console.warn('[auth] 未設定 ALLOWED_EMAILS/ALLOWED_EMAIL_DOMAINS——任何有效 Firebase 登入都可呼叫 AI 端點（成本面未上鎖）');
 }
@@ -38,17 +56,30 @@ app.use('/api/*', async (c, next) => {
     const token = auth.slice('Bearer '.length).trim();
     try {
       const payload = await verifyFirebaseIdToken(token, config.firebaseProjectId);
-      c.set('user', { uid: payload.sub, email: payload.email || null });
+      c.set('user', {
+        uid: payload.sub,
+        email: payload.email || null,
+        emailVerified: payload.email_verified === true, // email／密碼帳號未驗證前 email 不可信
+      });
+      c.set('idToken', token);
     } catch (e) {
       console.warn('[auth]', e?.message);
       return c.json({ error: { code: 'IDO_TOKEN_INVALID', message: '登入憑證無效或已過期' } }, 401);
     }
-    // 白名單（啟用時）：環境變數保底 ∪ 管理頁名單（platform/aiAllowlist，60s 快取）
-    const email = c.get('user')?.email;
+    // 管理端點不套 AI 白名單（管理員未必在 AI 名單內）；它有自己更嚴的守門（下方 /api/admin/* 中介層）
+    if (c.req.path.startsWith('/api/admin/')) return next();
+    // 白名單（啟用時）：環境變數保底 ∪ 管理頁名單（platform/aiAllowlist，60s 快取）。
+    // 名單比對之外還要求 email 已驗證（evaluateCaller）——email／密碼登入的 email 是自稱的。
+    const caller = c.get('user');
     const remote = await getRemoteAllowlist(token, config.firebaseProjectId);
-    if (!isEmailAllowed(email, mergeAllowlists(allowlist, remote))) {
-      console.warn('[auth] 白名單拒絕：', email || '(token 無 email)');
+    const verdict = evaluateCaller(caller, mergeAllowlists(allowlist, remote));
+    if (verdict === 'forbidden') {
+      console.warn('[auth] 白名單拒絕：', caller?.email || '(token 無 email)');
       return c.json({ error: { code: 'IDO_FORBIDDEN', message: '此帳號未獲授權使用 AI 功能，請聯絡平台管理員' } }, 403);
+    }
+    if (verdict === 'unverified') {
+      console.warn('[auth] email 未驗證：', caller?.email);
+      return c.json({ error: { code: 'IDO_EMAIL_UNVERIFIED', message: '請先完成 email 驗證（帳號選單→寄送驗證信→點擊信中連結→我已驗證），再使用 AI 功能' } }, 403);
     }
   }
   return next();
@@ -73,7 +104,122 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-app.get('/', (c) => c.json({ ok: true, service: 'ido-ai-service', hasApiKey: hasApiKey() }));
+app.get('/', (c) => c.json({ ok: true, service: 'ido-ai-service', hasApiKey: hasApiKey(), adminConfigured: Boolean(adminClient) }));
+
+// ── 管理端點（做法 A，2026-09-08）：平台管理員從 pages/admin.html 管 Firebase 帳號 ──────────
+// 守門三層：(1) 有效 Firebase ID token（上方 auth 中介層）(2) email 已驗證且
+// firestore.rules 認定為平台管理員（admin-guard 探測 platform/meta）(3) 服務帳號已設定。
+app.use('/api/admin/*', async (c, next) => {
+  if (c.req.method === 'OPTIONS') return next();
+  if (!config.requireAuth) {
+    return c.json({ error: { code: 'IDO_ADMIN_NOT_CONFIGURED', message: '管理端點需 REQUIRE_AUTH=true' } }, 503);
+  }
+  const caller = c.get('user');
+  if (!caller?.uid || caller.emailVerified !== true) {
+    return c.json({ error: { code: 'IDO_ADMIN_ONLY', message: '僅限 email 已驗證的平台管理員' } }, 403);
+  }
+  const verdict = await checkPlatformAdmin({ uid: caller.uid, idToken: c.get('idToken') }, config.firebaseProjectId);
+  if (verdict === 'denied') {
+    console.warn('[admin] 非管理員嘗試：', caller.email);
+    return c.json({ error: { code: 'IDO_ADMIN_ONLY', message: '此帳號沒有平台管理權限' } }, 403);
+  }
+  if (verdict !== 'admin') {
+    return c.json({ error: { code: 'IDO_ADMIN_UPSTREAM', message: '管理員身分查核暫時失敗，請稍後重試' } }, 502);
+  }
+  if (!adminClient) {
+    return c.json({ error: { code: 'IDO_ADMIN_NOT_CONFIGURED', message: '後端未設定 FIREBASE_SERVICE_ACCOUNT_JSON（Zeabur 環境變數）' } }, 503);
+  }
+  return next();
+});
+
+function adminError(c, e) {
+  if (e instanceof ValidationError) return c.json({ error: { code: 'IDO_VALIDATION', message: e.message } }, 400);
+  if (e instanceof AdminUpstreamError) {
+    console.error('[admin] upstream', e.status, e.upstream);
+    return c.json({ error: { code: 'IDO_ADMIN_UPSTREAM', message: e.message } }, 502);
+  }
+  console.error('[admin]', e?.message || e);
+  return c.json({ error: { code: 'IDO_ADMIN_UPSTREAM', message: String(e?.message || e) } }, 502);
+}
+
+async function readJson(c) {
+  try {
+    return await c.req.json();
+  } catch {
+    throw new ValidationError('JSON 解析失敗');
+  }
+}
+
+app.get('/api/admin/accounts', async (c) => {
+  try {
+    return c.json({ accounts: await adminClient.listAccounts() });
+  } catch (e) {
+    return adminError(c, e);
+  }
+});
+
+app.post('/api/admin/accounts', async (c) => {
+  try {
+    const body = await readJson(c);
+    const email = validateEmail(body.email);
+    const password = validatePassword(body.password);
+    const displayName = validateDisplayName(body.displayName);
+    const account = await adminClient.createAccount({ email, password, displayName });
+    console.log('[admin]', c.get('user').email, 'create', email);
+    return c.json({ account }, 201);
+  } catch (e) {
+    return adminError(c, e);
+  }
+});
+
+app.post('/api/admin/accounts/:uid/password', async (c) => {
+  try {
+    const uid = validateUid(c.req.param('uid'));
+    const body = await readJson(c);
+    const password = validatePassword(body.password);
+    await adminClient.setPassword(uid, password);
+    console.log('[admin]', c.get('user').email, 'set-password', uid);
+    return c.json({ ok: true });
+  } catch (e) {
+    return adminError(c, e);
+  }
+});
+
+app.post('/api/admin/accounts/:uid/disabled', async (c) => {
+  try {
+    const uid = validateUid(c.req.param('uid'));
+    const body = await readJson(c);
+    if (typeof body.disabled !== 'boolean') throw new ValidationError('disabled 需為布林值');
+    if (body.disabled && uid === c.get('user').uid) throw new ValidationError('不能停用自己的帳號');
+    await adminClient.setDisabled(uid, body.disabled);
+    console.log('[admin]', c.get('user').email, body.disabled ? 'disable' : 'enable', uid);
+    return c.json({ ok: true });
+  } catch (e) {
+    return adminError(c, e);
+  }
+});
+
+app.get('/api/admin/auth-config', async (c) => {
+  try {
+    return c.json(await adminClient.getAuthConfig());
+  } catch (e) {
+    return adminError(c, e);
+  }
+});
+
+app.post('/api/admin/auth-config', async (c) => {
+  try {
+    const body = await readJson(c);
+    const result = await adminClient.applyAuthConfig({
+      emailPassword: true,
+      disableSignup: body.disableSignup !== false,
+    });
+    console.log('[admin]', c.get('user').email, 'auth-config', JSON.stringify(result));
+    return c.json(result);
+  } catch (e) {
+    return adminError(c, e);
+  }
+});
 
 function parseJson(text) {
   try {

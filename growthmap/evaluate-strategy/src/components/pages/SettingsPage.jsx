@@ -170,7 +170,7 @@ export default function SettingsPage({ ctx }) {
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input
               value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="邀請成員的 Google 帳號 email"
+              placeholder="邀請成員的登入 email"
               className="w-64 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
             />
             <select value={inviteRole} aria-label="邀請角色" onChange={(e) => setInviteRole(e.target.value)}

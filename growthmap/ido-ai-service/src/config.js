@@ -16,6 +16,8 @@ export const config = {
   allowedOrigins: (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
   requireAuth: process.env.REQUIRE_AUTH === 'true',
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
+  // 做法 A（2026-09-08）：服務帳號金鑰（JSON 或 base64）——管理端點 /api/admin/* 用；未設定則該組端點回 503
+  serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '',
 };
 
 export const hasApiKey = () => Boolean(config.anthropic.apiKey);

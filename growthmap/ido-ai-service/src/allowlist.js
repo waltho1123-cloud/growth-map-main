@@ -80,3 +80,15 @@ export async function getRemoteAllowlist(idToken, projectId, fetchImpl = fetch) 
     return remoteCache.data || { emails: [], domains: [] };
   }
 }
+
+// 呼叫者裁決（白名單啟用時）：email 在名單內「且已驗證」才放行。
+// 2026-09-08 登入改為 email／密碼後，token 的 email 是填寫者自稱——未點驗證信前，
+// 名單比對等於信任攻擊者自填的字串（例：自註冊一個白名單網域的 email 燒 AI 額度）；
+// Google 時代的帳號本來就 email_verified=true，不受影響。
+// 回傳：'ok' | 'forbidden'（不在名單）| 'unverified'（在名單但 email 未驗證）
+export function evaluateCaller({ email, emailVerified } = {}, list) {
+  if (!allowlistEnabled(list)) return 'ok';
+  if (!isEmailAllowed(email, list)) return 'forbidden';
+  if (emailVerified !== true) return 'unverified';
+  return 'ok';
+}

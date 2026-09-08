@@ -3,8 +3,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // ── 平台層：帳號目錄與管理（2026-08-11）─────────────────────────────────
     // root 管理員寫死於規則（變更＝改此處＋重新部署）；可於 platform/meta 增補。
+    // email 信任邊界（2026-09-08 登入改為 email／密碼）：token 的 email 是填寫者自稱，
+    // 未點驗證信前不可信——凡以 email 授權（平台管理員、第四堂邀請／自助加入）一律
+    // 要求 email_verified；Google 時代建立的帳號本來就已驗證。缺 claim 視同未驗證。
+    function hasVerifiedEmail() {
+      return request.auth != null && request.auth.token.get('email_verified', false) == true;
+    }
     function isPlatformAdmin() {
-      return request.auth != null && (
+      return hasVerifiedEmail() && (
         request.auth.token.email == 'waltho1123@gmail.com'
         || (exists(/databases/$(database)/documents/platform/meta)
             && request.auth.token.email in get(/databases/$(database)/documents/platform/meta).data.adminEmails)
@@ -22,13 +28,13 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == uid || isPlatformAdmin());
       allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(
-             ['email', 'displayName', 'photoURL', 'firstSeenAt', 'lastSeenAt', 'lastPath', 'blocked'])
+             ['email', 'emailVerified', 'displayName', 'photoURL', 'firstSeenAt', 'lastSeenAt', 'lastPath', 'blocked'])
         && request.resource.data.blocked == false;
       allow update: if request.auth != null && (
         // 本人：只准更新活動欄位（不得自改 blocked/firstSeenAt）
         (request.auth.uid == uid
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['email', 'displayName', 'photoURL', 'lastSeenAt', 'lastPath']))
+               .hasOnly(['email', 'emailVerified', 'displayName', 'photoURL', 'lastSeenAt', 'lastPath']))
         // 管理員：只准切換封鎖狀態
         || (isPlatformAdmin()
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -101,14 +107,14 @@ service cloud.firestore {
       // 受邀者（尚非成員）可讀專案文件——自助加入需要讀到現有成員陣列；
       // 對應查詢 where('invitedEmails','array-contains', email) 的清單權限
       function isInvited() {
-        return isSignedIn() && request.auth.token.email in resource.data.invitedEmails;
+        return hasVerifiedEmail() && request.auth.token.email in resource.data.invitedEmails;
       }
 
       // email 邀請自助加入：受邀者只能「把自己加進成員＋消耗自己的邀請」，
       // 角色以邀請時登錄的 inviteRoles[email] 為準（不能自封 owner），
       // 且不得增改任何其他人的邀請（Codex P1：同筆 update 夾帶第二個 owner 邀請）。
       function isSelfJoin() {
-        return isSignedIn()
+        return hasVerifiedEmail()
           && request.auth.token.email in resource.data.invitedEmails
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['memberUids', 'members', 'invitedEmails', 'inviteRoles'])

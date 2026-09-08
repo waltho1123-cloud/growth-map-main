@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
-| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站（單元卡片資料驅動自 `data/unit-registry.json`；全站登入膠囊 `js/portal-auth.js`；**平台帳號管理頁 `pages/admin.html`**——帳號目錄＋平台封鎖＋增補管理員，root 管理員寫死於 firestore.rules；portal 層 Firebase config 唯一複本在 `js/firebase-config.js`（正本 `packages/firebase`，config-sync.test 驗一致＋CDN 版本＝安裝版）；同源共享 session，portal 登入＝四單元登入。**登入會自動寫 `platformUsers/{uid}` 帳號目錄**（useAuth 內 fire-and-forget）；封鎖帳號＝全平台禁寫（isBlocked 織入所有寫入規則），完全停用走 Firebase Console | 純靜態，Caddy 提供 | 無需建置 |
+| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站（單元卡片資料驅動自 `data/unit-registry.json`；全站登入膠囊 `js/portal-auth.js`（email／密碼登入，表單與錯誤翻譯共用 `js/auth-ui.js`，見下方「登入方式」）；**平台帳號管理頁 `pages/admin.html`**——帳號與密碼（經後端服務帳號建帳號／設密碼／停用）＋登入方式設定＋活動目錄／平台封鎖＋AI 白名單＋增補管理員，root 管理員寫死於 firestore.rules；portal 層 Firebase config 唯一複本在 `js/firebase-config.js`（正本 `packages/firebase`，config-sync.test 驗一致＋CDN 版本＝安裝版）；同源共享 session，portal 登入＝四單元登入。**登入會自動寫 `platformUsers/{uid}` 帳號目錄**（useAuth 內 fire-and-forget）；封鎖帳號＝全平台禁寫（isBlocked 織入所有寫入規則），完全停用走 Firebase Console | 純靜態，Caddy 提供 | 無需建置 |
 | `growthmap/opportunity-system/` | 識別機會（第三堂） | Vite 8 + React + Tailwind | `build/`（**要 commit**） |
 | `growthmap/aspiration-case/` | 願景 | Vite 8 + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Vite 8 + React + TS | `out/`（要 commit） |
@@ -33,6 +33,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **風險**：這條契約沒有共用程式碼保護——orient.js 的 fallback 全是 `|| 0`，**改 aspiration-case 的上述欄位名會靜默弄壞第三堂**（儀表變 0、不報錯）。改任一單元寫入的資料形狀前，先 grep 其他單元有沒有讀它。另：同步協定（load/save/subscribe/reconcile）唯一正本在 `@growthmap/cloud`——各單元的 `lib/cloud/sync` 只是綁定自家 firebase 實例的薄轉接層，**修同步 bug 一律改共用包**；三單元現皆為 onSnapshot 即時同步＋防迴授四層（hasPendingWrites／writer=clientId／applying 旗標／內容簽章 onSaved 後記錄）。**momentum 與 aspiration（走 `createCloudSyncBootstrap` factory）另有 section 級 merge**：雲端文件 additive `sectionTs` 記各 top-level section 最後編輯毫秒，兩台裝置並行編輯不同 section 互不覆蓋（`mergeBySection` 純函式，tie 偏本地＋內容比較用 stableStringify 防 Firestore key 排序誤判＋tie-with-diff 破對稱防 ping-pong）；opportunity 仍為 whole-doc reconcile（有 migrate／交付快照 union 獨有層，刻意不併入——不同 appKey 不同文件，兩種語意各自一致）。**Section 刪除走墓碑（tombstone）**：直接刪 `data.{key}` 會被開著的 client 秒級復活——正確的運維刪除是三件一起做：刪 `data.{key}`＋刪 `sectionTs.{key}`＋寫 `sectionTombstones.{key} = Date.now()`（毫秒）。墓碑生效後 ts ≤ 墓碑的殘值不套用、不上傳；使用者在刪除**之後**的新編輯（ts > 墓碑）合法復活該 section 並自動清墓碑；雲端同時有資料與墓碑時資料優先。注意：對 aspiration 的 orient 契約欄位（companyInfo/partA）下墓碑會觸發 dev guard 擋上傳且弄壞第三堂——那些欄位不該刪。**2026-08 起契約已程式碼化為 `@growthmap/contracts`**：`APP_KEYS`、`extractOrientSnapshot`（opportunity 消費端）、`assertOrientProducerShape`（aspiration dev 模式每次上傳前驗形狀，改壞欄位名＝dev console 立即報錯並擋下該次上傳——不炸整個同步，`[cloud sync] guardSnapshot rejected upload` 即此守衛）。三單元的 appKey 與 orient 欄位讀取都必須走契約包，勿再寫字面字串；改契約形狀＝改 `packages/contracts` ＋ 生產/消費兩端同步。
 
 **ADR 更新（2026-08-09 Phase 2d 完成）**：firebase config／lazy init／auth hook 已合一於 `@growthmap/firebase`（盤點確認三份純複製、零行為分歧，單元檔為薄 re-export 保持 import 路徑）；**AuthWidget（登入按鈕 UI）刻意留在各單元**——樣式與版位屬單元自主範圍，僅邏輯層共用。
+
+### 登入方式：email／密碼（2026-09-08 起，取代 Google OAuth）
+
+全平台（portal 膠囊、管理頁、四單元）改用 Firebase **Email/Password** 供應商登入。邏輯唯一正本在 `@growthmap/firebase`：`signInWithEmail`／`sendPasswordReset`／`sendVerificationEmail`／`describeAuthError`（Firebase 錯誤碼→繁中）＋ React hook `useEmailLogin`（欄位、送出、忘記密碼）與 `useEmailVerification`（寄驗證信、「我已驗證」＝reload＋強制刷新 token，讓後續 AI 呼叫帶到新 claim）；無建置的靜態頁（`js/portal-auth.js`、`js/platform-admin.js`）用等價複本 `js/auth-ui.js`（改錯誤文案兩處一起改；config-sync.test 驗其 CDN 版本）。表單樣式仍屬各單元（AuthWidget／LoginGate），與 Phase 2d 的 ADR 一致。
+
+**email 信任邊界（改登入方式的安全後果，勿回退）**：email／密碼帳號的 email 是填寫者自稱，未點驗證信前不可信。凡以 email 授權的地方一律要求 `email_verified == true`：firestore.rules 的 `hasVerifiedEmail()`（`isPlatformAdmin`、第四堂 `isInvited`／`isSelfJoin`）與後端 `evaluateCaller`（AI 白名單；在名單但未驗證回 403 `IDO_EMAIL_UNVERIFIED`）。未驗證帳號仍可登入、使用單元一～三與自己建立的第四堂專案。Google 時代建立的帳號（2026-09-08 盤點 7 個）本來就已驗證。`platformUsers/{uid}` 多寫 `emailVerified`，管理頁對未驗證者顯示標記。
+
+**帳號與密碼統一由管理員控管（做法 A，2026-09-08 裁定）**：平台不提供自助註冊；學員端登入表單不提供「忘記密碼」（顯示「請聯絡平台管理員」，只有管理頁登入表單保留重設信給管理員自助）。管理員在 `pages/admin.html` 的「帳號與密碼」卡建帳號、指定／重設密碼、停用／啟用，在「登入方式設定」卡一鍵啟用 Email/Password 供應商＋關閉自助註冊——全部經後端 `/api/admin/*` 以 **Firebase 服務帳號**代辦（Identity Toolkit REST；`src/service-account.js` 以 Node crypto 簽 jwt-bearer 換 OAuth token，仍不引入 firebase-admin）。管理員建立或設密碼的帳號一律 `emailVerified=true`（管理員背書），rules／AI 白名單的驗證守門直接放行。既有 Google 帳號由管理員直接設密碼（uid 不變、資料不動）。管理員身分後端不另存名單：`src/admin-guard.js` 用呼叫者 token 探測 `platform/meta` 可讀與否，正本仍是 firestore.rules。刪除帳號刻意不提供（Firestore 資料會成孤兒）。
+
+**Bootstrap（金鑰只存 Zeabur，不進 git／對話）**：Firebase Console → 專案設定 → 服務帳號 → 產生新的私密金鑰 → 整份 JSON 存 Zeabur 後端環境變數 `FIREBASE_SERVICE_ACCOUNT_JSON` → 重新部署後端 → 在容器內跑 `node scripts/auth-admin.mjs configure`（`zeabur service exec`；啟用 Email/Password＋關閉自助註冊）→ root 管理員用管理頁登入表單的「忘記密碼」設自己的密碼 → 之後全由管理頁操作。CLI 另有 `status`／`list`／`set-password <email>`（密碼走 `NEW_PASSWORD` 環境變數）／`verify-email <email>`。未設金鑰時 `/api/admin/*` 回 503 `IDO_ADMIN_NOT_CONFIGURED`，其餘功能不受影響。
 
 ### 第四堂（evaluate-strategy）——多人協作模型，與單人模型刻意分離
 
@@ -76,7 +86,7 @@ npm run dev                                  # --watch + 讀 .env（需 ANTHROPI
 
 ## 部署（Zeabur，direct deploy 非 git 連動）
 
-Zeabur 專案 `growth-map-main`：project-id `69a70ecee10515e35593d1c2`、env `69a70ecea2c1609bd1efd98a`。**push GitHub 不會觸發部署**，改完必須手動 deploy。重新部署**務必帶 `--service-id`**，否則會建出重複服務：
+Zeabur 專案 `growth-map-main`：project-id `69a70ecee10515e35593d1c2`、env `69a70ecea2c1609bd1efd98a`。兩個 Dockerfile 的基底映像走 `mirror.gcr.io/library/*`（Docker Hub 鏡像）：Zeabur 建置機直拉 docker.io 會遇 429 限流（2026-09-08 連兩次 build failed），勿改回。**push GitHub 不會觸發部署**，改完必須手動 deploy。重新部署**務必帶 `--service-id`**，否則會建出重複服務：
 
 | 服務 | service-id | URL | 內容 |
 | --- | --- | --- | --- |
@@ -98,11 +108,11 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 0. **root `npm run preflight` 全綠**（帶 `VITE_AI_BASE_URL`）；行為級變更另跑 Playwright smoke（見 `scripts/smoke.md`）。
 
 1. 重 build，且**必須帶 `VITE_AI_BASE_URL`**（Vite 是建置時注入；漏設則線上 AI 功能整組停用——GD-06 優雅降級，不會報錯，容易漏察覺）。
-2. **先部 staging**，在 staging 網址跑 Playwright 線上 smoke（登入需 Firebase Console 已收錄 staging 網域——見下方備註）。
+2. **先部 staging**，在 staging 網址跑 Playwright 線上 smoke（登入用 email／密碼測試帳號即可自動化——見下方備註）。
 3. smoke 綠了才部 prod 服務（`.zeaburignore` 只打包 build 輸出，排除 `src/`、`node_modules`、`.map`、`*.md`）。
 4. **commit `build/` 進 git**——本 repo 刻意把建置產物入版控，維持「GitHub = 線上」的同步慣例。
 
-> staging 備註：後端 `ALLOWED_ORIGINS` 已含 staging origin（`https://growthmap-staging.zeabur.app`）；Google 登入要在 Firebase Console → Authentication → Settings → Authorized domains 手動加 `growthmap-staging.zeabur.app`（一次性，無 API 可自動化）。純 UI/資產類變更在 staging 可不登入驗證，跳過此需求。
+> staging 備註：後端 `ALLOWED_ORIGINS` 已含 staging origin（`https://growthmap-staging.zeabur.app`）；Firebase Authorized domains 已含 `growthmap-staging.zeabur.app`（2026-09-08 以公開 config 端點確認）。登入為 email／密碼，Playwright 可用測試帳號直接登入（Google OAuth 擋 CDP 瀏覽器的限制已不存在）；純 UI/資產類變更在 staging 可不登入驗證。
 
 前端站線上路徑：opportunity-system 於 `/growthmap/opportunity-system/build/`、evaluate-strategy 於 `/growthmap/evaluate-strategy/dist/`。
 
@@ -115,19 +125,21 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 | `MODEL_OPUS` / `MODEL_SONNET` / `MODEL_HAIKU` | 模型字串，預設 `claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5` |
 | `ALLOWED_ORIGINS` | CORS 白名單 CSV（fail-closed）。線上＝`https://growth-map-main.zeabur.app`（staging 建立後追加其 origin） |
 | `REQUIRE_AUTH` | `true` 時強制 Firebase 登入 |
-| `ALLOWED_EMAILS` | AI 端點 email 白名單 CSV——**保底名單**（日常增刪走管理頁 `pages/admin.html` 的 AI 白名單卡，存 Firestore `platform/aiAllowlist`，後端以呼叫者 token 走 REST 讀取＋60s 快取，兩者**聯集**生效）。聯集非空即強制：名單外 403 IDO_FORBIDDEN；聯集為空＝不限制（啟動 console.warn）。環境變數至少留管理員 email，防管理頁誤清空後限制整個關掉 |
+| `ALLOWED_EMAILS` | AI 端點 email 白名單 CSV——**保底名單**（日常增刪走管理頁 `pages/admin.html` 的 AI 白名單卡，存 Firestore `platform/aiAllowlist`，後端以呼叫者 token 走 REST 讀取＋60s 快取，兩者**聯集**生效）。聯集非空即強制：名單外 403 IDO_FORBIDDEN；聯集為空＝不限制（啟動 console.warn）。環境變數至少留管理員 email，防管理頁誤清空後限制整個關掉。名單比對之外還要求 token `email_verified == true`（`evaluateCaller`），未驗證回 403 `IDO_EMAIL_UNVERIFIED` |
 | `ALLOWED_EMAIL_DOMAINS` | AI 端點 email 網域白名單 CSV（保底；如 `corp.tw`，嚴格比對、子網域不放行；管理頁亦可設網域） |
 | `FIREBASE_PROJECT_ID` | 驗 token aud/iss 用 |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | 選填。Firebase 服務帳號金鑰（整份 JSON 或 base64）；設了才開 `/api/admin/*`（管理頁的帳號／密碼／登入方式）。Console「產生新的私密金鑰」的 firebase-adminsdk 帳號權限即足夠 |
 | `PORT` | 預設 8787（線上由平台給 8080） |
 
 ## API 規範 — ido-ai-service
 
-Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆為 **draft（建議稿）**，前端**人在迴路採納後才生效**（ADR-004 / GD-04），**後端不寫任何業務資料**。
+Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆為 **draft（建議稿）**，前端**人在迴路採納後才生效**（ADR-004 / GD-04），**後端不寫任何業務資料**（例外：`/api/admin/*` 以服務帳號管理 Firebase Auth 帳號——身分層，非業務資料）。
 
 ### 中介層（順序）
 1. **CORS**（`/*`）：來源限 `ALLOWED_ORIGINS`（CSV）。**fail-closed**：未設＝不允許任何跨來源（防止變成公開的 Anthropic proxy）；要全開須顯式設 `*`。
 2. **Auth**（`/api/*`）：`REQUIRE_AUTH=true` 時驗證 `Authorization: Bearer <Firebase ID token>`。OPTIONS 預檢免 token。驗證成功將 `{ uid, email }` 放入 context。
 3. **Rate limit**（`/api/*`）：in-memory、per-IP、**20 次/分**，超過回 429。
+4. **Admin guard**（`/api/admin/*`）：email 已驗證＋firestore.rules 認定的平台管理員（`admin-guard.js` 探測 `platform/meta`，60s 快取）＋服務帳號已設定；此組端點不套 AI 白名單。
 
 ### 端點
 
@@ -136,6 +148,11 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | GET | `/` | 健康檢查 → `{ ok, service, hasApiKey }`（沒有 `/health` 路由） | — |
 | POST | `/api/ai/tasks` | AI-01 / AI-03 / AI-04（非串流任務） | 否 |
 | POST | `/api/ai/coach` | AI-07 教練對話 | SSE |
+| GET | `/api/admin/accounts` | 帳號清單 `{ accounts:[{uid,email,displayName,emailVerified,disabled,providers,createdAt,lastLoginAt}] }` | 否 |
+| POST | `/api/admin/accounts` | 建帳號 `{ email, password(8–128), displayName? }` → 201 `{ account:{uid,email} }`；emailVerified=true | 否 |
+| POST | `/api/admin/accounts/:uid/password` | 設密碼 `{ password }`（並標 email 已驗證） | 否 |
+| POST | `/api/admin/accounts/:uid/disabled` | 停用／啟用 `{ disabled: boolean }`（不能停用自己） | 否 |
+| GET／POST | `/api/admin/auth-config` | 讀／套用登入方式：POST `{ disableSignup?: true }` → 啟用 Email/Password＋關閉自助註冊 | 否 |
 
 **`POST /api/ai/tasks`**：Request `{ "taskCode": "AI-01|AI-03|AI-04", "input": {...} }` → Response `{ taskCode, state: "draft", payload, confidence, model, usage }`。後端流程：`sanitizeObject(input)` → `callClaude(tier, system, buildUser)` → JSON 解析（含容錯擷取 `{...}`）→ `normalize`。
 
@@ -149,7 +166,8 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | --- | --- | --- |
 | `IDO_PERMISSION_DENIED` | 401 | 缺 Bearer token |
 | `IDO_TOKEN_INVALID` | 401 | token 無效/過期（前端會強制刷新後重試一次） |
-| `IDO_FORBIDDEN` | 403 | email 不在 AI 白名單（`ALLOWED_EMAILS`/`ALLOWED_EMAIL_DOMAINS`） |
+| `IDO_FORBIDDEN` | 403 | email 不在 AI 白名單（`ALLOWED_EMAILS`/`ALLOWED_EMAIL_DOMAINS` ∪ 管理頁名單） |
+| `IDO_EMAIL_UNVERIFIED` | 403 | email 在白名單但 token `email_verified` 非 true（email／密碼帳號尚未點驗證信） |
 | `IDO_RATE_LIMIT` | 429 | 超過 20/min |
 | `IDO_AI_NO_KEY` | 503 | 伺服器未設 `ANTHROPIC_API_KEY` |
 | `IDO_VALIDATION` / `IDO_VALIDATION_TASK` | 400 | JSON 解析失敗 / 未知任務 |
@@ -157,6 +175,9 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | `IDO_AI_TRUNCATED` | 502 | 輸出達 max_tokens 截斷（adaptive thinking 與回覆共用上限） |
 | `IDO_AI_PARSE_ERROR` | 502 | AI 輸出非合法 JSON |
 | `IDO_AI_ERROR` | 502 | 上游 Anthropic 錯誤 |
+| `IDO_ADMIN_ONLY` | 403 | 非平台管理員（或 email 未驗證）呼叫 `/api/admin/*` |
+| `IDO_ADMIN_NOT_CONFIGURED` | 503 | 未設 `FIREBASE_SERVICE_ACCOUNT_JSON`，或 `REQUIRE_AUTH` 非 true |
+| `IDO_ADMIN_UPSTREAM` | 502 | Firebase 管理 API 錯誤（訊息含原因）或管理員身分查核暫時失敗 |
 
 ### 認證機制
 
@@ -235,7 +256,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
 
 ## 本機開發注意
 
-- **Firebase Google 登入一律用 `localhost`，不要 `127.0.0.1`**，否則 `auth/unauthorized-domain`。
+- **登入為 email／密碼**（2026-09-08 起），不走 OAuth，不受 Firebase Authorized domains 限制，`localhost` 或 `127.0.0.1` 皆可；Authorized domains 只影響郵件動作連結（重設密碼／驗證信），本機測登入不需要。
 - 本機跑 build 版（portal 慣用 :8000）若要用 AI，**後端 `ALLOWED_ORIGINS` 須含 `http://localhost:8000`**，否則 `Failed to fetch`（CORS）。線上正式域名不受影響。
 - 雲端**即時同步是前端直連 Firebase，localhost 即可測**（與 AI/CORS 無關）：開兩個分頁、同一帳號登入，一邊改另一邊應自動更新。
 - `.agents/skills/` 與 `.windsurf/workflows/` 是設計思考流程工具包（empathize/define/ideate/prototype/test），與應用程式碼無關。

@@ -28,11 +28,11 @@ test('portal 層 CDN Firebase 版本與 workspace 安裝版一致（SDK 行為�
   assert.ok(declared, 'js/firebase-config.js 缺少 FIREBASE_SDK_VERSION');
   assert.equal(declared[1], installed, 'FIREBASE_SDK_VERSION 需等於 node_modules/firebase 安裝版');
 
-  // 兩個無建置頁的 CDN import 都要對版
-  for (const file of ['portal-auth.js', 'platform-admin.js']) {
+  // 無建置頁的 CDN import 都要對版（auth-ui.js 只 import firebase-auth，最少 1 個）
+  for (const [file, minImports] of [['portal-auth.js', 2], ['platform-admin.js', 2], ['auth-ui.js', 1]]) {
     const src = read('js', file);
     const versions = [...src.matchAll(/firebasejs\/(\d+\.\d+\.\d+)\//g)].map((m) => m[1]);
-    assert.ok(versions.length >= 2, `${file} 應有 firebase-app 與 firebase-auth/firestore 的 CDN import`);
+    assert.ok(versions.length >= minImports, `${file} 的 CDN import 數量不足（預期 ≥ ${minImports}）`);
     for (const v of versions) {
       assert.equal(v, installed, `${file} CDN 版本 ${v} ≠ 安裝版 ${installed}——URL 要一起改`);
     }

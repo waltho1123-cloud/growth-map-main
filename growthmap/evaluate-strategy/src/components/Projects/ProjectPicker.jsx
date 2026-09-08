@@ -4,7 +4,7 @@ import { logEvent } from '../../lib/events';
 import { ROLES } from '../../domain/model';
 import { fmtTime } from '../../lib/format';
 import { Btn, Chip, Modal } from '../common/ui';
-import { signOut } from '../../lib/cloud/auth';
+import { signOut, useEmailVerification } from '../../lib/cloud/auth';
 
 // 專案選擇（多人協作入口）：我的專案／邀請我的專案／建立新專案
 export default function ProjectPicker({ user, onSelect }) {
@@ -14,12 +14,16 @@ export default function ProjectPicker({ user, onSelect }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const verification = useEmailVerification();
 
   useEffect(() => {
     const u1 = subscribeMyProjects(user.uid, setProjects, (e) => setError(e.message));
-    const u2 = subscribeMyInvites((user.email || '').toLowerCase(), setInvites, () => {});
+    // 安全規則拒絕未驗證 email 查詢邀請；email 驗證後才訂閱。
+    const u2 = user.emailVerified
+      ? subscribeMyInvites((user.email || '').toLowerCase(), setInvites, () => {})
+      : () => {};
     return () => { u1(); u2(); };
-  }, [user.uid, user.email]);
+  }, [user.uid, user.email, user.emailVerified]);
 
   const create = async () => {
     if (!name.trim() || busy) return;
@@ -66,6 +70,17 @@ export default function ProjectPicker({ user, onSelect }) {
         </div>
         <Btn onClick={() => signOut()}>登出</Btn>
       </div>
+
+      {!user.emailVerified && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p>你的 email 尚未驗證——受邀專案清單與 AI 功能需先完成驗證。</p>
+          <div className="mt-2 flex gap-2">
+            <Btn onClick={verification.send} disabled={verification.busy}>寄送驗證信</Btn>
+            <Btn onClick={verification.recheck} disabled={verification.busy}>我已驗證</Btn>
+          </div>
+          {verification.message && <p className="mt-2 text-xs text-amber-800">{verification.message}</p>}
+        </div>
+      )}
 
       {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 

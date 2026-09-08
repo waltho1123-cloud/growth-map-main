@@ -1,15 +1,18 @@
 // 平台帳號管理頁（pages/admin.html）——僅平台管理員可用（firestore.rules isPlatformAdmin）。
 // 功能：帳號目錄（platformUsers 即時清單）、平台封鎖/解封、增補管理員（platform/meta）。
+// 登入方式：email／密碼（2026-09-08 起）；表單與錯誤翻譯在 js/auth-ui.js。
+// 帳號與密碼（做法 A）：本頁透過後端 /api/admin/*（服務帳號代辦 Firebase Auth 管理 API）
+// 建帳號、設密碼、停用／啟用、開關登入方式——學員零 Firebase 接觸，密碼統一由管理員控管。
 // CDN 版本須與 js/firebase-config.js 的 FIREBASE_SDK_VERSION 一致（測試會驗）。
 
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
-import {
-  getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut,
-} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import {
   getFirestore, collection, doc, onSnapshot, updateDoc, setDoc,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
+import { createLoginForm } from './auth-ui.js';
+import { AI_BASE_URL } from './platform-config.js';
 
 const ROOT_ADMIN = 'waltho1123@gmail.com'; // 與 firestore.rules 的 root 常數一致
 
@@ -50,6 +53,7 @@ function renderUsers() {
         <span>
           <b>${esc(u.displayName || '（無名稱）')}</b><br>
           <span class="muted">${esc(u.email)}</span>
+          ${u.emailVerified === false ? '<span class="badge badge-warn" title="未驗證前不能用 AI、接受邀請或當管理員">email 未驗證</span>' : ''}
         </span>
       </td>
       <td>${fmt(u.firstSeenAt)}</td>
@@ -125,9 +129,13 @@ function renderAiAllowlist() {
   };
 }
 
+let adminApiBound = false;
 function startAdminView() {
   show('view-admin');
   $('me-line').textContent = `管理員：${me.displayName || ''}（${me.email}）`;
+  if (!adminApiBound) { bindAdminApiUi(); adminApiBound = true; }
+  loadAuthConfig();
+  loadAccounts();
 
   unsubUsers = onSnapshot(collection(db, 'platformUsers'), (snap) => {
     users = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
@@ -163,13 +171,188 @@ function startAdminView() {
   };
 }
 
-$('btn-login').onclick = async () => {
-  try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
-  } catch (e) {
-    $('login-err').textContent = `登入失敗：${e.code || e.message}`;
+$('login-form').replaceChildren(createLoginForm(auth, { allowReset: true }));
+
+// ── 後端管理 API（/api/admin/*）────────────────────────────────────────────
+async function api(path, { method = 'GET', body } = {}) {
+  const token = await me.getIdToken();
+  const res = await fetch(`${AI_BASE_URL}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, ...(body ? { 'content-type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || `HTTP ${res.status}`);
+    err.code = data?.error?.code || '';
+    err.status = res.status;
+    throw err;
   }
-};
+  return data;
+}
+
+const PW_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+function genPassword(len = 12) {
+  const buf = new Uint32Array(len);
+  crypto.getRandomValues(buf);
+  return [...buf].map((n) => PW_ALPHABET[n % PW_ALPHABET.length]).join('');
+}
+
+const PROVIDER_LABEL = { password: 'email／密碼', 'google.com': 'Google' };
+let accounts = [];
+
+function renderAccounts() {
+  const tbody = $('account-rows');
+  $('account-count').textContent = `${accounts.length} 個帳號`;
+  if (!accounts.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="muted">尚無帳號。</td></tr>';
+    return;
+  }
+  tbody.innerHTML = accounts.map((a) => `
+    <tr class="${a.disabled ? 'row-blocked' : ''}" data-row="${esc(a.uid)}">
+      <td class="cell-id">
+        <span>
+          <b>${esc(a.displayName || '（無名稱）')}</b><br>
+          <span class="muted">${esc(a.email)}</span>
+        </span>
+      </td>
+      <td>${esc(a.providers.map((p) => PROVIDER_LABEL[p] || p).join('＋') || '—')}</td>
+      <td>${a.emailVerified ? '<span class="badge badge-ok">已驗證</span>' : '<span class="badge badge-warn" style="margin-left:0">未驗證</span>'}</td>
+      <td>${a.disabled ? '<span class="badge badge-blocked">已停用</span>' : '<span class="badge badge-ok">啟用</span>'}</td>
+      <td>${fmt(a.lastLoginAt)}</td>
+      <td class="actions">
+        <button class="btn-small" data-pw="${esc(a.uid)}">設定密碼</button>
+        ${a.uid === me?.uid
+          ? '<span class="muted">（自己）</span>'
+          : `<button class="btn-small ${a.disabled ? '' : 'btn-danger'}" data-toggle="${esc(a.uid)}" data-disabled="${a.disabled ? '1' : ''}">${a.disabled ? '啟用' : '停用'}</button>`}
+      </td>
+    </tr>`).join('');
+
+  tbody.querySelectorAll('button[data-pw]').forEach((btn) => {
+    btn.onclick = () => openPasswordEditor(btn.dataset.pw);
+  });
+  tbody.querySelectorAll('button[data-toggle]').forEach((btn) => {
+    btn.onclick = async () => {
+      const uid = btn.dataset.toggle;
+      const target = accounts.find((x) => x.uid === uid);
+      const nowDisabled = !btn.dataset.disabled;
+      const verb = nowDisabled ? '停用' : '啟用';
+      if (!window.confirm(`確定${verb}「${target?.email}」？停用後該帳號無法登入（資料保留）。`)) return;
+      try {
+        await api(`/api/admin/accounts/${uid}/disabled`, { method: 'POST', body: { disabled: nowDisabled } });
+        await loadAccounts();
+      } catch (e) {
+        $('accounts-err').textContent = `操作失敗：${e.message}`;
+      }
+    };
+  });
+}
+
+function openPasswordEditor(uid) {
+  document.querySelectorAll('tr.pw-row').forEach((r) => r.remove());
+  const row = document.querySelector(`tr[data-row="${CSS.escape(uid)}"]`);
+  const target = accounts.find((x) => x.uid === uid);
+  if (!row || !target) return;
+  const editor = document.createElement('tr');
+  editor.className = 'pw-row';
+  editor.innerHTML = `
+    <td colspan="6">
+      <div class="pw-editor">
+        <span>為 <b>${esc(target.email)}</b> 設定新密碼：</span>
+        <input type="text" class="pw-input" placeholder="至少 8 碼" autocomplete="off">
+        <button type="button" class="btn-small pw-gen">產生</button>
+        <button type="button" class="btn-small btn-primary pw-save">儲存</button>
+        <button type="button" class="btn-small pw-cancel">取消</button>
+        <span class="pw-msg muted"></span>
+      </div>
+    </td>`;
+  row.after(editor);
+  const input = editor.querySelector('.pw-input');
+  const msg = editor.querySelector('.pw-msg');
+  editor.querySelector('.pw-gen').onclick = () => { input.value = genPassword(); };
+  editor.querySelector('.pw-cancel').onclick = () => editor.remove();
+  editor.querySelector('.pw-save').onclick = async () => {
+    const pw = input.value;
+    if (pw.length < 8) { msg.textContent = '密碼至少 8 碼'; return; }
+    msg.textContent = '儲存中…';
+    try {
+      await api(`/api/admin/accounts/${uid}/password`, { method: 'POST', body: { password: pw } });
+      msg.textContent = `已更新，請把密碼「${pw}」交給對方（此頁不會再顯示）。`;
+      await loadAccounts();
+      // loadAccounts 會重繪表格，把訊息放到卡片層級
+      $('accounts-err').textContent = '';
+      $('create-msg').textContent = `已設定 ${target.email} 的密碼：${pw}（請立即交給對方；重新整理後不再顯示）`;
+    } catch (e) {
+      msg.textContent = `失敗：${e.message}`;
+    }
+  };
+  input.focus();
+}
+
+async function loadAccounts() {
+  try {
+    const data = await api('/api/admin/accounts');
+    accounts = (data.accounts || []).slice().sort((a, b) => (b.lastLoginAt || 0) - (a.lastLoginAt || 0));
+    $('accounts-err').textContent = '';
+    renderAccounts();
+  } catch (e) {
+    accounts = [];
+    $('account-rows').innerHTML = `<tr><td colspan="6" class="muted">${esc(describeAdminApiError(e))}</td></tr>`;
+    $('account-count').textContent = '';
+  }
+}
+
+function describeAdminApiError(e) {
+  if (e.code === 'IDO_ADMIN_NOT_CONFIGURED') return `後端尚未設定服務帳號：${e.message}`;
+  if (e.code === 'IDO_ADMIN_ONLY') return `後端拒絕：${e.message}`;
+  if (e.message === 'Failed to fetch') return '無法連線後端（CORS 或網路）——本機測試需後端 ALLOWED_ORIGINS 含此 origin';
+  return `讀取失敗：${e.message}`;
+}
+
+async function loadAuthConfig() {
+  const el = $('auth-config-status');
+  try {
+    const cfg = await api('/api/admin/auth-config');
+    el.innerHTML = `Email／密碼登入：<b>${cfg.emailPasswordEnabled ? '已啟用' : '停用'}</b>　自助註冊：<b>${cfg.signUpDisabled ? '已關閉' : '開放中'}</b>`
+      + `<br><span class="muted">授權網域：${esc(cfg.authorizedDomains.join('、'))}</span>`;
+    $('btn-auth-config').style.display = cfg.emailPasswordEnabled && cfg.signUpDisabled ? 'none' : '';
+    $('auth-config-err').textContent = '';
+  } catch (e) {
+    el.textContent = describeAdminApiError(e);
+    $('btn-auth-config').style.display = 'none';
+  }
+}
+
+function bindAdminApiUi() {
+  $('btn-gen-password').onclick = () => { $('new-acct-password').value = genPassword(); };
+  $('create-account').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const email = $('new-acct-email').value.trim().toLowerCase();
+    const displayName = $('new-acct-name').value.trim();
+    const password = $('new-acct-password').value;
+    $('create-msg').textContent = '建立中…';
+    try {
+      await api('/api/admin/accounts', { method: 'POST', body: { email, displayName, password } });
+      $('create-msg').textContent = `已建立 ${email}，初始密碼：${password}（請立即交給對方；重新整理後不再顯示）`;
+      $('new-acct-email').value = '';
+      $('new-acct-name').value = '';
+      $('new-acct-password').value = '';
+      await loadAccounts();
+    } catch (e) {
+      $('create-msg').textContent = `建立失敗：${e.message}`;
+    }
+  };
+  $('btn-auth-config').onclick = async () => {
+    if (!window.confirm('將啟用 Email／密碼登入並關閉自助註冊（外人無法自行建帳號）。確定？')) return;
+    $('auth-config-err').textContent = '套用中…';
+    try {
+      await api('/api/admin/auth-config', { method: 'POST', body: { disableSignup: true } });
+      await loadAuthConfig();
+    } catch (e) {
+      $('auth-config-err').textContent = `套用失敗：${e.message}`;
+    }
+  };
+}
 document.querySelectorAll('.btn-logout').forEach((b) => { b.onclick = () => signOut(auth); });
 
 onAuthStateChanged(auth, (u) => {

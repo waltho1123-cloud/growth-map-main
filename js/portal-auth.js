@@ -5,11 +5,26 @@
 
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { createLoginForm, createVerifyBlock } from './auth-ui.js';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
+
+// 平台管理員判定（與 firestore.rules 的 isPlatformAdmin 同源，不另存名單）：
+// 能讀 platform/meta（文件存不存在都算）＝管理員；permission-denied＝不是。
+// 每次登入狀態變更探測一次；任何錯誤都保守視為非管理員（只影響要不要顯示連結）。
+async function isPlatformAdmin(user) {
+  if (!user?.emailVerified) return false;
+  try {
+    await getDoc(doc(db, 'platform', 'meta'));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // ── UI（自帶樣式，不動 portal.css）──────────────────────────────────────────
 const style = document.createElement('style');
@@ -28,6 +43,8 @@ style.textContent = `
   .gbp-auth-btn:hover { background: #3730a3; }
   .gbp-auth-link { border: 0; background: none; cursor: pointer; color: #94a3b8; font-size: 12px; padding: 0; font-family: inherit; }
   .gbp-auth-link:hover { color: #475569; }
+  .gbp-auth-admin { color: #4338ca; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .gbp-auth-admin:hover { text-decoration: underline; }
   .gbp-auth-warn { border: 0; background: none; cursor: pointer; color: #b45309; font-size: 12px; padding: 0;
     text-decoration: underline; white-space: nowrap; font-family: inherit; }
   .gbp-auth-panel { position: fixed; top: 60px; right: 16px; z-index: 60; width: 288px; background: #fff;
@@ -118,6 +135,17 @@ function render(user) {
   }
   pill.appendChild(out);
   root.appendChild(pill);
+
+  // 管理員：膠囊多一個「帳號管理」連結（探測完成後才插入；登入狀態若已改變則放棄）
+  isPlatformAdmin(user).then((ok) => {
+    if (!ok || auth.currentUser?.uid !== user.uid || !pill.isConnected) return;
+    const admin = document.createElement('a');
+    admin.className = 'gbp-auth-admin';
+    admin.href = '/pages/admin.html';
+    admin.textContent = '帳號管理';
+    admin.title = '平台帳號管理（僅管理員可見）';
+    pill.insertBefore(admin, out);
+  });
 }
 
 onAuthStateChanged(auth, render);

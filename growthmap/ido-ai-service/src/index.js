@@ -269,6 +269,7 @@ app.post('/api/admin/auth-config', async (c) => {
     const result = await adminClient.applyAuthConfig({
       emailPassword: true,
       disableSignup: body.disableSignup !== false,
+      ...(typeof body.googleEnabled === 'boolean' ? { googleEnabled: body.googleEnabled } : {}),
     });
     console.log('[admin]', c.get('user').email, 'auth-config', JSON.stringify(result));
     return c.json(result);

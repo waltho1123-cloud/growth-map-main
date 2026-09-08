@@ -360,13 +360,17 @@ async function loadAuthConfig() {
   const el = $('auth-config-status');
   try {
     const cfg = await api('/api/admin/auth-config');
-    el.innerHTML = `Email／密碼登入：<b>${cfg.emailPasswordEnabled ? '已啟用' : '停用'}</b>　自助註冊：<b>${cfg.signUpDisabled ? '已關閉' : '開放中'}</b>`
+    el.innerHTML = `Email／密碼登入：<b>${cfg.emailPasswordEnabled ? '已啟用' : '停用'}</b>　自助註冊：<b>${cfg.signUpDisabled ? '已關閉' : '開放中'}</b>　Google 登入：<b>${cfg.googleEnabled ? '啟用中' : '已關閉'}</b>`
       + `<br><span class="muted">授權網域：${esc(cfg.authorizedDomains.join('、'))}</span>`;
     $('btn-auth-config').style.display = cfg.emailPasswordEnabled && cfg.signUpDisabled ? 'none' : '';
+    $('btn-google-toggle').textContent = cfg.googleEnabled ? '關閉 Google 登入' : '重新啟用 Google 登入';
+    $('btn-google-toggle').dataset.next = cfg.googleEnabled ? 'false' : 'true';
+    $('btn-google-toggle').style.display = '';
     $('auth-config-err').textContent = '';
   } catch (e) {
     el.textContent = describeAdminApiError(e);
     $('btn-auth-config').style.display = 'none';
+    $('btn-google-toggle').style.display = 'none';
   }
 }
 
@@ -387,6 +391,18 @@ function bindAdminApiUi() {
       await loadAccounts();
     } catch (e) {
       $('create-msg').textContent = `建立失敗：${e.message}`;
+    }
+  };
+  $('btn-google-toggle').onclick = async () => {
+    const next = $('btn-google-toggle').dataset.next === 'true';
+    const verb = next ? '重新啟用' : '關閉';
+    if (!window.confirm(`${verb} Google 登入供應商？${next ? '' : '關閉後所有人只能用 email／密碼登入（帳號與資料不受影響）。'}`)) return;
+    $('auth-config-err').textContent = '套用中…';
+    try {
+      await api('/api/admin/auth-config', { method: 'POST', body: { disableSignup: true, googleEnabled: next } });
+      await loadAuthConfig();
+    } catch (e) {
+      $('auth-config-err').textContent = `套用失敗：${e.message}`;
     }
   };
   $('btn-auth-config').onclick = async () => {

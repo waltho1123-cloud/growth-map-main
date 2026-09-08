@@ -42,7 +42,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **帳號與密碼統一由管理員控管（做法 A，2026-09-08 裁定）**：平台不提供自助註冊；學員端登入表單不提供「忘記密碼」（顯示「請聯絡平台管理員」，只有管理頁登入表單保留重設信給管理員自助）。管理員在 `pages/admin.html` 的「帳號與密碼」卡建帳號、指定／重設密碼、停用／啟用，在「登入方式設定」卡一鍵啟用 Email/Password 供應商＋關閉自助註冊——全部經後端 `/api/admin/*` 以 **Firebase 服務帳號**代辦（Identity Toolkit REST；`src/service-account.js` 以 Node crypto 簽 jwt-bearer 換 OAuth token，仍不引入 firebase-admin）。管理員建立或設密碼的帳號一律 `emailVerified=true`（管理員背書），rules／AI 白名單的驗證守門直接放行。既有 Google 帳號由管理員直接設密碼（uid 不變、資料不動）。管理員身分後端不另存名單：`src/admin-guard.js` 用呼叫者 token 探測 `platform/meta` 可讀與否，正本仍是 firestore.rules。**刪除帳號**（2026-09-09）：需在請求重打目標 email、不能刪自己；Auth 先刪，再以同一把服務帳號走 Firestore REST 刪 `platformUsers/{uid}`（一定）與 `users/{uid}` 工作簿整棵樹（`purgeData` 勾選才刪，`src/admin-firestore.js` 遞迴含子集合、2000 份文件安全閥）；Firestore 清理失敗不回滾、以 `purge.error` 回報。第四堂 evalProjects 成員資格不動。
 
-**Bootstrap（金鑰只存 Zeabur，不進 git／對話）**：Firebase Console → 專案設定 → 服務帳號 → 產生新的私密金鑰 → 整份 JSON 存 Zeabur 後端環境變數 `FIREBASE_SERVICE_ACCOUNT_JSON` → 重新部署後端 → 在容器內跑 `node scripts/auth-admin.mjs configure`（`zeabur service exec`；啟用 Email/Password＋關閉自助註冊）→ root 管理員用管理頁登入表單的「忘記密碼」設自己的密碼 → 之後全由管理頁操作。CLI 另有 `status`／`list`／`set-password <email>`（密碼走 `NEW_PASSWORD` 環境變數）／`verify-email <email>`／`delete <email> [--purge-data]`。未設金鑰時 `/api/admin/*` 回 503 `IDO_ADMIN_NOT_CONFIGURED`，其餘功能不受影響。
+**Bootstrap（金鑰只存 Zeabur，不進 git／對話）**：Firebase Console → 專案設定 → 服務帳號 → 產生新的私密金鑰 → 整份 JSON 存 Zeabur 後端環境變數 `FIREBASE_SERVICE_ACCOUNT_JSON` → 重新部署後端 → 在容器內跑 `node scripts/auth-admin.mjs configure`（`zeabur service exec`；啟用 Email/Password＋關閉自助註冊）→ root 管理員用管理頁登入表單的「忘記密碼」設自己的密碼 → 之後全由管理頁操作。CLI 另有 `status`／`list`／`set-password <email>`（密碼走 `NEW_PASSWORD` 環境變數）／`verify-email <email>`／`delete <email> [--purge-data]`／`google-provider <enable|disable>`。**Google 供應商已於 2026-09-09 關閉**（admin v2 `defaultSupportedIdpConfigs/google.com` enabled=false；帳號與資料不動），管理頁「登入方式設定」卡可重新啟用；`auth-config` 回 `googleEnabled`。未設金鑰時 `/api/admin/*` 回 503 `IDO_ADMIN_NOT_CONFIGURED`，其餘功能不受影響。
 
 ### 第四堂（evaluate-strategy）——多人協作模型，與單人模型刻意分離
 
@@ -153,7 +153,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | POST | `/api/admin/accounts/:uid/password` | 設密碼 `{ password }`（並標 email 已驗證） | 否 |
 | POST | `/api/admin/accounts/:uid/disabled` | 停用／啟用 `{ disabled: boolean }`（不能停用自己） | 否 |
 | POST | `/api/admin/accounts/:uid/delete` | 刪帳號 `{ confirmEmail, purgeData?: boolean }` → `{ ok, deleted:{uid,email}, purge:{platformProfile,userDocs,error?} }`；不能刪自己 | 否 |
-| GET／POST | `/api/admin/auth-config` | 讀／套用登入方式：POST `{ disableSignup?: true }` → 啟用 Email/Password＋關閉自助註冊 | 否 |
+| GET／POST | `/api/admin/auth-config` | 讀／套用登入方式：POST `{ disableSignup?: true, googleEnabled?: boolean }` → 啟用 Email/Password＋關閉自助註冊（＋開關 Google 供應商）；GET 回 `{ emailPasswordEnabled, signUpDisabled, googleEnabled, authorizedDomains }` | 否 |
 
 **`POST /api/ai/tasks`**：Request `{ "taskCode": "AI-01|AI-03|AI-04", "input": {...} }` → Response `{ taskCode, state: "draft", payload, confidence, model, usage }`。後端流程：`sanitizeObject(input)` → `callClaude(tier, system, buildUser)` → JSON 解析（含容錯擷取 `{...}`）→ `normalize`。
 

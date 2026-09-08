@@ -35,8 +35,8 @@ test('toAdminView／summarizeAuthConfig：只露出管理需要的欄位，缺�
     uid: 'u2', email: '', displayName: '', emailVerified: false, disabled: false, providers: [], createdAt: null, lastLoginAt: null,
   });
   assert.deepEqual(summarizeAuthConfig({ signIn: { email: { enabled: true } }, client: { permissions: { disabledUserSignup: true } }, authorizedDomains: ['localhost'] }),
-    { emailPasswordEnabled: true, signUpDisabled: true, authorizedDomains: ['localhost'] });
-  assert.deepEqual(summarizeAuthConfig({}), { emailPasswordEnabled: false, signUpDisabled: false, authorizedDomains: [] });
+    { emailPasswordEnabled: true, signUpDisabled: true, googleEnabled: false, authorizedDomains: ['localhost'] });
+  assert.deepEqual(summarizeAuthConfig({}, { enabled: true }), { emailPasswordEnabled: false, signUpDisabled: false, googleEnabled: true, authorizedDomains: [] });
 });
 
 test('describeUpstream：已知碼翻繁中並保留原碼，未知碼原樣帶出', () => {
@@ -94,7 +94,7 @@ test('applyAuthConfig：先讀現值合併 permissions，再 PATCH 帶 updateMas
       : { json: { signIn: { email: { enabled: true, passwordRequired: true } }, client: { permissions: { disabledUserSignup: true, disabledUserDeletion: true } }, authorizedDomains: ['localhost'] } }
   ));
   const after = await client.applyAuthConfig({ emailPassword: true, disableSignup: true });
-  assert.deepEqual(after, { emailPasswordEnabled: true, signUpDisabled: true, authorizedDomains: ['localhost'] });
+  assert.deepEqual(after, { emailPasswordEnabled: true, signUpDisabled: true, googleEnabled: false, authorizedDomains: ['localhost'] });
   assert.equal(calls[1].method, 'PATCH');
   assert.match(calls[1].url, /\/admin\/v2\/projects\/demo\/config\?updateMask=signIn\.email,client\.permissions$/);
   assert.deepEqual(calls[1].body, {
@@ -122,4 +122,32 @@ test('lookupByUid／deleteAccount：lookup 帶 localId 陣列，delete 打 accou
   await client.deleteAccount('u7');
   assert.match(calls[1].url, /\/v1\/projects\/demo\/accounts:delete$/);
   assert.deepEqual(calls[1].body, { localId: 'u7' });
+});
+
+test('Google 供應商：GET 404 視為未啟用；set 走 PATCH updateMask=enabled；applyAuthConfig 只在要求且狀態不同時才動它', async () => {
+  const state = { google: { enabled: true } };
+  const { client, calls } = mockClient(({ method, url, body }) => {
+    if (url.includes('defaultSupportedIdpConfigs/google.com')) {
+      if (method === 'PATCH') { state.google = { enabled: body.enabled }; return { json: { name: 'x', ...state.google } }; }
+      return { json: { name: 'x', ...state.google } };
+    }
+    if (url.endsWith('/config') || url.includes('/config?')) return { json: { signIn: { email: { enabled: true } }, client: { permissions: { disabledUserSignup: true } } } };
+    return { status: 404, json: { error: { message: 'CONFIGURATION_NOT_FOUND' } } };
+  });
+  const cfg = await client.getAuthConfig();
+  assert.equal(cfg.googleEnabled, true);
+  const after = await client.applyAuthConfig({ googleEnabled: false });
+  assert.equal(after.googleEnabled, false);
+  const patches = calls.filter((c) => c.method === 'PATCH' && c.url.includes('google.com'));
+  assert.equal(patches.length, 1);
+  assert.match(patches[0].url, /defaultSupportedIdpConfigs\/google\.com\?updateMask=enabled$/);
+  assert.deepEqual(patches[0].body, { enabled: false });
+  await client.applyAuthConfig({ googleEnabled: false });
+  assert.equal(calls.filter((c) => c.method === 'PATCH' && c.url.includes('google.com')).length, 1, '狀態相同不再 PATCH');
+
+  const { client: c404 } = mockClient(({ url }) => (
+    url.includes('google.com') ? { status: 404, json: { error: { message: 'CONFIGURATION_NOT_FOUND' } } } : { json: {} }
+  ));
+  assert.equal(await c404.getGoogleProvider(), null);
+  assert.equal((await c404.getAuthConfig()).googleEnabled, false);
 });

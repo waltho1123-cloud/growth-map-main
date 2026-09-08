@@ -70,10 +70,12 @@ export function toAdminView(u) {
   };
 }
 
-export function summarizeAuthConfig(cfg) {
+export function summarizeAuthConfig(cfg, googleIdp) {
   return {
     emailPasswordEnabled: cfg?.signIn?.email?.enabled === true,
     signUpDisabled: cfg?.client?.permissions?.disabledUserSignup === true,
+    // Google 供應商：admin v2 defaultSupportedIdpConfigs/google.com；不存在（404）視為未啟用
+    googleEnabled: googleIdp?.enabled === true,
     authorizedDomains: Array.isArray(cfg?.authorizedDomains) ? cfg.authorizedDomains : [],
   };
 }
@@ -149,11 +151,27 @@ export function createIdentityToolkitClient({ projectId, getAccessToken, fetchIm
     async deleteAccount(uid) {
       await call('POST', '/accounts:delete', { localId: uid });
     },
+    async getGoogleProvider() {
+      try {
+        return await call('GET', '/defaultSupportedIdpConfigs/google.com', undefined, { admin: true });
+      } catch (e) {
+        if (e instanceof AdminUpstreamError && e.status === 404) return null; // 從未設定＝未啟用
+        throw e;
+      }
+    },
+    async setGoogleProvider(enabled) {
+      return call('PATCH', '/defaultSupportedIdpConfigs/google.com?updateMask=enabled', { enabled: enabled === true }, { admin: true });
+    },
     async getAuthConfig() {
-      return summarizeAuthConfig(await call('GET', '/config', undefined, { admin: true }));
+      const [cfg, google] = await Promise.all([
+        call('GET', '/config', undefined, { admin: true }),
+        this.getGoogleProvider(),
+      ]);
+      return summarizeAuthConfig(cfg, google);
     },
     // 啟用 Email/Password 供應商＋關閉自助註冊；permissions 先讀現值再合併，避免 PATCH 整包蓋掉其他旗標
-    async applyAuthConfig({ emailPassword = true, disableSignup = true } = {}) {
+    // googleEnabled 未給＝不動 Google 供應商；給 false＝關閉（帳號不刪，只擋 Google 登入）
+    async applyAuthConfig({ emailPassword = true, disableSignup = true, googleEnabled } = {}) {
       const current = await call('GET', '/config', undefined, { admin: true });
       const permissions = { ...(current?.client?.permissions || {}), disabledUserSignup: disableSignup === true };
       const body = {
@@ -161,7 +179,11 @@ export function createIdentityToolkitClient({ projectId, getAccessToken, fetchIm
         client: { permissions },
       };
       const cfg = await call('PATCH', '/config?updateMask=signIn.email,client.permissions', body, { admin: true });
-      return summarizeAuthConfig(cfg);
+      let google = await this.getGoogleProvider();
+      if (typeof googleEnabled === 'boolean' && google && google.enabled !== googleEnabled) {
+        google = await this.setGoogleProvider(googleEnabled);
+      }
+      return summarizeAuthConfig(cfg, google);
     },
   };
 }

@@ -7,6 +7,7 @@
 //   NEW_PASSWORD=... node scripts/auth-admin.mjs set-password <email>   設密碼（並標 email 已驗證）
 //   node scripts/auth-admin.mjs verify-email <email>   標記 email 已驗證
 //   node scripts/auth-admin.mjs delete <email> [--purge-data]   刪帳號（＋platformUsers 目錄項；--purge-data 連工作簿資料）
+//   node scripts/auth-admin.mjs google-provider <enable|disable>   開關 Google 登入供應商（帳號不動）
 import { readFileSync } from 'node:fs';
 import { parseServiceAccount, createAdminTokenProvider } from '../src/service-account.js';
 import { createIdentityToolkitClient, validateEmail, validatePassword } from '../src/admin-accounts.js';
@@ -67,6 +68,14 @@ try {
       console.log(`已標記 ${u.email} 為 email 已驗證`);
       break;
     }
+    case 'google-provider': {
+      if (arg !== 'enable' && arg !== 'disable') throw new Error('用法：node scripts/auth-admin.mjs google-provider <enable|disable>');
+      const before = await client.getGoogleProvider();
+      if (!before) { console.log('Google 供應商從未設定（視為未啟用），不需變更'); break; }
+      const after = await client.setGoogleProvider(arg === 'enable');
+      console.log(JSON.stringify({ before: { enabled: before.enabled === true }, after: { enabled: after.enabled === true } }, null, 2));
+      break;
+    }
     case 'delete': {
       if (!arg) throw new Error('用法：node scripts/auth-admin.mjs delete <email> [--purge-data]');
       const u = await findByEmail(arg);
@@ -77,7 +86,7 @@ try {
       break;
     }
     default:
-      console.error('用法：node scripts/auth-admin.mjs <status|configure|list|set-password <email>|verify-email <email>|delete <email> [--purge-data]>');
+      console.error('用法：node scripts/auth-admin.mjs <status|configure|list|set-password <email>|verify-email <email>|delete <email> [--purge-data]|google-provider <enable|disable>>');
       process.exit(2);
   }
 } catch (e) {

@@ -121,6 +121,7 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 ### 維運護欄（2026-09-09 補強）
 
 - **Firestore 每日備份**：backupSchedule `e76c342a-dc69-404e-a8cb-9c511882191d`（dailyRecurrence，保留 7 天，UTC）。還原走 Firebase Console → Firestore → 備份，或 Firebase MCP／`gcloud firestore backups`。
+- **PITR 已開啟（2026-09-09 07:00Z，識別機會資料覆寫事故後）**：`versionRetentionPeriod` 由 1 小時變 7 天（1 小時內任意時間點、之後每分鐘快照）。單一文件還原：容器內 `node scripts/firestore-restore.mjs <docPath> <readTime ISO> [--apply]`（服務帳號；先檢視摘要再 --apply；會存 `restoreBackups/` 並把 updatedAtMs 設為現在）。readTime 選「事故前最後完整版本存活區間的較晚時刻」。
 - **健康檢查監控**：GitHub Actions `health-check`（`.github/workflows/health-check.yml`）每 10 分鐘探測後端 `/`（`ok`／`apiKeyValid`／`adminConfigured` 皆須 true）與前端站 200；失敗＝workflow 紅燈（GitHub 寄信）＋開／更新 issue「🚨 線上健康檢查失敗」，恢復自動關閉。**公開 repo 60 天無 commit 會被 GitHub 暫停排程**，需到 Actions 頁重新啟用。
 - **CI**：`preflight` workflow 在 push／PR 跑 root preflight（含四單元建置）與 `npm run test:rules`；部署仍手動（刻意）。
 - **rules 自動化測試**：`tests/rules/firestore.rules.test.mjs`（`@firebase/rules-unit-testing`＋Firestore 模擬器，`npm run test:rules`，需 Java 21——本機沒有 Java 就靠 CI）。覆蓋 platformUsers 欄位白名單、管理員 email_verified、第四堂邀請／自助加入／提權、scores docId 綁定、adminLogs 只讀。改 rules 必加案例。

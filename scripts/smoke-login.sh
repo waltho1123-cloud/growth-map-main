@@ -20,7 +20,7 @@ playwright-cli goto "$BASE/growthmap/evaluate-strategy/dist/" >/dev/null
 r eval "(async () => { for (let i=0;i<60;i++){ const t=document.body.innerText; if(t.includes('選擇評估專案')) return 'evaluate: gate passed (ProjectPicker)'; if(document.querySelector('input[type=password]')) return 'evaluate: still at LoginGate'; await new Promise(r=>setTimeout(r,250)); } return 'evaluate: undetermined'; })()"
 echo "### opportunity-system shared session"
 playwright-cli goto "$BASE/growthmap/opportunity-system/build/" >/dev/null
-r eval "(async () => { for (let i=0;i<60;i++){ if(document.body.innerText.includes('已同步')) return 'opportunity: 已同步 pill (session shared)'; await new Promise(r=>setTimeout(r,250)); } return 'opportunity: no sync pill'; })()"
+r eval "(async () => { for (let i=0;i<160;i++){ const t=document.body.innerText; if(t.includes('已同步')) return 'opportunity: 已同步 pill after '+(i*250)+'ms (session shared)'; if(i>40 && [...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='登入')) return 'opportunity: shows 登入 button (session NOT shared?)'; await new Promise(r=>setTimeout(r,250)); } return 'opportunity: no sync pill after 40s; skeleton='+(document.getElementById('app-skeleton')!==null)+' text='+document.body.innerText.slice(0,80).replace(/\\n/g,' '); })()"
 r console error
 echo "### logout"
 playwright-cli goto "$BASE/" >/dev/null

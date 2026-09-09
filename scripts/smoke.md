@@ -84,3 +84,13 @@ scripts/smoke-login.sh https://growthmap-staging.zeabur.app   # 或 prod 網址
 需要 `~/.config/growthmap/smoke.env`（`SMOKE_EMAIL`／`SMOKE_PASSWORD`，chmod 600）。smoke 帳號
 `platform-smoke@growth-map-main.zeabur.app` 由管理員建立、不在 AI 白名單、沒有資料；密碼忘了就到管理頁重設並更新該檔。
 通過標準：portal 顯示「✓ 已登入」、第四堂進到「選擇評估專案」、第三堂右上「已同步」、登出後回到「登入」按鈕，console 零錯誤。
+
+## 第四堂多人流程 UAT（動到 evalProjects 規則、邀請／加入、ProjectPicker／SettingsPage 時必跑）
+
+```bash
+scripts/uat-evaluate-multiuser.sh https://growthmap-staging.zeabur.app
+```
+
+兩個 smoke 帳號（`smoke.env` 的 SMOKE 與 SMOKE2）各開一個 Playwright session（`-s=uat-owner`／`-s=uat-member`）。
+通過標準：每一步的 `seen:` 都出現（建立、已邀請、邀請我加入、成員（2）雙方、專案刪除後 member 清單消失），console 零錯誤。
+腳本會自行清理（owner 刪除該測試專案）；若中途失敗殘留專案，請以 owner 帳號登入第四堂手動刪除「UAT 自動化 …」。

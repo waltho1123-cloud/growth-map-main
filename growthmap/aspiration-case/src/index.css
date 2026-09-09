@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* 建置產物入版控（GitHub＝線上），必須排除在 Tailwind 自動掃描之外：否則上一次的 bundle 會被當成
+   class 來源，class 增減延遲一個建置週期才反映到 CSS，造成「沒改程式卻換 hash」（2026-09-09 根因）。 */
+@source not "../dist";
 
 @theme {
   --color-brand-blue: #4f46e5;

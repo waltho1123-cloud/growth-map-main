@@ -63,6 +63,8 @@ VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 三單元全�
 npm test                                     # 全 workspace 測試（contracts/cloud/opportunity）
 npm run lint                                 # 三單元 lint（基線全綠）
 VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run preflight   # 部署前必跑：test+lint+build 全綠才准 deploy
+# 建置產物入版控＋Tailwind v4 自動掃描：三個 v4 單元的 CSS 入口有 `@source not "../dist"`（momentum 為 ../../out），
+# 否則上一次的 bundle 會被當 class 來源、hash 延遲一個週期才穩定（2026-09-09 根因）。opportunity 是 Tailwind v3（content 明列）不受影響。
 # preflight 開頭有兩個前置 gate（scripts/）：check:env 未帶 VITE_AI_BASE_URL 直接 fail（防 GD-06 靜默停用）；
 # check:react 掃全 workspace 任意深度的巢狀 react/react-dom 副本（防兩個 React 實例白屏，修法 npm explain react）
 
@@ -123,6 +125,7 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 - **CI**：`preflight` workflow 在 push／PR 跑 root preflight（含四單元建置）與 `npm run test:rules`；部署仍手動（刻意）。
 - **rules 自動化測試**：`tests/rules/firestore.rules.test.mjs`（`@firebase/rules-unit-testing`＋Firestore 模擬器，`npm run test:rules`，需 Java 21——本機沒有 Java 就靠 CI）。覆蓋 platformUsers 欄位白名單、管理員 email_verified、第四堂邀請／自助加入／提權、scores docId 綁定、adminLogs 只讀。改 rules 必加案例。
 - **管理操作稽核**：後端所有管理變更（建帳號／設密碼／停用／啟用／刪除／登入方式／Google 供應商，含 CLI）寫 Firestore `adminLogs/{autoId}`（`{ at, actorUid, actorEmail, action, targetUid, targetEmail, detail }`），rules 只讓管理員讀、client 不可寫；管理頁「管理操作紀錄」卡讀最近 50 筆。
+- **第四堂多人流程 UAT（自動化）**：`scripts/uat-evaluate-multiuser.sh [base-url]`——兩個 smoke 帳號、兩個獨立 Playwright session：owner 建專案 → 設定頁邀請 → member 自助加入 → 雙方看到成員（2）→ owner 刪除 → member 端消失。需 `smoke.env` 另有 `SMOKE2_EMAIL`／`SMOKE2_PASSWORD`（帳號 `platform-smoke-2@growth-map-main.zeabur.app`）。
 - **登入 e2e smoke**：`scripts/smoke-login.sh [base-url]`——用 smoke 專用帳號 `platform-smoke@growth-map-main.zeabur.app`（管理員建立、不在 AI 白名單、無資料、**勿刪**）登入 portal → 第四堂通過登入閘門 → 第三堂同步膠囊 → 登出。帳密只放本機 `~/.config/growthmap/smoke.env`（chmod 600），不進 repo／對話。動到登入或 firebase 包時必跑。
 - CLI 新增 `create <email> [名稱]`（`NEW_PASSWORD` 環境變數帶密碼），與管理頁建帳號同義。
 
@@ -241,7 +244,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
 - **Migration**：`migrateData` / `migrateOpportunity` 為**冪等純增量補欄位**，不刪既有資料；新欄位與舊扁平欄位**並存**是刻意的漸進切換設計，勿「順手清理」舊欄位。
 - **狀態機**：`draft → insight_linked → evaluated → shortlisted → handed_off → archived`。
 - **檢查引擎（CHK）**：例 CHK-1 機會營收總和 ≥ 成長差距 × 緩衝係數（預設 1.2，可於設定頁調整，ADR-010）；CHK-4 長清單合格數 7–12。資料一變動即令上次檢查失效。
-- **BCG 工具庫**（`utils/toolLibrary.js`）：24 工具，**17–24 啟用（內部洞察）**、1–16 預留（外部觀察）。資料驅動（ADR-007 / GD-08）。**1–16 沒有 fieldSchema**：分析頁改提供「觀察資料／研究筆記」自由欄（存 `toolAnalyses[code].inputs.notes`，隨既有同步），AI-01 以它為輸入；`utils/toolAiInput.js` 的 `buildAiInsightInput` 決定 AI 按鈕可否按（外部工具筆記 ≥ 20 字、內部工具至少一個欄位有值），否則停用並提示——避免送空輸入得到「資料為空」的 10% 信心建議稿（2026-09-09）。
+- **BCG 工具庫**（`utils/toolLibrary.js`）：24 工具，**17–24 啟用（內部洞察）**、1–16 預留（外部觀察）。資料驅動（ADR-007 / GD-08）。**1–16 的 fieldSchema 是 2026-09-09 起草的「草案欄位」**（`fieldSchema.draft=true`，分析頁標示「草案欄位」；Dropbox 與 repo 都沒有 BCG 原始方法論規格，欄位依標準策略框架設計，主持人可直接在 toolLibrary.js 調整），仍 `defaultEnabled:false`。外部工具的分析頁另保留「觀察資料／研究筆記」自由欄（`inputs.notes`，隨既有同步）作為萬用出口；`utils/toolAiInput.js` 的 `buildAiInsightInput` 決定 AI 按鈕可否按（至少一個欄位有值，或筆記 ≥ 20 字；內部工具只看欄位），並把有值欄位＋筆記一起餵 AI-01——避免送空輸入得到「資料為空」的 10% 信心建議稿。
 
 ### 持久化與雲端即時同步
 - **本地**：localStorage，key `bw_opportunity_v2`（`utils/storage.js`）。

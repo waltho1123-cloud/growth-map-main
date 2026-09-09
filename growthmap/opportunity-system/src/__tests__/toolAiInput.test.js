@@ -32,3 +32,19 @@ describe('buildAiInsightInput', () => {
     expect(buildAiInsightInput({ name: 'x' }, { notes: 'a'.repeat(NOTES_MIN_CHARS) }).ready).toBe(true);
   });
 });
+
+describe('showsNotes／外部工具有欄位時的合併輸入', () => {
+  it('外部工具即使有欄位也保留筆記欄；筆記 ≥20 字可單獨讓 AI 可按並併入 payload', async () => {
+    const { showsNotes } = await import('../utils/toolAiInput');
+    const extWithFields = { id: 2, name: '價值鏈分析', observationType: 'external', fieldSchema: { fields: [{ key: 'stages' }] } };
+    expect(showsNotes(extWithFields)).toBe(true);
+    expect(showsNotes({ id: 17, name: 'x', observationType: 'internal', fieldSchema: { fields: [{ key: 'a' }] } })).toBe(false);
+    const notes = '產業價值鏈利潤集中在品牌與通路兩端，代工環節毛利率不到一成。';
+    const r = buildAiInsightInput(extWithFields, { [NOTES_KEY]: notes });
+    expect(r.ready).toBe(true);
+    expect(r.payload.inputs).toEqual({ 觀察資料與研究筆記: notes });
+    const both = buildAiInsightInput(extWithFields, { stages: '原料→製造→品牌→通路', [NOTES_KEY]: notes });
+    expect(both.payload.inputs).toEqual({ stages: '原料→製造→品牌→通路', 觀察資料與研究筆記: notes });
+    expect(buildAiInsightInput(extWithFields, {}).hint).toContain('觀察資料');
+  });
+});

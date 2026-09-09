@@ -18,6 +18,11 @@ export function hasFieldSchema(tool) {
   return Array.isArray(tool?.fieldSchema?.fields) && tool.fieldSchema.fields.length > 0;
 }
 
+// 外部觀察工具（1–16）不論有無正式欄位都保留「觀察資料／研究筆記」自由欄（欄位是草案，筆記是萬用出口）
+export function showsNotes(tool) {
+  return !hasFieldSchema(tool) || tool?.observationType === 'external';
+}
+
 /**
  * @returns {{ ready: boolean, payload: null | { toolName: string, inputs: object }, hint: string }}
  */
@@ -36,8 +41,16 @@ export function buildAiInsightInput(tool, inputs = {}) {
   }
   const keys = tool.fieldSchema.fields.map((f) => f.key);
   const picked = Object.fromEntries(keys.filter((k) => filled(inputs?.[k])).map((k) => [k, inputs[k]]));
+  const notes = showsNotes(tool) ? String(inputs?.[NOTES_KEY] || '').trim() : '';
+  if (notes.length >= NOTES_MIN_CHARS) picked['觀察資料與研究筆記'] = notes;
   if (Object.keys(picked).length === 0) {
-    return { ready: false, payload: null, hint: '請先填寫至少一個分析欄位，AI 才有東西可分析。' };
+    return {
+      ready: false,
+      payload: null,
+      hint: showsNotes(tool)
+        ? `請先填寫至少一個分析欄位，或在「觀察資料／研究筆記」貼上至少 ${NOTES_MIN_CHARS} 字，AI 才有東西可分析。`
+        : '請先填寫至少一個分析欄位，AI 才有東西可分析。',
+    };
   }
   return { ready: true, payload: { toolName, inputs: picked }, hint: '' };
 }

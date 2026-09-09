@@ -9,7 +9,7 @@ import { IMETextarea } from '../IMEInput';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
 import AiSuggestionCard from '../ai/AiSuggestionCard';
 import { aiText } from '../../lib/ai/aiText';
-import { buildAiInsightInput, hasFieldSchema, NOTES_KEY } from '../../utils/toolAiInput';
+import { buildAiInsightInput, hasFieldSchema, showsNotes, NOTES_KEY } from '../../utils/toolAiInput';
 import toast from 'react-hot-toast';
 
 // 字串列表編輯器（主要洞察 / 機會）
@@ -167,9 +167,14 @@ export default function ToolAnalysis() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* 工具專屬分析欄位（依 fieldSchema 動態渲染） */}
-        {hasFieldSchema(tool) ? (
+        {hasFieldSchema(tool) && (
           <div className="glass-card rounded-xl p-5 space-y-5">
-            <h3 className="text-sm font-bold text-gray-800">工具分析</h3>
+            <h3 className="text-sm font-bold text-gray-800">
+              工具分析
+              {tool.fieldSchema.draft && (
+                <span className="ml-2 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">草案欄位</span>
+              )}
+            </h3>
             {tool.fieldSchema.fields.map((field) => (
               <DynamicField
                 key={field.key}
@@ -179,12 +184,14 @@ export default function ToolAnalysis() {
               />
             ))}
           </div>
-        ) : (
+        )}
+        {showsNotes(tool) && (
           <div className="glass-card rounded-xl p-5 space-y-3">
             <h3 className="text-sm font-bold text-gray-800">觀察資料／研究筆記</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              此工具屬外部觀察，沒有專屬分析欄位。把市場數據、研究摘要、訪談紀錄或新聞重點貼在這裡，
-              AI 會據此產出洞察候選；也可以跳過，直接填寫下方主要洞察與機會。
+              {hasFieldSchema(tool)
+                ? '上方欄位之外的補充資料：市場數據、研究摘要、訪談紀錄或新聞重點貼在這裡，AI 會一併參考。'
+                : '此工具屬外部觀察，沒有專屬分析欄位。把市場數據、研究摘要、訪談紀錄或新聞重點貼在這裡，AI 會據此產出洞察候選；也可以跳過，直接填寫下方主要洞察與機會。'}
             </p>
             <IMETextarea
               value={inputs[NOTES_KEY] || ''}

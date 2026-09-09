@@ -150,7 +150,9 @@ export function subscribeProjectDoc(pid, onChange, onError) {
     const d = await db();
     if (cancelled) return;
     unsub = onSnapshot(projRef(d, pid), (snap) => {
-      onChange(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+      // fromCache：第一個快照常來自本機快取（例如受邀者剛自助加入，快取還是加入前的文件）；
+      // 呼叫端據此決定「非成員→踢回選擇頁」只能在伺服器確認的快照上做（2026-09-09 UAT 抓到）
+      onChange(snap.exists() ? { id: snap.id, ...snap.data() } : null, { fromCache: snap.metadata.fromCache === true });
     }, (err) => onError?.(err));
   })();
   return () => { cancelled = true; unsub?.(); };

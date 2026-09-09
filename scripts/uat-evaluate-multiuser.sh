@@ -53,6 +53,6 @@ o eval "$WAIT_TEXT('無法復原', 5000)"
 oq click 'button:text-is("確認刪除")'
 o eval "$WAIT_TEXT('選擇評估專案', 20000)"
 mq goto "$EVA"
-m eval "(async () => { for (let i=0;i<40;i++){ const t=document.body.innerText; if(t.includes('選擇評估專案') && !t.includes('$NAME')) return 'member picker: project gone'; await new Promise(r=>setTimeout(r,250)); } return 'member picker: project still listed?'; })()"
+m eval "(async () => { for (let i=0;i<80;i++){ const t=document.body.innerText; if(t.includes('選擇評估專案') && !t.includes('$NAME')) return 'member picker: project gone (after '+(i*250)+'ms)'; await new Promise(r=>setTimeout(r,250)); } return 'member NOT back at picker in 20s | '+document.body.innerText.replace(/\s+/g,' ').slice(0,200); })()"
 echo "### console errors"; echo "owner:"; o console error; echo "member:"; m console error
 oq close; mq close

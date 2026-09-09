@@ -68,6 +68,8 @@ function Workspace({ pid, user, onExit }) {
   const unbind = useProjectStore((s) => s.unbind);
   const project = useProjectStore((s) => s.project);
   const projectLoaded = useProjectStore((s) => s.projectLoaded);
+  const projectFromCache = useProjectStore((s) => s.projectFromCache);
+  const projectError = useProjectStore((s) => s.projectError);
   const storeError = useProjectStore((s) => s.error);
 
   useEffect(() => {
@@ -77,10 +79,17 @@ function Workspace({ pid, user, onExit }) {
     return () => unbind();
   }, [pid, user.uid, bind, unbind]);
 
-  // 換帳號防護：目前帳號不是成員（或專案被刪）→ 回選擇頁
+  // 換帳號防護：目前帳號不是成員（或專案被刪）→ 回選擇頁。
+  // 只信伺服器快照：受邀者剛自助加入時，第一個快照可能是本機快取裡「加入前」的文件，
+  // 若據此踢人會把剛加入的成員彈回選擇頁（2026-09-09 雙人 UAT 抓到的 bug）。
   useEffect(() => {
-    if (projectLoaded && (!project || !project.members?.[user.uid])) onExit();
-  }, [projectLoaded, project, user.uid, onExit]);
+    if (projectLoaded && !projectFromCache && (!project || !project.members?.[user.uid])) onExit();
+  }, [projectLoaded, projectFromCache, project, user.uid, onExit]);
+  // 專案本體讀不到（被刪／已非成員／權限被拒）：新監聽不會有任何快照、只有錯誤——
+  // 若不處理會永遠卡在「載入專案中…」（2026-09-09 雙人 UAT：member 在工作台時 owner 刪專案）
+  useEffect(() => {
+    if (projectError && !projectLoaded) onExit();
+  }, [projectError, projectLoaded, onExit]);
 
   if (!projectLoaded || !project) {
     return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">載入專案中…</div>;

@@ -25,6 +25,8 @@ export const useProjectStore = create((set, get) => ({
   _uid: null, // 綁定時的使用者——同機換帳號（pid 相同、uid 不同）必須重建訂閱
   project: null,      // null＝載入中或不存在；ready 後仍 null＝已被刪除/無權限
   projectLoaded: false,
+  projectFromCache: true, // 最新專案快照是否來自本機快取；成員資格判定只信伺服器快照
+  projectError: null,     // 專案本體訂閱錯誤（被刪／已非成員→規則拒絕，不會有快照）；Workspace 據此回選擇頁
   ...EMPTY_SUBS,
   error: null,
   _unsubs: [],
@@ -35,12 +37,13 @@ export const useProjectStore = create((set, get) => ({
     if (state.pid === pid && state._uid === uid) return;
     state._unsubs.forEach((u) => u?.());
     if (!pid) {
-      set({ pid: null, _uid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
+      set({ pid: null, _uid: null, project: null, projectLoaded: false, projectFromCache: true, projectError: null, error: null, _unsubs: [], ...EMPTY_SUBS });
       return;
     }
     const onError = (err) => set({ error: err?.message || String(err) });
     const unsubs = [
-      subscribeProjectDoc(pid, (project) => set({ project, projectLoaded: true }), onError),
+      subscribeProjectDoc(pid, (project, meta) => set({ project, projectLoaded: true, projectFromCache: meta?.fromCache === true }),
+        (err) => { onError(err); set({ projectError: err?.code || err?.message || 'error' }); }),
       ...Object.keys(SUB_SORTERS).filter((s) => s !== 'scores').map((sub) =>
         subscribeSubcollection(pid, sub, (rows) => {
           rows.sort(SUB_SORTERS[sub]);
@@ -53,12 +56,12 @@ export const useProjectStore = create((set, get) => ({
         set({ scores: rows });
       }, onError),
     ];
-    set({ pid, _uid: uid, project: null, projectLoaded: false, error: null, _unsubs: unsubs, ...EMPTY_SUBS });
+    set({ pid, _uid: uid, project: null, projectLoaded: false, projectFromCache: true, projectError: null, error: null, _unsubs: unsubs, ...EMPTY_SUBS });
   },
 
   unbind() {
     get()._unsubs.forEach((u) => u?.());
-    set({ pid: null, _uid: null, project: null, projectLoaded: false, error: null, _unsubs: [], ...EMPTY_SUBS });
+    set({ pid: null, _uid: null, project: null, projectLoaded: false, projectFromCache: true, projectError: null, error: null, _unsubs: [], ...EMPTY_SUBS });
   },
 }));
 

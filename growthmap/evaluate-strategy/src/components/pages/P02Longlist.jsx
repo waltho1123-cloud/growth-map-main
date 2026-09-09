@@ -331,6 +331,7 @@ function OpportunityDetail({ opp }) {
         {row('市場規模', t3.marketSize)}
         {row('現有規模', t3.currentScale)}
         {row('CAGR', t3.cagr)}
+        {row('綜效', t3.synergies)}
         {row('競爭環境', t3.competitiveEnvironment)}
         {row('必要投資', t3.requiredInvestment)}
         {row('成功因子', t3.successFactors)}

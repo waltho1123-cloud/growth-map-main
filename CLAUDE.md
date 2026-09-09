@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 三單元共用 Firestore 資料契約 `users/{uid}/apps/{appKey}`，appKey＝`momentum`（第一堂）/ `aspiration`（第二堂）/ `opportunity`（第三堂），資料串成一條管線：
 
-1. momentum-case 寫 `apps/momentum`；aspiration-case 寫 `apps/aspiration`。
+1. momentum-case 寫 `apps/momentum`；aspiration-case 寫 `apps/aspiration`。aspiration 文件另有 **additive** 的 `tamSamSom`（TAM／SAM／SOM 三層：`{ description, size }`，億）與 `partA[].businessModel`（`existing`／`new`，舊資料缺此欄由 UI 依 id 推定），2026-09-10 依講義 p21–37 新增；判讀規則（SAM≠TAM、20% 市佔門檻、四格合計 ≤ SOM）純函式在 `aspiration-case/src/lib/marketLayers.js`。兩者都不在 orient 契約內，消費端可忽略。
 2. **opportunity-system 跨單元讀 `apps/aspiration`**（`src/lib/cloud/orient.js`）：取 `data.companyInfo.naturalGrowth.targetRevenue2028`（自然增長）、`data.companyInfo.aspirationGrowth.targetRevenue2028`（加速增長）、`data.partA`（營收拆解），算出成長差距餵給 `GrowthGapDashboard` 與 CHK-1。
 3. opportunity-system 的 `HandoffPanel` 快照凍結後交付第四堂。
 
@@ -207,7 +207,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | --- | --- | --- | --- | --- |
 | **AI-01** 洞察生成 | sonnet | JSON | `{ toolName, toolCategory, framework:[欄位標籤], inputs, context:{archetype,growthGap,otherInsights,opportunities}, mode }` | `{ insights:[], confidence }` → `toolAnalyses[code].insights`。**兩種模式**（2026-09-09）：`inputs` 有值＝analysis；空＝hypothesis——依公司背景與工具框架提出 3–5 條【假說】開頭、句末「→ 需驗證：…」、confidence ≤ 0.4 的洞察（前端 `buildAiContext` 組 context，`buildAiInsightInput` 決定 mode；AI 按鈕永遠可按） |
 | **AI-02** 機會方向候選 | sonnet | JSON | `{ toolName, toolCategory, framework, insights:[本工具主要洞察], existingOpportunities:[避免重複], context, mode }` | `{ opportunities:[], confidence }` → 採納後 append 到 `toolAnalyses[code].opportunitiesNote`。每條「市場／客群 × 產品或服務 × 方式（來自：洞察 N）」；insights 空＝假說模式（【假說】＋需驗證、≤ 0.4）。normalize 把物件項攤成字串（2026-09-09） |
-| **AI-03** 四象限評分 | sonnet | JSON | `{ title, archetype, gap, insights[], template2 }` | `{ ratings{size,potential,path,rightToWin: 1–5}, ebitBand, cagrBand, rationale, confidence }` → `template3.ratings/ebitBand/cagrBand`。`normalize` 會把巢狀 `{score,rationale}` 攤平為純數字 |
+| **AI-03** 四象限評分 | sonnet | JSON | `{ title, archetype, gap, insights[], template2, synergies }` | `{ ratings{size,potential,path,rightToWin: 1–5}, ebitBand, cagrBand, rationale, confidence }` → `template3.ratings/ebitBand/cagrBand`。`normalize` 會把巢狀 `{score,rationale}` 攤平為純數字 |
 | **AI-04** 機會排序 | sonnet | JSON | `{ opportunities[] }` | `{ order:[機會 id 由高到低], rationale }` → `opp.rank` |
 | **AI-07** 教練對話 | opus | SSE | `{ messages[] }` | 不持久化（即時對話） |
 
@@ -238,7 +238,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
                  /* 舊欄位 goToMarketStrategy/implementationSteps 保留相容 */ },
     template3: { marketSize, unitPrice, competitiveEnvironment, topBrandsShare,
                  currentScale, cagr, ebitMargin, requiredInvestment, potentialHurdles,
-                 successFactors, coreCapabilities,
+                 successFactors, coreCapabilities, synergies /* 2026-09-10 講義 p102：操作潛力＝從綜效去思考 */,
                  ratings:{size,potential,path,rightToWin /* 0–5 */}, points, ebitBand, cagrBand }
   }
   toolAnalyses[code] = { inputs, insights[], opportunitiesNote[], status, updatedAt }

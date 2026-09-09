@@ -20,7 +20,7 @@ export const CloudSyncBootstrap = createCloudSyncBootstrap({
   subscribe: (listener) => useAspirationStore.subscribe(listener),
   getSnapshot: () => {
     const s = useAspirationStore.getState();
-    return { companyInfo: s.companyInfo, partA: s.partA, partB: s.partB, partC: s.partC };
+    return { companyInfo: s.companyInfo, partA: s.partA, partB: s.partB, partC: s.partC, tamSamSom: s.tamSamSom };
   },
   applySnapshot: (data) => useAspirationStore.getState().applySnapshot(data),
   // 同分頁換帳號時清空殘留（防跨帳號資料汙染）

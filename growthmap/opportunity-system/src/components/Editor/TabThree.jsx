@@ -66,6 +66,7 @@ export default function TabThree({ data, onChange }) {
         archetype: data.template1?.companyType,
         insights: data.template1?.insights ? [data.template1.insights] : [],
         template2: data.template2,
+        synergies: data.template3?.synergies || '',
       });
       setAi({ loading: false, payload: r.payload, confidence: r.confidence, error: null });
     } catch (e) {
@@ -205,6 +206,10 @@ export default function TabThree({ data, onChange }) {
         <div className="glass-card rounded-xl p-5">
           <QuadrantHeader num={2} color="bg-emerald-600" title="Potential of Play — 操作潛力" rating={ratings.potential} onRating={(v) => updateRating('potential', v)} />
           <div className="space-y-4">
+            <div>
+              <label htmlFor="t3-f7s" className="block text-xs font-medium text-gray-600 mb-1">綜效 (synergies) <span className="font-normal text-gray-400">— 講義：操作潛力請從「綜效」去思考</span></label>
+              <IMETextarea id="t3-f7s" value={template3.synergies || ''} onValueChange={(v) => updateField('synergies', v)} rows={3} placeholder="生產／產品／跨國／研發／銷售綜效…例：透過護膚明星商品奠定品牌聲譽，跨售其他美妝品類；三地製造佈局提升供應鏈彈性" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />
+            </div>
             <div>
               <label htmlFor="t3-f7" className="block text-xs font-medium text-gray-600 mb-1">現有規模 (currentScale)</label>
               <IMEInput id="t3-f7" type="text" value={template3.currentScale} onValueChange={(v) => updateField('currentScale', v)} placeholder="例如：年營收 NT$ 2B" className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm" />

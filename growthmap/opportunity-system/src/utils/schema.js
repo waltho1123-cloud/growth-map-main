@@ -83,6 +83,7 @@ export function createEmptyOpportunity() {
       marketSize: '', unitPrice: '', competitiveEnvironment: '', topBrandsShare: '',
       currentScale: '', cagr: '', ebitMargin: '',
       requiredInvestment: '', potentialHurdles: '', successFactors: '', coreCapabilities: '',
+      synergies: '', // 2026-09-10 講義 p102：操作潛力＝從「綜效」去思考（生產／產品／跨國／研發／銷售綜效）
       // SDD 新增：四象限 1–5 評分 + 要點 + 分級
       ratings: { size: 0, potential: 0, path: 0, rightToWin: 0 },
       points: '',
@@ -146,6 +147,7 @@ export function migrateOpportunity(opp) {
       potentialHurdles: t3.potentialHurdles || '',
       successFactors: t3.successFactors || '',
       coreCapabilities: t3.coreCapabilities || '',
+      synergies: t3.synergies || '',
       points: t3.points || '',
       ratings: {
         size: ratings.size ?? 0,

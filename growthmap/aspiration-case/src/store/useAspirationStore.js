@@ -2,10 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 const INITIAL_PART_A = [
-  { id: 'core', category: '既有市場/產品', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
-  { id: 'newProd', category: '新產品/服務', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
-  { id: 'newMarket', category: '新市場/客戶', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
-  { id: 'newModel', category: '新商業模式', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '' },
+  // businessModel：原有（existing）／新（new）商業模式——講義 p30／p37 要求把 TAM 落地時區分；舊資料缺此欄時由 UI 依 id 推定
+  { id: 'core', category: '既有市場/產品', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '', businessModel: 'existing' },
+  { id: 'newProd', category: '新產品/服務', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '', businessModel: 'existing' },
+  { id: 'newMarket', category: '新市場/客戶', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '', businessModel: 'existing' },
+  { id: 'newModel', category: '新商業模式', marketSize2028: 0, marketShare2028: 0, revenue2028: 0, description: '', businessModel: 'new' },
 ];
 
 const INITIAL_PART_C = [
@@ -22,6 +23,14 @@ const INITIAL_COMPANY_INFO = {
   aspirationGrowth: { targetRevenue2028: 0, cagr: 0 },
 };
 
+// TAM／SAM／SOM 三層市場（講義 p21–24）：先文字描述再估規模，單位億。additive 的新 section（2026-09-10），
+// 不在 orient 契約內；section merge 以 top-level key 為單位，舊 client 不讀不寫此鍵。
+const INITIAL_TAM_SAM_SOM = {
+  tam: { description: '', size: 0 },
+  sam: { description: '', size: 0 },
+  som: { description: '', size: 0 },
+};
+
 const INITIAL_PART_B = {
   targetTsr3Years: 0,
   contributions: { revenueGrowth: 0, ebitGrowth: 0, ebitMultiple: 0 },
@@ -35,11 +44,12 @@ export const useAspirationStore = create(
       partA: INITIAL_PART_A,
       partB: INITIAL_PART_B,
       partC: INITIAL_PART_C,
+      tamSamSom: INITIAL_TAM_SAM_SOM,
 
       // 同分頁換帳號時由 CloudSyncBootstrap 呼叫：清空前一位使用者的殘留資料
       //（防跨帳號汙染——不清的話新帳號第一次編輯會把整份殘留上傳）
       resetSynced: () =>
-        set({ companyInfo: INITIAL_COMPANY_INFO, partA: INITIAL_PART_A, partB: INITIAL_PART_B, partC: INITIAL_PART_C }),
+        set({ companyInfo: INITIAL_COMPANY_INFO, partA: INITIAL_PART_A, partB: INITIAL_PART_B, partC: INITIAL_PART_C, tamSamSom: INITIAL_TAM_SAM_SOM }),
 
       updateCompany: (field, value) => {
         const next = { ...get().companyInfo };
@@ -60,6 +70,11 @@ export const useAspirationStore = create(
         }
         next[index] = row;
         set({ partA: next });
+      },
+
+      updateMarketLayer: (layer, field, value) => {
+        const prev = get().tamSamSom || INITIAL_TAM_SAM_SOM;
+        set({ tamSamSom: { ...prev, [layer]: { ...(prev[layer] || {}), [field]: value } } });
       },
 
       updatePartB: (section, field, value) => {

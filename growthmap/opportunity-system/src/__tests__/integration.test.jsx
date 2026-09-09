@@ -44,6 +44,7 @@ describe('schema & migration', () => {
       template3: { marketSize: '50B', cagr: '>15%', ebitMargin: '>5%' },
     };
     const m1 = migrateOpportunity(legacy);
+    expect(m1.template3.synergies).toBe(''); // 2026-09-10 新增欄位：舊資料補空字串
     expect(m1.status).toBe('draft');
     expect(m1.template2.goToMarketStrategy).toBe('old gtm');
     expect(m1.template2.steps).toBe('steps');

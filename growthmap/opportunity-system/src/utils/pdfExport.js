@@ -365,7 +365,8 @@ export async function exportToPdf(opportunities, toolAnalyses = {}) {
       { label: '競爭環境', value: opp.template3.competitiveEnvironment },
       { label: '前幾大品牌市佔', value: opp.template3.topBrandsShare },
     ]);
-    y = addBlock(doc, y, ctx3, '2. Potential of Play — 發展潛力', [
+    y = addBlock(doc, y, ctx3, '2. Potential of Play — 操作潛力', [
+      { label: '綜效 Synergies', value: opp.template3.synergies, w: CONTENT_W - 12 },
       { label: '目前規模 Current Scale', value: opp.template3.currentScale },
       { label: 'CAGR', value: opp.template3.cagr },
       { label: 'EBIT Margin', value: opp.template3.ebitMargin },

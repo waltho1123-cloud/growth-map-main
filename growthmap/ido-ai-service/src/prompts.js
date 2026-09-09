@@ -86,9 +86,9 @@ export const TASKS = {
   'AI-03': {
     model: 'sonnet',
     json: true,
-    system: `你是 BCG 成長策略教練。任務：依「四象限機會評估」框架，為單一增長機會產出評估【草稿】。\n對每個面向給 1-5 分（1 最低、5 最高），並附簡短理由。${HUMAN_LOOP_RULE}`,
+    system: `你是 BCG 成長策略教練。任務：依「四象限機會評估」框架，為單一增長機會產出評估【草稿】。\n對每個面向給 1-5 分（1 最低、5 最高），並附簡短理由。「操作潛力」面向請以綜效（生產／產品／跨國／研發／銷售）為核心判斷。${HUMAN_LOOP_RULE}`,
     buildUser: (input) =>
-      `企業原型：${input.archetype || '未知'}　成長差距：${input.gap || '未知'}\n機會：${input.title || ''}\n模版一洞察：${JSON.stringify(input.insights || [])}\n模版二：${JSON.stringify(input.template2 || {})}\n\n請輸出 JSON（ratings 各面向為 1-5 的整數，理由放 rationale 欄）：{ "ratings": { "size": 3, "potential": 3, "path": 3, "rightToWin": 3 }, "ebitBand": "5-10%", "cagrBand": "~2-5%", "rationale": "各面向理由", "confidence": 0.0 }`,
+      `企業原型：${input.archetype || '未知'}　成長差距：${input.gap || '未知'}\n機會：${input.title || ''}\n模版一洞察：${JSON.stringify(input.insights || [])}\n模版二：${JSON.stringify(input.template2 || {})}\n綜效（模版三・操作潛力，從綜效去思考）：${input.synergies || '未填'}\n\n請輸出 JSON（ratings 各面向為 1-5 的整數，理由放 rationale 欄）：{ "ratings": { "size": 3, "potential": 3, "path": 3, "rightToWin": 3 }, "ebitBand": "5-10%", "cagrBand": "~2-5%", "rationale": "各面向理由", "confidence": 0.0 }`,
     // 容錯正規化：AI 可能回 { size: {score, rationale} } 巢狀結構，攤平為純數字
     normalize: (payload) => {
       const r = payload && payload.ratings;

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, lazy, Suspense } from 'react'
 import CompanyBasics from './components/CompanyBasics'
 import AnsoffTable from './components/AnsoffTable'
+import MarketLayersPanel from './components/MarketLayersPanel'
+import { SHARE_THRESHOLD, somConsistency } from './lib/marketLayers'
 import TsrPanel from './components/TsrPanel'
 import FinalDecisionPanel from './components/FinalDecisionPanel'
 import SupplyChainTable from './components/SupplyChainTable'
@@ -22,6 +24,8 @@ export default function App() {
   const partA = useAspirationStore((s) => s.partA)
   const partB = useAspirationStore((s) => s.partB)
   const partC = useAspirationStore((s) => s.partC)
+  const tamSamSom = useAspirationStore((s) => s.tamSamSom)
+  const updateMarketLayer = useAspirationStore((s) => s.updateMarketLayer)
   const updateCompany = useAspirationStore((s) => s.updateCompany)
   const updatePartA = useAspirationStore((s) => s.updatePartA)
   const updatePartB = useAspirationStore((s) => s.updatePartB)
@@ -40,6 +44,18 @@ export default function App() {
   const partASubtotal = useMemo(
     () => partA.reduce((sum, row) => sum + row.revenue2028, 0),
     [partA]
+  )
+
+  // 講義 p31–32：每條賽道在可見未來要能達 20% 以上市佔率
+  const lowShareCount = useMemo(
+    () => partA.filter((r) => r.marketShare2028 > 0 && r.marketShare2028 < SHARE_THRESHOLD).length,
+    [partA]
+  )
+
+  // TAM→SAM→SOM 落地到四格後的一致性：四格合計不應超過 SOM
+  const somCheck = useMemo(
+    () => somConsistency(partASubtotal, tamSamSom && tamSamSom.som ? tamSamSom.som.size : 0),
+    [partASubtotal, tamSamSom]
   )
 
   const activeCategories = useMemo(
@@ -86,14 +102,35 @@ export default function App() {
           />
         </SectionWrapper>
 
-        <SectionWrapper title="A. 客戶/競爭面向 (安索夫矩陣)" number="A">
-          <AnsoffTable data={partA} onChange={updatePartA} />
-          <div className="mt-4 flex items-center justify-end gap-3 px-2">
-            <span className="text-sm font-medium text-gray-500">客戶視角營收總計</span>
-            <span className="text-lg font-bold text-brand-blue">
-              {partASubtotal.toLocaleString('zh-TW', { minimumFractionDigits: 0 })} 億
-            </span>
+        <SectionWrapper title="A. 客戶/競爭面向：TAM／SAM／SOM 破框 → 安索夫矩陣落地" number="A">
+          <MarketLayersPanel data={tamSamSom} onChange={updateMarketLayer} />
+
+          <div className="mt-8 mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">② 落地：安索夫矩陣</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              請把 TAM 依三個層次落地（p30、p37）：這個 TAM 會在什麼產品／市場呈現？哪些是新的、哪些是既有的？
+              哪些透過原有商業模式、哪些要採用新商業模式？愈具體愈好（客戶別、產品別），並記住每條賽道要能達到 {SHARE_THRESHOLD}% 以上市佔率。
+            </p>
           </div>
+          <AnsoffTable data={partA} onChange={updatePartA} />
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2">
+            <div className="text-xs">
+              {lowShareCount > 0 && (
+                <span className="text-amber-600">⚠ 有 {lowShareCount} 個維度的市佔率低於 {SHARE_THRESHOLD}%，請檢視賽道選擇或重新聚焦。</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-500">客戶視角營收總計</span>
+              <span className="text-lg font-bold text-brand-blue">
+                {partASubtotal.toLocaleString('zh-TW', { minimumFractionDigits: 0 })} 億
+              </span>
+            </div>
+          </div>
+          {somCheck && (
+            <p className={`mt-2 px-2 text-xs ${somCheck.level === 'warn' ? 'text-amber-600' : 'text-emerald-700'}`}>
+              {somCheck.level === 'warn' ? '⚠ ' : '✓ '}{somCheck.message}
+            </p>
+          )}
         </SectionWrapper>
 
         <SectionWrapper title="B. 股東面向 (TSR 架構)" number="B">

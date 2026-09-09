@@ -169,12 +169,8 @@ export default function ToolAnalysis() {
         {/* 工具專屬分析欄位（依 fieldSchema 動態渲染） */}
         {hasFieldSchema(tool) && (
           <div className="glass-card rounded-xl p-5 space-y-5">
-            <h3 className="text-sm font-bold text-gray-800">
-              工具分析
-              {tool.fieldSchema.draft && (
-                <span className="ml-2 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">草案欄位</span>
-              )}
-            </h3>
+            {/* fieldSchema.draft 只是給主持人的內部旗標（CLAUDE.md 記錄哪些工具欄位待確認），不對學員顯示 */}
+            <h3 className="text-sm font-bold text-gray-800">工具分析</h3>
             {tool.fieldSchema.fields.map((field) => (
               <DynamicField
                 key={field.key}

@@ -160,6 +160,9 @@ export function OpportunityProvider({ children }) {
   const reconciledRef = useRef(false);
   // 最後一次與雲端同步（寫入或收到）的內容簽章，用來分辨使用者編輯與套用雲端快照。
   const lastCloudSigRef = useRef('');
+  // 上次落地 localStorage 的內容簽章；null＝儲存效果尚未跑過（初始掛載）。
+  // 用來分辨「真的有人改了東西」與「掛載／重繪」——只有前者可以把 localTs 推到現在。
+  const lastSavedSigRef = useRef(null);
   // 本裝置 session 識別碼：辨識並略過「自己寫入後由伺服器回送」的快照，避免回授。
   const clientIdRef = useRef(null);
   if (clientIdRef.current === null) {
@@ -186,10 +189,18 @@ export function OpportunityProvider({ children }) {
         longlistSnapshots: state.longlistSnapshots,
       };
       saveAppData(data);
+      const sig = dataSig(data);
+      const isInitialMount = lastSavedSigRef.current === null;
+      const unchanged = sig === lastSavedSigRef.current;
+      lastSavedSigRef.current = sig;
+      // 初始掛載（只是把 localStorage 載入的內容原樣落地）與內容未變的重繪都不是使用者編輯：
+      // 絕不能因此更新 localTs——否則一台從沒編輯過的裝置（本機狀態過期甚至全空）登入後，
+      // reconcile 會把它判成「比雲端新」而整份上傳，蓋掉雲端資料
+      //（2026-09-09 事故：staging 瀏覽器登入後以空狀態覆寫 19 個機會，靠 1 小時版本保留還原）。
+      if (isInitialMount || unchanged) return;
       // 若這次變更其實是「剛套用雲端快照」，簽章會與 lastCloudSig 相同 →
       // 不更新 localTs、也不回寫雲端（否則多裝置間會無限回授）。
-      const sig = (isFirebaseConfigured && user) ? dataSig(data) : null;
-      if (sig !== null && sig === lastCloudSigRef.current) return;
+      if (isFirebaseConfigured && user && sig === lastCloudSigRef.current) return;
       localTsRef.current = Date.now();
       if (isFirebaseConfigured && user && reconciledRef.current) {
         // 簽章只能在寫入確實成功（onSaved）後記錄——先記後存會讓存檔失敗被永久視為已同步

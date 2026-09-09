@@ -64,6 +64,17 @@ export function createFirestoreAdminClient({ projectId, getAccessToken, fetchImp
     return paths;
   }
 
+  // 讀整份文件（typed fields）；readTime 可讀版本保留期內（無 PITR 時 1 小時）的舊版本——事故還原用
+  async function getDocumentRaw(docPath, { readTime } = {}) {
+    const q = readTime ? `?readTime=${encodeURIComponent(readTime)}` : '';
+    return call('GET', `${base}/${docPath}${q}`);
+  }
+
+  // 整份覆寫文件（PATCH 不帶 updateMask＝取代全部欄位）；還原用
+  async function setDocumentRaw(docPath, fields) {
+    return call('PATCH', `${base}/${docPath}`, { fields });
+  }
+
   // 建立文件（auto id）：稽核紀錄 adminLogs 用；回傳相對路徑
   async function createDocument(collPath, data) {
     const json = await call('POST', `${base}/${collPath}`, { fields: toFirestoreFields(data) });
@@ -96,7 +107,7 @@ export function createFirestoreAdminClient({ projectId, getAccessToken, fetchImp
     return counter.n;
   }
 
-  return { listCollectionIds, listDocumentPaths, createDocument, deleteDocument, purgeUserData };
+  return { listCollectionIds, listDocumentPaths, getDocumentRaw, setDocumentRaw, createDocument, deleteDocument, purgeUserData };
 }
 
 // JS 值 → Firestore REST typed value（只涵蓋稽核紀錄會用到的型別；undefined 欄位略過）

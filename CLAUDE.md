@@ -254,7 +254,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
   1. 每裝置 `clientId` 寫入文件，略過 `writer===自己` 的回送；
   2. 略過 Firestore `hasPendingWrites`（自己未確認的樂觀寫入）；
   3. **內容簽章**分辨「使用者編輯」vs「套用快照」，後者不回寫。
-- **衝突解析**：`reconcile()` — `localTs===0`（本 session 未動）→ 取雲端；雲端較新 → 取雲端；否則上傳。並發編輯為 **last-write-wins**。交付快照（longlistSnapshots）以 version union 保留。
+- **衝突解析**：`reconcile()` — `localTs===0`（本 session 未動）→ 取雲端；雲端較新 → 取雲端；否則上傳。並發編輯為 **last-write-wins**。交付快照（longlistSnapshots）以 version union 保留。**localTs 只能由真正的使用者編輯推進**：儲存效果在初始掛載（把 localStorage 原樣落地）與內容未變的重繪時不得更新 localTs（`lastSavedSigRef`）——2026-09-09 事故：staging 瀏覽器（本機狀態全空）登入後被判成「比雲端新」，整份上傳蓋掉 19 個機會與工具分析；靠 Firestore 1 小時版本保留（無 PITR）用服務帳號 `scripts/firestore-restore.mjs <docPath> <readTime> --apply` 還原（讀舊版本→存 `restoreBackups/`→寫回並把 updatedAtMs 設為現在）。事故後 opportunity 每次頁面載入都會產生新 clientId，多次重新整理＝多個 writer 連續覆寫是同一台瀏覽器。單元一、二走 `@growthmap/cloud` 的 zustand subscribe 追蹤（掛載不觸發），當日未受影響。
 
 ### 匯出 PDF（`utils/pdfExport.js`，jsPDF）
 - 結構化報告：封面 → 每個機會的模板一/二/三（含四象限評分視覺化、EBIT/CAGR 分級、AI 排序/評分/狀態）→ 工具分析洞察頁（AI-01）→ Long-list 總表。

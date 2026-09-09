@@ -1,5 +1,6 @@
 /* Phase 0–4 整合煙霧測試：核心邏輯正確性 + 新元件 render 不崩潰 */
 import { render } from '@testing-library/react';
+import { SCHEMA_VERSION } from '../utils/constants';
 import {
   createEmptyOpportunity,
   migrateData,
@@ -31,7 +32,7 @@ describe('schema & migration', () => {
 
   test('migrateData(null) 產生完整結構且預設啟用 17–24', () => {
     const d = migrateData(null);
-    expect(d.schemaVersion).toBe(2);
+    expect(d.schemaVersion).toBe(SCHEMA_VERSION);
     expect(Array.isArray(d.opportunities)).toBe(true);
     DEFAULT_ENABLED_TOOL_CODES.forEach((code) => expect(d.projectMeta.toolActivation[code]).toBe(true));
   });
@@ -44,7 +45,7 @@ describe('schema & migration', () => {
       template3: { marketSize: '50B', cagr: '>15%', ebitMargin: '>5%' },
     };
     const m1 = migrateOpportunity(legacy);
-    expect(m1.template3.synergies).toBe(''); // 2026-09-10 新增欄位：舊資料補空字串
+    expect('synergies' in m1.template3).toBe(false); // 附加欄位：舊資料缺鍵要保持缺鍵（不可補成空字串）
     expect(m1.status).toBe('draft');
     expect(m1.template2.goToMarketStrategy).toBe('old gtm');
     expect(m1.template2.steps).toBe('steps');

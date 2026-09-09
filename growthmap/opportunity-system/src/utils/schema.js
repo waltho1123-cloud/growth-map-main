@@ -93,7 +93,10 @@ export function createEmptyOpportunity() {
   };
 }
 
-// 單一機會 migration（冪等補欄位）
+// 單一機會 migration（冪等補欄位）。
+// 附加欄位協定（2026-09-10）：各層先展開原物件再列舉已知欄位——未列舉的鍵（更新版客戶端才認得的欄位）
+// 原樣保留，不得被 migration 丟掉；純量附加欄位（如 template3.synergies）不補預設值，
+// 「鍵不存在」要保持不存在（見 utils/additiveFields.js 的缺鍵／空字串語意）。
 export function migrateOpportunity(opp) {
   if (!opp || typeof opp !== 'object') return createEmptyOpportunity();
   const t1 = opp.template1 || {};
@@ -102,6 +105,7 @@ export function migrateOpportunity(opp) {
   const gtm = t2.goToMarket || {};
   const ratings = t3.ratings || {};
   return {
+    ...opp,
     id: opp.id || uuid(),
     opportunityName: opp.opportunityName || '',
     status: opp.status || OPPORTUNITY_STATUS.DRAFT,
@@ -111,6 +115,7 @@ export function migrateOpportunity(opp) {
     aiScore: opp.aiScore ?? null,
     rank: opp.rank ?? null,
     template1: {
+      ...t1,
       companyType: t1.companyType || '',
       growthDimension: t1.growthDimension || '',
       growthLever: t1.growthLever || '',
@@ -118,6 +123,7 @@ export function migrateOpportunity(opp) {
       insights: t1.insights || '',
     },
     template2: {
+      ...t2,
       concept: t2.concept || '',
       method: t2.method || '',
       targetCustomer: t2.targetCustomer || '',
@@ -125,6 +131,7 @@ export function migrateOpportunity(opp) {
       goToMarketStrategy: t2.goToMarketStrategy || '',
       implementationSteps: t2.implementationSteps || '',
       goToMarket: {
+        ...gtm,
         rnd: gtm.rnd || '',
         production: gtm.production || '',
         pricing: gtm.pricing || '',
@@ -136,6 +143,7 @@ export function migrateOpportunity(opp) {
       steps: t2.steps || t2.implementationSteps || '',
     },
     template3: {
+      ...t3,
       marketSize: t3.marketSize || '',
       unitPrice: t3.unitPrice || '',
       competitiveEnvironment: t3.competitiveEnvironment || '',
@@ -147,7 +155,7 @@ export function migrateOpportunity(opp) {
       potentialHurdles: t3.potentialHurdles || '',
       successFactors: t3.successFactors || '',
       coreCapabilities: t3.coreCapabilities || '',
-      synergies: t3.synergies || '',
+      // synergies：附加欄位，不列舉——有就由 ...t3 保留，沒有就保持缺鍵
       points: t3.points || '',
       ratings: {
         size: ratings.size ?? 0,

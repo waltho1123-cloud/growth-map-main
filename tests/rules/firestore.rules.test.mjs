@@ -5,7 +5,7 @@ import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const ROOT = 'waltho1123@gmail.com'; // 與 firestore.rules 的 root 常數一致
 let env;
@@ -71,6 +71,20 @@ test('users/{uid}/apps：本人可讀寫；他人不可；被封鎖者可讀不�
   await assertFails(getDoc(doc(asUser('u2', 'u2@x.y'), 'users/u1/apps/momentum')));
   await assertFails(setDoc(doc(asUser('b1', 'b1@x.y'), 'users/b1/apps/momentum'), { data: {} }));
   await assertSucceeds(getDoc(doc(asUser('b1', 'b1@x.y'), 'users/b1/apps/momentum')));
+});
+
+test('users/{uid}/apps/opportunity：附加欄位協定——data.schemaVersion ≥ 3 才可寫；其他 appKey 不受限；本人可刪', async () => {
+  const u = asUser('u1', 'u1@x.y');
+  await assertSucceeds(setDoc(doc(u, 'users/u1/apps/opportunity'), { data: { schemaVersion: 3, opportunities: [] } }));
+  await assertSucceeds(setDoc(doc(u, 'users/u1/apps/opportunity'), { data: { schemaVersion: 4, opportunities: [] } }));
+  await assertFails(setDoc(doc(u, 'users/u1/apps/opportunity'), { data: { schemaVersion: 2, opportunities: [] } })); // 舊版客戶端
+  await assertFails(setDoc(doc(u, 'users/u1/apps/opportunity'), { data: { opportunities: [] } }));                   // 無版本
+  await assertFails(setDoc(doc(u, 'users/u1/apps/opportunity'), { data: { schemaVersion: '3' } }));                  // 型別錯
+  await assertFails(setDoc(doc(u, 'users/u1/apps/opportunity'), { data: 'x' }));
+  await assertSucceeds(setDoc(doc(u, 'users/u1/apps/aspiration'), { data: {} }));
+  await assertSucceeds(setDoc(doc(u, 'users/u1/apps/momentum'), { data: { schemaVersion: 1 } }));
+  await assertSucceeds(deleteDoc(doc(u, 'users/u1/apps/opportunity')));
+  await assertFails(setDoc(doc(asUser('u2', 'u2@x.y'), 'users/u1/apps/opportunity'), { data: { schemaVersion: 3 } }));
 });
 
 test('evalProjects：建立者必須是唯一成員且 owner；成員可讀、非成員不可', async () => {

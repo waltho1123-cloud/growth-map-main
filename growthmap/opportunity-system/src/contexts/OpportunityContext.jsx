@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useState, useCallback } from 'react';
 import { loadAppData, saveAppData } from '../utils/storage';
 import { createEmptyOpportunity, migrateData } from '../utils/schema';
+import { carryOverAdditiveFields } from '../utils/additiveFields';
 import { SCHEMA_VERSION } from '../utils/constants';
 import { useAuth } from '../lib/cloud/auth';
 import { subscribeCloud, saveCloudDebounced, reconcile } from '../lib/cloud/sync';
@@ -174,6 +175,12 @@ export function OpportunityProvider({ children }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // 雲端寫入失敗狀態：'stale'＝rules 拒寫（此分頁 schemaVersion 低於最低寫入版本，須重新整理）；'error'＝其他失敗。
+  const [syncError, setSyncError] = useState(null);
+  const handleSaveError = useCallback((e) => {
+    setSyncError(e && e.code === 'permission-denied' ? 'stale' : 'error');
+  }, []);
+
   // 自動儲存至 LocalStorage + 雲端 (debounced)
   const saveTimer = useRef(null);
   useEffect(() => {
@@ -205,12 +212,13 @@ export function OpportunityProvider({ children }) {
       if (isFirebaseConfigured && user && reconciledRef.current) {
         // 簽章只能在寫入確實成功（onSaved）後記錄——先記後存會讓存檔失敗被永久視為已同步
         saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 1000, clientIdRef.current, {
-          onSaved: () => { lastCloudSigRef.current = sig; },
+          onSaved: () => { lastCloudSigRef.current = sig; setSyncError(null); },
+          onError: handleSaveError,
         });
       }
     }, 300);
     return () => clearTimeout(saveTimer.current);
-  }, [state.opportunities, state.projectMeta, state.toolAnalyses, state.lastCheckRun, state.longlistSnapshots, user]);
+  }, [state.opportunities, state.projectMeta, state.toolAnalyses, state.lastCheckRun, state.longlistSnapshots, user, handleSaveError]);
 
   // 部署切換自動重載前的同步存檔（index.jsx 於 vite:preloadError 時觸發）：
   // 立即以最新 state 寫入 localStorage（跳過 300ms debounce），並留下 flush 時間戳
@@ -238,7 +246,9 @@ export function OpportunityProvider({ children }) {
     if (!isFirebaseConfigured || !user) return;
 
     const applyCloud = (cloud) => {
-      const merged = migrateData(cloud.data);
+      // 附加欄位協定：雲端文件若由舊版客戶端寫入，會缺新欄位（鍵不存在）——以本地值補回，
+      // 並回寫一次修復雲端文件；沒有可補的就照常套用（utils/additiveFields.js）。
+      const { data: merged, carried } = carryOverAdditiveFields(migrateData(cloud.data), stateRef.current);
       // 保留本地已有的不可變交付快照（GD-09）：以 version 做 union，避免多裝置間遺失交付記錄。
       // 註：projectMeta/toolAnalyses 仍為 last-write-wins（雲端較新者勝），屬已知同步取捨。
       const seen = new Set(merged.longlistSnapshots.map((s) => s.version));
@@ -246,9 +256,17 @@ export function OpportunityProvider({ children }) {
         ...merged.longlistSnapshots,
         ...(stateRef.current.longlistSnapshots || []).filter((s) => !seen.has(s.version)),
       ].sort((a, b) => a.version - b.version);
-      lastCloudSigRef.current = dataSig(merged); // 標記為已同步，避免 save effect 回寫
+      const sig = dataSig(merged);
+      lastCloudSigRef.current = sig; // 標記為已同步，避免 save effect 回寫
       localTsRef.current = cloud.updatedAt;
       dispatch({ type: 'REPLACE_DATA', payload: merged });
+      if (carried > 0) {
+        console.warn(`[cloud sync] 雲端文件缺 ${carried} 個附加欄位（舊版客戶端寫入），已以本地值補回並回寫修復`);
+        saveCloudDebounced(user.uid, APP_KEYS.opportunity, merged, 1500, clientIdRef.current, {
+          onSaved: () => { lastCloudSigRef.current = sig; setSyncError(null); },
+          onError: handleSaveError,
+        });
+      }
     };
 
     const unsub = subscribeCloud(user.uid, APP_KEYS.opportunity, (cloud, meta) => {
@@ -264,20 +282,43 @@ export function OpportunityProvider({ children }) {
       if (decision === 'cloud' && cloud && cloud.data) {
         applyCloud(cloud);
       } else if (decision === 'upload') {
-        const data = extractData(stateRef.current);
+        // 本地較新：若本地缺附加欄位而雲端有（舊版分頁的 localStorage 被新版載入後上傳），先從雲端補回再上傳，
+        // 否則整份上傳會把雲端已有的欄位值清掉。
+        const local = extractData(stateRef.current);
+        const { data, carried } = cloud && cloud.data
+          ? carryOverAdditiveFields(local, migrateData(cloud.data))
+          : { data: local, carried: 0 };
+        if (carried > 0) {
+          console.warn(`[cloud sync] 本地缺 ${carried} 個附加欄位，已自雲端補回後再上傳`);
+          dispatch({ type: 'REPLACE_DATA', payload: data });
+        }
         const sig = dataSig(data);
         saveCloudDebounced(user.uid, APP_KEYS.opportunity, data, 0, clientIdRef.current, {
-          onSaved: () => { lastCloudSigRef.current = sig; },
+          onSaved: () => { lastCloudSigRef.current = sig; setSyncError(null); },
+          onError: handleSaveError,
         });
       }
       reconciledRef.current = true;
     });
 
     return () => unsub();
-  }, [user]);
+  }, [user, handleSaveError]);
 
   return (
-    <OpportunityContext.Provider value={{ state, dispatch }}>
+    <OpportunityContext.Provider value={{ state, dispatch, syncError }}>
+      {syncError && (
+        <div role="alert" className="fixed top-16 right-4 z-50 max-w-sm rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 shadow">
+          {syncError === 'stale' ? (
+            <>
+              ⚠ 這個分頁的程式版本已過期，雲端已拒絕儲存。請
+              <button type="button" className="mx-1 font-semibold underline" onClick={() => window.location.reload()}>重新整理</button>
+              後再編輯；過期期間的修改不會同步，重新整理後以雲端版本為準。
+            </>
+          ) : (
+            <>⚠ 雲端儲存失敗（下次編輯時會再嘗試）。若持續出現，請檢查網路或重新整理。</>
+          )}
+        </div>
+      )}
       {children}
     </OpportunityContext.Provider>
   );

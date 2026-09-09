@@ -59,7 +59,10 @@ export const PROGRESS_MAX = 10;
 // 以下為 SDD 整合新增常數（資料驅動，GD-08）
 // ───────────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 2;
+// 資料 schema 版本。3＝2026-09-10 附加欄位協定（template3.synergies）。
+// 提升版本＝同時提升 firestore.rules 的 opportunitySchemaOk() 最低版本（先部署前端、再部署 rules），
+// 舊版分頁會被雲端拒寫（permission-denied）並由 OpportunityContext 提示重新整理。詳見 CLAUDE.md「附加欄位協定」。
+export const SCHEMA_VERSION = 3;
 
 export const DEFAULT_CURRENCY = 'TWD';
 

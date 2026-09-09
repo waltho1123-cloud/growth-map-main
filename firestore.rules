@@ -72,14 +72,29 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 第三堂 opportunity 文件的最低寫入 schema 版本（見下方 match /apps/{appKey} 註解）
+    function opportunitySchemaOk() {
+      return request.resource.data.data is map
+        && request.resource.data.data.schemaVersion is number
+        && request.resource.data.data.schemaVersion >= 3;
+    }
+
     // ── 單人工作簿（單元一～三）：本人限定；封鎖帳號禁寫 ─────────────────────
     match /users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if request.auth != null && request.auth.uid == uid && !isBlocked();
 
-      match /apps/{doc=**} {
+      // 文件形狀 users/{uid}/apps/{appKey}（appKey＝momentum／aspiration／opportunity），目前無子集合。
+      // 附加欄位協定（2026-09-10，Codex 對抗式審查後立）：第三堂 opportunity 文件是 whole-doc 覆寫，
+      // 舊版客戶端的 migration 會把新欄位丟掉再整份寫回（靜默資料遺失）。因此 create/update 要求
+      // data.schemaVersion ≥ 最低版本（與 opportunity-system constants.SCHEMA_VERSION 同步）；
+      // 提升流程：先部署新前端、再部署 rules，舊分頁自此被拒寫並提示重新整理。單元一、二走 section merge，
+      // 舊版客戶端會轉發不認得的頂層 section，不需此門檻。
+      match /apps/{appKey} {
         allow read: if request.auth != null && request.auth.uid == uid;
-        allow write: if request.auth != null && request.auth.uid == uid && !isBlocked();
+        allow create, update: if request.auth != null && request.auth.uid == uid && !isBlocked()
+          && (appKey != 'opportunity' || opportunitySchemaOk());
+        allow delete: if request.auth != null && request.auth.uid == uid && !isBlocked();
       }
     }
 

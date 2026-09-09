@@ -88,7 +88,7 @@ npm run dev                                  # --watch + 讀 .env（需 ANTHROPI
 
 ## 部署（Zeabur，direct deploy 非 git 連動）
 
-Zeabur 專案 `growth-map-main`：project-id `69a70ecee10515e35593d1c2`、env `69a70ecea2c1609bd1efd98a`。兩個 Dockerfile 的基底映像走 `mirror.gcr.io/library/*`（Docker Hub 鏡像）：Zeabur 建置機直拉 docker.io 會遇 429 限流（2026-09-08 連兩次 build failed），勿改回。**push GitHub 不會觸發部署**，改完必須手動 deploy。重新部署**務必帶 `--service-id`**，否則會建出重複服務：
+Zeabur 專案 `growth-map-main`：project-id `69a70ecee10515e35593d1c2`、env `69a70ecea2c1609bd1efd98a`。**`zeabur deploy` 上傳的是目前工作目錄**：前端站（prod／staging）一律在 repo 根執行、後端一律在 `growthmap/ido-ai-service` 執行；同一串指令切了目錄後要切回來——2026-09-09 曾把後端目錄上傳到 staging 前端服務（整站 404、根路徑變成健康檢查 JSON），重新從 repo 根部署即恢復。部署後用「只有新版才有的檔案 md5」輪詢確認，勿只信 CLI 的 deployed successfully。兩個 Dockerfile 的基底映像走 `mirror.gcr.io/library/*`（Docker Hub 鏡像）：Zeabur 建置機直拉 docker.io 會遇 429 限流（2026-09-08 連兩次 build failed），勿改回。**push GitHub 不會觸發部署**，改完必須手動 deploy。重新部署**務必帶 `--service-id`**，否則會建出重複服務：
 
 | 服務 | service-id | URL | 內容 |
 | --- | --- | --- | --- |
@@ -204,7 +204,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 
 | 任務 | 模型 | 形式 | input | payload（採納後寫入） |
 | --- | --- | --- | --- | --- |
-| **AI-01** 洞察生成 | sonnet | JSON | `{ toolName, inputs }` | `{ insights:[], confidence }` → `toolAnalyses[code].insights` |
+| **AI-01** 洞察生成 | sonnet | JSON | `{ toolName, toolCategory, framework:[欄位標籤], inputs, context:{archetype,growthGap,otherInsights,opportunities}, mode }` | `{ insights:[], confidence }` → `toolAnalyses[code].insights`。**兩種模式**（2026-09-09）：`inputs` 有值＝analysis；空＝hypothesis——依公司背景與工具框架提出 3–5 條【假說】開頭、句末「→ 需驗證：…」、confidence ≤ 0.4 的洞察（前端 `buildAiContext` 組 context，`buildAiInsightInput` 決定 mode；AI 按鈕永遠可按） |
 | **AI-03** 四象限評分 | sonnet | JSON | `{ title, archetype, gap, insights[], template2 }` | `{ ratings{size,potential,path,rightToWin: 1–5}, ebitBand, cagrBand, rationale, confidence }` → `template3.ratings/ebitBand/cagrBand`。`normalize` 會把巢狀 `{score,rationale}` 攤平為純數字 |
 | **AI-04** 機會排序 | sonnet | JSON | `{ opportunities[] }` | `{ order:[機會 id 由高到低], rationale }` → `opp.rank` |
 | **AI-07** 教練對話 | opus | SSE | `{ messages[] }` | 不持久化（即時對話） |
@@ -244,7 +244,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
 - **Migration**：`migrateData` / `migrateOpportunity` 為**冪等純增量補欄位**，不刪既有資料；新欄位與舊扁平欄位**並存**是刻意的漸進切換設計，勿「順手清理」舊欄位。
 - **狀態機**：`draft → insight_linked → evaluated → shortlisted → handed_off → archived`。
 - **檢查引擎（CHK）**：例 CHK-1 機會營收總和 ≥ 成長差距 × 緩衝係數（預設 1.2，可於設定頁調整，ADR-010）；CHK-4 長清單合格數 7–12。資料一變動即令上次檢查失效。
-- **BCG 工具庫**（`utils/toolLibrary.js`）：24 工具，**17–24 啟用（內部洞察）**、1–16 預留（外部觀察）。資料驅動（ADR-007 / GD-08）。**1–16 的 fieldSchema 是 2026-09-09 起草的「草案欄位」**（`fieldSchema.draft=true`，分析頁標示「草案欄位」；Dropbox 與 repo 都沒有 BCG 原始方法論規格，欄位依標準策略框架設計，主持人可直接在 toolLibrary.js 調整），仍 `defaultEnabled:false`。外部工具的分析頁另保留「觀察資料／研究筆記」自由欄（`inputs.notes`，隨既有同步）作為萬用出口；`utils/toolAiInput.js` 的 `buildAiInsightInput` 決定 AI 按鈕可否按（至少一個欄位有值，或筆記 ≥ 20 字；內部工具只看欄位），並把有值欄位＋筆記一起餵 AI-01——避免送空輸入得到「資料為空」的 10% 信心建議稿。
+- **BCG 工具庫**（`utils/toolLibrary.js`）：24 工具，**17–24 啟用（內部洞察）**、1–16 預留（外部觀察）。資料驅動（ADR-007 / GD-08）。**1–16 的 fieldSchema 是 2026-09-09 起草的「草案欄位」**（`fieldSchema.draft=true`，分析頁標示「草案欄位」；Dropbox 與 repo 都沒有 BCG 原始方法論規格，欄位依標準策略框架設計，主持人可直接在 toolLibrary.js 調整），仍 `defaultEnabled:false`。外部工具的分析頁另保留「觀察資料／研究筆記」自由欄（`inputs.notes`，隨既有同步）作為萬用出口；`utils/toolAiInput.js` 的 `buildAiInsightInput` 決定 AI 按鈕可否按（至少一個欄位有值，或筆記 ≥ 20 字；內部工具只看欄位），並把有值欄位＋筆記一起餵 AI-01；**什麼都沒填時 AI 仍可按**，改走假說模式（見 AI-01 任務說明），按鈕文字變「請 AI 依公司背景提出假說洞察」並顯示琥珀提示（2026-09-09 使用者裁定）。
 
 ### 持久化與雲端即時同步
 - **本地**：localStorage，key `bw_opportunity_v2`（`utils/storage.js`）。

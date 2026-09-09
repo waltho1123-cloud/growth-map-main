@@ -1,7 +1,8 @@
-// AI-01 洞察生成的輸入組裝與「可不可以按」判定（純函式，Vitest 覆蓋）。
-// 1–16 號外部觀察工具沒有 fieldSchema：改用自由欄 inputs.notes（觀察資料／研究筆記）餵 AI；
-// 17–24 號內部洞察工具沿用欄位輸入。兩者都要求「至少有一點資料」，否則 AI 只會回
-// 「資料為空、請補資料」的低信心建議稿（2026-09-09 使用者回報的市場地圖案例）。
+// AI-01 洞察生成的輸入組裝（純函式，Vitest 覆蓋）。
+// 2026-09-09 裁定：AI 按鈕「永遠可按」——沒填任何欄位或筆記時改走「假說模式」：
+// 把公司背景（企業原型、成長差距、其他工具已產出的洞察、機會清單）與本工具的框架欄位
+// 一併送給後端，由 AI 依框架提出假說級洞察（後端 prompt 會要求標【假說】、附需驗證資料、
+// 信心 ≤ 0.4）；有填資料則走一般分析模式，並把筆記與已填欄位一起送出。
 export const NOTES_KEY = 'notes';
 export const NOTES_MIN_CHARS = 20;
 
@@ -23,34 +24,58 @@ export function showsNotes(tool) {
   return !hasFieldSchema(tool) || tool?.observationType === 'external';
 }
 
+const clip = (s, n) => String(s || '').trim().slice(0, n);
+
+// 公司背景摘要（給 AI 的 context；全部截斷，避免 payload 膨脹）
+export function buildAiContext(state, { toolNameById = {}, currentToolId } = {}) {
+  const meta = state?.projectMeta || {};
+  const snap = meta.targetSnapshot || null;
+  const otherInsights = Object.entries(state?.toolAnalyses || {})
+    .filter(([code, a]) => Number(code) !== Number(currentToolId) && Array.isArray(a?.insights) && a.insights.some((s) => clip(s, 1)))
+    .slice(0, 8)
+    .map(([code, a]) => ({
+      tool: toolNameById[code] || `工具 ${code}`,
+      insights: a.insights.filter((s) => clip(s, 1)).slice(0, 3).map((s) => clip(s, 160)),
+    }));
+  const opportunities = (state?.opportunities || [])
+    .map((o) => clip(o?.opportunityName, 60)).filter(Boolean).slice(0, 10);
+  return {
+    archetype: meta.archetypeSnapshot ?? null,
+    growthGap: snap ? { momentum: snap.momentum ?? null, aspiration: snap.aspiration ?? null, growthGap: snap.growthGap ?? null, currency: snap.currency ?? null } : null,
+    otherInsights,
+    opportunities,
+  };
+}
+
 /**
- * @returns {{ ready: boolean, payload: null | { toolName: string, inputs: object }, hint: string }}
+ * @returns {{ ready: boolean, hasData: boolean, mode: 'analysis'|'hypothesis', payload: object|null, hint: string }}
  */
-export function buildAiInsightInput(tool, inputs = {}) {
-  const toolName = tool?.name || '';
-  if (!hasFieldSchema(tool)) {
-    const notes = String(inputs?.[NOTES_KEY] || '').trim();
-    if (notes.length < NOTES_MIN_CHARS) {
-      return {
-        ready: false,
-        payload: null,
-        hint: `請先在上方「觀察資料／研究筆記」貼上至少 ${NOTES_MIN_CHARS} 字的資料（市場數據、研究摘要、訪談紀錄），AI 才有東西可分析。`,
-      };
-    }
-    return { ready: true, payload: { toolName, inputs: { 觀察資料與研究筆記: notes } }, hint: '' };
-  }
-  const keys = tool.fieldSchema.fields.map((f) => f.key);
+export function buildAiInsightInput(tool, inputs = {}, context = null) {
+  if (!tool) return { ready: false, hasData: false, mode: 'hypothesis', payload: null, hint: '找不到工具。' };
+  const toolName = tool.name || '';
+  const keys = hasFieldSchema(tool) ? tool.fieldSchema.fields.map((f) => f.key) : [];
   const picked = Object.fromEntries(keys.filter((k) => filled(inputs?.[k])).map((k) => [k, inputs[k]]));
   const notes = showsNotes(tool) ? String(inputs?.[NOTES_KEY] || '').trim() : '';
   if (notes.length >= NOTES_MIN_CHARS) picked['觀察資料與研究筆記'] = notes;
-  if (Object.keys(picked).length === 0) {
-    return {
-      ready: false,
-      payload: null,
-      hint: showsNotes(tool)
-        ? `請先填寫至少一個分析欄位，或在「觀察資料／研究筆記」貼上至少 ${NOTES_MIN_CHARS} 字，AI 才有東西可分析。`
-        : '請先填寫至少一個分析欄位，AI 才有東西可分析。',
-    };
-  }
-  return { ready: true, payload: { toolName, inputs: picked }, hint: '' };
+  const hasData = Object.keys(picked).length > 0;
+  const framework = hasFieldSchema(tool) ? tool.fieldSchema.fields.map((f) => f.label) : [];
+  return {
+    ready: true,
+    hasData,
+    mode: hasData ? 'analysis' : 'hypothesis',
+    payload: {
+      toolName,
+      toolCategory: tool.category || '',
+      observationType: tool.observationType || '',
+      framework,
+      inputs: picked,
+      context: context || null,
+      mode: hasData ? 'analysis' : 'hypothesis',
+    },
+    hint: hasData
+      ? ''
+      : (showsNotes(tool)
+        ? `尚未填寫欄位或筆記：AI 會依公司背景與本工具框架提出「假說級」洞察（信心較低、需驗證）；填寫欄位或貼上至少 ${NOTES_MIN_CHARS} 字的觀察資料可得到更具體的洞察。`
+        : '尚未填寫欄位：AI 會依公司背景與本工具框架提出「假說級」洞察（信心較低、需驗證）；填寫欄位可得到更具體的洞察。'),
+  };
 }

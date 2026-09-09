@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useOpportunity } from '../../contexts/OpportunityContext';
 import { useNav } from '../../contexts/NavContext';
-import { BCG_TOOL_LIBRARY } from '../../utils/toolLibrary';
+import { BCG_TOOL_LIBRARY, TOOL_NAME_BY_ID } from '../../utils/toolLibrary';
 import { TOOL_ANALYSIS_STATUS } from '../../utils/constants';
 import { createEmptyToolAnalysis } from '../../utils/schema';
 import DynamicField from './DynamicField';
@@ -9,7 +9,7 @@ import { IMETextarea } from '../IMEInput';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
 import AiSuggestionCard from '../ai/AiSuggestionCard';
 import { aiText } from '../../lib/ai/aiText';
-import { buildAiInsightInput, hasFieldSchema, showsNotes, NOTES_KEY } from '../../utils/toolAiInput';
+import { buildAiInsightInput, buildAiContext, hasFieldSchema, showsNotes, NOTES_KEY } from '../../utils/toolAiInput';
 import toast from 'react-hot-toast';
 
 // 字串列表編輯器（主要洞察 / 機會）
@@ -123,8 +123,8 @@ export default function ToolAnalysis() {
     toast.success(`已完成「${tool.name}」分析`);
   };
 
-  // AI-01 輸入組裝與可按判定：外部工具用 inputs.notes 自由欄，內部工具用已填的 schema 欄位
-  const aiInput = buildAiInsightInput(tool, inputs);
+  // AI-01 輸入組裝：永遠可按——沒資料時走假說模式，附公司背景與本工具框架（2026-09-09 裁定）
+  const aiInput = buildAiInsightInput(tool, inputs, buildAiContext(state, { toolNameById: TOOL_NAME_BY_ID, currentToolId: tool.id }));
   const handleAiInsight = async () => {
     if (!aiInput.ready) return;
     setAi({ loading: true, insights: null, confidence: null, error: null });
@@ -213,10 +213,10 @@ export default function ToolAnalysis() {
               title={aiInput.hint || undefined}
               className="text-sm font-medium px-4 py-2 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              ✨ 請 AI 依分析產洞察
+              {aiInput.hasData ? '✨ 請 AI 依分析產洞察' : '✨ 請 AI 依公司背景提出假說洞察'}
             </button>
-            {!aiInput.ready && !ai.loading && (
-              <p className="mt-2 text-xs text-gray-400">{aiInput.hint}</p>
+            {!aiInput.hasData && !ai.loading && (
+              <p className="mt-2 text-xs text-amber-700">{aiInput.hint}</p>
             )}
             {(ai.loading || ai.insights || ai.error) && (
               <AiSuggestionCard

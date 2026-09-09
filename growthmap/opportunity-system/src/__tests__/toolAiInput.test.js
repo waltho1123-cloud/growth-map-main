@@ -1,50 +1,67 @@
 import { describe, it, expect } from 'vitest';
-import { buildAiInsightInput, hasFieldSchema, NOTES_KEY, NOTES_MIN_CHARS } from '../utils/toolAiInput';
+import { buildAiInsightInput, buildAiContext, hasFieldSchema, showsNotes, NOTES_KEY, NOTES_MIN_CHARS } from '../utils/toolAiInput';
 
-const external = { id: 1, name: '市場地圖', fieldSchema: { fields: [] } };
-const internal = { id: 17, name: '核心能力', fieldSchema: { fields: [{ key: 'capabilities' }, { key: 'score' }, { key: 'tags' }] } };
+const external = { id: 1, name: '市場地圖', category: '產業面', observationType: 'external', fieldSchema: { draft: true, fields: [{ key: 'segments', label: '市場區隔與規模' }, { key: 'players', label: '主要參與者與市佔' }] } };
+const internal = { id: 17, name: '核心能力', category: '成長槓桿診斷', observationType: 'internal', fieldSchema: { fields: [{ key: 'capabilities', label: '能力' }, { key: 'score', label: '分數' }] } };
 
-describe('buildAiInsightInput', () => {
-  it('外部觀察工具：筆記不足 20 字 → 不可按並給提示；足夠 → 以「觀察資料與研究筆記」餵 AI', () => {
-    expect(hasFieldSchema(external)).toBe(false);
-    const empty = buildAiInsightInput(external, {});
-    expect(empty.ready).toBe(false);
-    expect(empty.payload).toBeNull();
-    expect(empty.hint).toContain(String(NOTES_MIN_CHARS));
-    const short = buildAiInsightInput(external, { [NOTES_KEY]: '  市場很大  ' });
-    expect(short.ready).toBe(false);
-    const notes = '2025 年台灣機能服飾市場規模約 120 億，前三品牌合計市佔 45%，成長最快區隔為戶外機能。';
-    const ok = buildAiInsightInput(external, { [NOTES_KEY]: `  ${notes}  ` });
-    expect(ok.ready).toBe(true);
-    expect(ok.payload).toEqual({ toolName: '市場地圖', inputs: { 觀察資料與研究筆記: notes } });
-  });
-
-  it('內部洞察工具：一個欄位都沒填 → 不可按；只送有填的 schema 欄位（略過空值與非 schema 鍵）', () => {
-    expect(hasFieldSchema(internal)).toBe(true);
-    expect(buildAiInsightInput(internal, { capabilities: '  ', score: null, tags: [], stray: 'x' }).ready).toBe(false);
-    const r = buildAiInsightInput(internal, { capabilities: '通路與供應鏈', score: 0, tags: [], stray: 'x' });
+describe('buildAiInsightInput（AI 永遠可按；無資料走假說模式）', () => {
+  it('什麼都沒填 → ready 仍為 true、mode=hypothesis、payload 帶框架欄位與提示', () => {
+    const r = buildAiInsightInput(external, {}, { archetype: 'A' });
     expect(r.ready).toBe(true);
-    expect(r.payload).toEqual({ toolName: '核心能力', inputs: { capabilities: '通路與供應鏈', score: 0 } });
+    expect(r.hasData).toBe(false);
+    expect(r.mode).toBe('hypothesis');
+    expect(r.payload.framework).toEqual(['市場區隔與規模', '主要參與者與市佔']);
+    expect(r.payload.inputs).toEqual({});
+    expect(r.payload.context).toEqual({ archetype: 'A' });
+    expect(r.hint).toContain('假說');
+    expect(r.hint).toContain(String(NOTES_MIN_CHARS));
   });
 
-  it('缺工具或缺 fieldSchema 時視為外部工具，不會拋錯', () => {
+  it('有填欄位或筆記 → mode=analysis，只送有值欄位＋筆記；短筆記不算', () => {
+    const notes = '2025 年台灣機能服飾市場規模約 120 億，前三品牌合計市佔 45%。';
+    const r = buildAiInsightInput(external, { segments: '戶外／運動／日常', players: '', [NOTES_KEY]: notes });
+    expect(r.mode).toBe('analysis');
+    expect(r.hint).toBe('');
+    expect(r.payload.inputs).toEqual({ segments: '戶外／運動／日常', 觀察資料與研究筆記: notes });
+    expect(buildAiInsightInput(external, { [NOTES_KEY]: '太短' }).mode).toBe('hypothesis');
+  });
+
+  it('內部工具不顯示筆記欄；欄位全空同樣走假說模式且提示不提筆記', () => {
+    expect(showsNotes(internal)).toBe(false);
+    expect(showsNotes(external)).toBe(true);
+    expect(hasFieldSchema(internal)).toBe(true);
+    const r = buildAiInsightInput(internal, { capabilities: ' ', score: null, [NOTES_KEY]: 'x'.repeat(50) });
+    expect(r.mode).toBe('hypothesis');
+    expect(r.payload.inputs).toEqual({});
+    expect(r.hint).not.toContain('筆記');
+    expect(buildAiInsightInput(internal, { score: 0 }).payload.inputs).toEqual({ score: 0 });
+  });
+
+  it('缺工具 → ready=false', () => {
     expect(buildAiInsightInput(undefined, {}).ready).toBe(false);
-    expect(buildAiInsightInput({ name: 'x' }, { notes: 'a'.repeat(NOTES_MIN_CHARS) }).ready).toBe(true);
   });
 });
 
-describe('showsNotes／外部工具有欄位時的合併輸入', () => {
-  it('外部工具即使有欄位也保留筆記欄；筆記 ≥20 字可單獨讓 AI 可按並併入 payload', async () => {
-    const { showsNotes } = await import('../utils/toolAiInput');
-    const extWithFields = { id: 2, name: '價值鏈分析', observationType: 'external', fieldSchema: { fields: [{ key: 'stages' }] } };
-    expect(showsNotes(extWithFields)).toBe(true);
-    expect(showsNotes({ id: 17, name: 'x', observationType: 'internal', fieldSchema: { fields: [{ key: 'a' }] } })).toBe(false);
-    const notes = '產業價值鏈利潤集中在品牌與通路兩端，代工環節毛利率不到一成。';
-    const r = buildAiInsightInput(extWithFields, { [NOTES_KEY]: notes });
-    expect(r.ready).toBe(true);
-    expect(r.payload.inputs).toEqual({ 觀察資料與研究筆記: notes });
-    const both = buildAiInsightInput(extWithFields, { stages: '原料→製造→品牌→通路', [NOTES_KEY]: notes });
-    expect(both.payload.inputs).toEqual({ stages: '原料→製造→品牌→通路', 觀察資料與研究筆記: notes });
-    expect(buildAiInsightInput(extWithFields, {}).hint).toContain('觀察資料');
+describe('buildAiContext（公司背景摘要，全部截斷）', () => {
+  it('取企業原型、成長差距、其他工具洞察（排除目前工具、最多 8 個工具×3 條×160 字）、機會名稱', () => {
+    const state = {
+      projectMeta: { archetypeSnapshot: { archetype: '穩健型' }, targetSnapshot: { momentum: 100, aspiration: 150, growthGap: 50, currency: 'TWD', syncedAt: 1 } },
+      toolAnalyses: {
+        1: { insights: ['本工具的洞察不該出現'] },
+        17: { insights: ['A', '', 'B', 'C', 'D'] },
+        18: { insights: ['  '] },
+        19: { insights: ['x'.repeat(500)] },
+      },
+      opportunities: [{ opportunityName: '機會一' }, { opportunityName: '' }, { opportunityName: '機會三' }],
+    };
+    const ctx = buildAiContext(state, { toolNameById: { 17: '行銷診斷', 19: '通路' }, currentToolId: 1 });
+    expect(ctx.archetype).toEqual({ archetype: '穩健型' });
+    expect(ctx.growthGap).toEqual({ momentum: 100, aspiration: 150, growthGap: 50, currency: 'TWD' });
+    expect(ctx.otherInsights).toEqual([
+      { tool: '行銷診斷', insights: ['A', 'B', 'C'] },
+      { tool: '通路', insights: ['x'.repeat(160)] },
+    ]);
+    expect(ctx.opportunities).toEqual(['機會一', '機會三']);
+    expect(buildAiContext({}).growthGap).toBeNull();
   });
 });

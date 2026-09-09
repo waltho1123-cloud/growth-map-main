@@ -64,6 +64,12 @@ export function createFirestoreAdminClient({ projectId, getAccessToken, fetchImp
     return paths;
   }
 
+  // 建立文件（auto id）：稽核紀錄 adminLogs 用；回傳相對路徑
+  async function createDocument(collPath, data) {
+    const json = await call('POST', `${base}/${collPath}`, { fields: toFirestoreFields(data) });
+    return relPath(json.name);
+  }
+
   // 刪不存在的文件 Firestore 也回 200，呼叫端不必先查
   async function deleteDocument(docPath) {
     await call('DELETE', `${base}/${docPath}`);
@@ -90,5 +96,22 @@ export function createFirestoreAdminClient({ projectId, getAccessToken, fetchImp
     return counter.n;
   }
 
-  return { listCollectionIds, listDocumentPaths, deleteDocument, purgeUserData };
+  return { listCollectionIds, listDocumentPaths, createDocument, deleteDocument, purgeUserData };
+}
+
+// JS 值 → Firestore REST typed value（只涵蓋稽核紀錄會用到的型別；undefined 欄位略過）
+export function toFirestoreValue(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === 'string') return { stringValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFirestoreValue) } };
+  if (typeof v === 'object') return { mapValue: { fields: toFirestoreFields(v) } };
+  return { stringValue: String(v) };
+}
+
+export function toFirestoreFields(obj) {
+  return Object.fromEntries(
+    Object.entries(obj || {}).filter(([, v]) => v !== undefined).map(([k, v]) => [k, toFirestoreValue(v)])
+  );
 }

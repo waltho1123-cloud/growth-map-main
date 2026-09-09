@@ -65,3 +65,19 @@ test('deleteDocument：DELETE 對應路徑並帶 Bearer；上游錯誤 → Fires
   assert.equal(calls[0].init.headers.Authorization, 'Bearer tok');
   await assert.rejects(fs.deleteDocument('platformUsers/bad'), (e) => e instanceof FirestoreAdminError && e.status === 403);
 });
+
+test('toFirestoreFields／createDocument：JS 值編成 typed value、undefined 略過；POST 到集合路徑', async () => {
+  const { toFirestoreFields, createFirestoreAdminClient: mk } = await import('./admin-firestore.js');
+  assert.deepEqual(toFirestoreFields({ s: 'x', i: 3, f: 1.5, b: true, n: null, u: undefined, a: ['y', 2], m: { k: 'v' } }), {
+    s: { stringValue: 'x' }, i: { integerValue: '3' }, f: { doubleValue: 1.5 }, b: { booleanValue: true }, n: { nullValue: null },
+    a: { arrayValue: { values: [{ stringValue: 'y' }, { integerValue: '2' }] } }, m: { mapValue: { fields: { k: { stringValue: 'v' } } } },
+  });
+  const calls = [];
+  const fetchImpl = async (url, init) => { calls.push({ url, init }); return { ok: true, status: 200, json: async () => ({ name: name('adminLogs/abc') }) }; };
+  const fs = mk({ projectId: 'demo', getAccessToken: async () => 'tok', fetchImpl });
+  const path = await fs.createDocument('adminLogs', { at: 1, action: 'create' });
+  assert.equal(path, 'adminLogs/abc');
+  assert.equal(calls[0].url, `${DOCS}/adminLogs`);
+  assert.equal(calls[0].init.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0].init.body), { fields: { at: { integerValue: '1' }, action: { stringValue: 'create' } } });
+});

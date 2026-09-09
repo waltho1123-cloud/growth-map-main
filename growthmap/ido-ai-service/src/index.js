@@ -154,6 +154,21 @@ app.use('/api/admin/*', async (c, next) => {
   return next();
 });
 
+// 管理操作稽核（Firestore adminLogs，client 只讀）：fire-and-forget，失敗只記 log 不影響回應
+function audit(c, action, target = {}, detail = {}) {
+  if (!firestoreAdmin) return;
+  const caller = c.get('user') || {};
+  firestoreAdmin.createDocument('adminLogs', {
+    at: Date.now(),
+    actorUid: caller.uid || '',
+    actorEmail: caller.email || '',
+    action,
+    targetUid: target.uid || '',
+    targetEmail: target.email || '',
+    detail,
+  }).catch((e) => console.error('[admin] 稽核寫入失敗', e?.message || e));
+}
+
 function adminError(c, e) {
   if (e instanceof ValidationError) return c.json({ error: { code: 'IDO_VALIDATION', message: e.message } }, 400);
   if (e instanceof AdminUpstreamError) {
@@ -188,6 +203,7 @@ app.post('/api/admin/accounts', async (c) => {
     const displayName = validateDisplayName(body.displayName);
     const account = await adminClient.createAccount({ email, password, displayName });
     console.log('[admin]', c.get('user').email, 'create', email);
+    audit(c, 'create', account, { displayName });
     return c.json({ account }, 201);
   } catch (e) {
     return adminError(c, e);
@@ -199,8 +215,11 @@ app.post('/api/admin/accounts/:uid/password', async (c) => {
     const uid = validateUid(c.req.param('uid'));
     const body = await readJson(c);
     const password = validatePassword(body.password);
+    const target = await adminClient.lookupByUid(uid);
+    if (!target) throw new ValidationError('找不到此帳號');
     await adminClient.setPassword(uid, password);
     console.log('[admin]', c.get('user').email, 'set-password', uid);
+    audit(c, 'set-password', target);
     return c.json({ ok: true });
   } catch (e) {
     return adminError(c, e);
@@ -213,8 +232,11 @@ app.post('/api/admin/accounts/:uid/disabled', async (c) => {
     const body = await readJson(c);
     if (typeof body.disabled !== 'boolean') throw new ValidationError('disabled 需為布林值');
     if (body.disabled && uid === c.get('user').uid) throw new ValidationError('不能停用自己的帳號');
+    const target = await adminClient.lookupByUid(uid);
+    if (!target) throw new ValidationError('找不到此帳號');
     await adminClient.setDisabled(uid, body.disabled);
     console.log('[admin]', c.get('user').email, body.disabled ? 'disable' : 'enable', uid);
+    audit(c, body.disabled ? 'disable' : 'enable', target);
     return c.json({ ok: true });
   } catch (e) {
     return adminError(c, e);
@@ -249,6 +271,7 @@ app.post('/api/admin/accounts/:uid/delete', async (c) => {
       console.error('[admin] delete: Firestore 清理失敗', uid, purge.error);
     }
     console.log('[admin]', caller.email, 'delete', target.email, uid, JSON.stringify(purge));
+    audit(c, 'delete', target, { purgeData, ...purge });
     return c.json({ ok: true, deleted: { uid, email: target.email }, purge });
   } catch (e) {
     return adminError(c, e);
@@ -272,6 +295,7 @@ app.post('/api/admin/auth-config', async (c) => {
       ...(typeof body.googleEnabled === 'boolean' ? { googleEnabled: body.googleEnabled } : {}),
     });
     console.log('[admin]', c.get('user').email, 'auth-config', JSON.stringify(result));
+    audit(c, 'auth-config', {}, { emailPasswordEnabled: result.emailPasswordEnabled, signUpDisabled: result.signUpDisabled, googleEnabled: result.googleEnabled });
     return c.json(result);
   } catch (e) {
     return adminError(c, e);

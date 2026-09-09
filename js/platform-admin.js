@@ -8,7 +8,7 @@
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import {
-  getFirestore, collection, doc, onSnapshot, updateDoc, setDoc,
+  getFirestore, collection, doc, onSnapshot, updateDoc, setDoc, query, orderBy, limit,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 import { createLoginForm } from './auth-ui.js';
@@ -33,6 +33,30 @@ let aiAllowlist = { emails: [], domains: [] };
 let unsubUsers = null;
 let unsubMeta = null;
 let unsubAi = null;
+let unsubLogs = null;
+
+// 管理操作稽核（adminLogs，後端以服務帳號寫入；此處只讀最近 50 筆）
+const ACTION_LABEL = {
+  create: '建立帳號', 'set-password': '設定密碼', disable: '停用', enable: '啟用', delete: '刪除帳號',
+  'auth-config': '登入方式設定', 'google-provider': 'Google 供應商', 'verify-email': '標記已驗證',
+};
+function renderLogs(rows) {
+  const tbody = $('log-rows');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="muted">尚無紀錄。</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map((r) => {
+    const detail = r.detail && Object.keys(r.detail).length ? JSON.stringify(r.detail) : '';
+    return `<tr>
+      <td>${fmt(r.at)}</td>
+      <td class="muted">${esc(r.actorEmail || r.actorUid || '—')}</td>
+      <td><b>${esc(ACTION_LABEL[r.action] || r.action || '—')}</b></td>
+      <td>${esc(r.targetEmail || r.targetUid || '—')}</td>
+      <td class="muted" style="font-size:.75rem;word-break:break-all">${esc(detail)}</td>
+    </tr>`;
+  }).join('');
+}
 
 function show(sectionId) {
   for (const id of ['view-login', 'view-denied', 'view-admin']) {
@@ -144,7 +168,7 @@ function startAdminView() {
     renderUsers();
   }, () => {
     // 讀整個目錄被拒＝非管理員
-    unsubUsers?.(); unsubMeta?.(); unsubAi?.();
+    unsubUsers?.(); unsubMeta?.(); unsubAi?.(); unsubLogs?.();
     show('view-denied');
   });
 
@@ -152,6 +176,12 @@ function startAdminView() {
     adminEmails = (snap.exists() ? snap.data().adminEmails : []) || [];
     renderAdmins();
   }, () => { adminEmails = []; renderAdmins(); });
+
+  unsubLogs = onSnapshot(query(collection(db, 'adminLogs'), orderBy('at', 'desc'), limit(50)), (snap) => {
+    renderLogs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  }, (e) => {
+    $('log-rows').innerHTML = `<tr><td colspan="5" class="muted">無法讀取稽核紀錄（${esc(e.code || e.message)}）——rules 尚未部署 adminLogs 或無權限</td></tr>`;
+  });
 
   unsubAi = onSnapshot(doc(db, 'platform', 'aiAllowlist'), (snap) => {
     const data = snap.exists() ? snap.data() : {};
@@ -419,7 +449,7 @@ function bindAdminApiUi() {
 document.querySelectorAll('.btn-logout').forEach((b) => { b.onclick = () => signOut(auth); });
 
 onAuthStateChanged(auth, (u) => {
-  unsubUsers?.(); unsubMeta?.(); unsubAi?.();
+  unsubUsers?.(); unsubMeta?.(); unsubAi?.(); unsubLogs?.();
   me = u;
   if (!u) {
     show('view-login');

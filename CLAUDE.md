@@ -116,6 +116,16 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 
 前端站線上路徑：opportunity-system 於 `/growthmap/opportunity-system/build/`、evaluate-strategy 於 `/growthmap/evaluate-strategy/dist/`。
 
+### 維運護欄（2026-09-09 補強）
+
+- **Firestore 每日備份**：backupSchedule `e76c342a-dc69-404e-a8cb-9c511882191d`（dailyRecurrence，保留 7 天，UTC）。還原走 Firebase Console → Firestore → 備份，或 Firebase MCP／`gcloud firestore backups`。
+- **健康檢查監控**：GitHub Actions `health-check`（`.github/workflows/health-check.yml`）每 10 分鐘探測後端 `/`（`ok`／`apiKeyValid`／`adminConfigured` 皆須 true）與前端站 200；失敗＝workflow 紅燈（GitHub 寄信）＋開／更新 issue「🚨 線上健康檢查失敗」，恢復自動關閉。**公開 repo 60 天無 commit 會被 GitHub 暫停排程**，需到 Actions 頁重新啟用。
+- **CI**：`preflight` workflow 在 push／PR 跑 root preflight（含四單元建置）與 `npm run test:rules`；部署仍手動（刻意）。
+- **rules 自動化測試**：`tests/rules/firestore.rules.test.mjs`（`@firebase/rules-unit-testing`＋Firestore 模擬器，`npm run test:rules`，需 Java 21——本機沒有 Java 就靠 CI）。覆蓋 platformUsers 欄位白名單、管理員 email_verified、第四堂邀請／自助加入／提權、scores docId 綁定、adminLogs 只讀。改 rules 必加案例。
+- **管理操作稽核**：後端所有管理變更（建帳號／設密碼／停用／啟用／刪除／登入方式／Google 供應商，含 CLI）寫 Firestore `adminLogs/{autoId}`（`{ at, actorUid, actorEmail, action, targetUid, targetEmail, detail }`），rules 只讓管理員讀、client 不可寫；管理頁「管理操作紀錄」卡讀最近 50 筆。
+- **登入 e2e smoke**：`scripts/smoke-login.sh [base-url]`——用 smoke 專用帳號 `platform-smoke@growth-map-main.zeabur.app`（管理員建立、不在 AI 白名單、無資料、**勿刪**）登入 portal → 第四堂通過登入閘門 → 第三堂同步膠囊 → 登出。帳密只放本機 `~/.config/growthmap/smoke.env`（chmod 600），不進 repo／對話。動到登入或 firebase 包時必跑。
+- CLI 新增 `create <email> [名稱]`（`NEW_PASSWORD` 環境變數帶密碼），與管理頁建帳號同義。
+
 ### 後端環境變數（存於 Zeabur，非 git）
 
 | 變數 | 說明 |

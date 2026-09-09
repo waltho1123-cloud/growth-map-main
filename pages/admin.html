@@ -116,6 +116,17 @@
         <p class="note">由後端以服務帳號代辦，不需進 Firebase Console。後端未設定 <code>FIREBASE_SERVICE_ACCOUNT_JSON</code> 時此區顯示「後端尚未設定」。</p>
       </div>
 
+      <div class="card" id="card-logs">
+        <h2>管理操作紀錄 <span class="muted" style="font-weight:400">（最近 50 筆）</span></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>時間</th><th>操作者</th><th>動作</th><th>對象</th><th>細節</th></tr></thead>
+            <tbody id="log-rows"><tr><td colspan="5" class="muted">讀取中…</td></tr></tbody>
+          </table>
+        </div>
+        <p class="note">由後端以服務帳號寫入（建帳號、設密碼、停用／啟用、刪除、登入方式變更；含 CLI 操作，操作者顯示為 cli:服務帳號）。前端只能讀，不能改。</p>
+      </div>
+
       <div class="card">
         <h2>平台活動目錄與封鎖 <span id="user-count" class="muted" style="font-weight:400"></span></h2>
         <div class="table-wrap">

@@ -74,3 +74,13 @@ playwright-cli console error
 ```
 
 有測試帳號時再補：登入成功 → 右上膠囊「✓ 已登入」；未驗證帳號顯示「未驗證 email」→ 寄送驗證信不報錯。
+
+## 真帳號登入 e2e（動到登入流程、@growthmap/firebase、js/auth-ui.js 時必跑）
+
+```bash
+scripts/smoke-login.sh https://growthmap-staging.zeabur.app   # 或 prod 網址
+```
+
+需要 `~/.config/growthmap/smoke.env`（`SMOKE_EMAIL`／`SMOKE_PASSWORD`，chmod 600）。smoke 帳號
+`platform-smoke@growth-map-main.zeabur.app` 由管理員建立、不在 AI 白名單、沒有資料；密碼忘了就到管理頁重設並更新該檔。
+通過標準：portal 顯示「✓ 已登入」、第四堂進到「選擇評估專案」、第三堂右上「已同步」、登出後回到「登入」按鈕，console 零錯誤。

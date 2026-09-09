@@ -159,7 +159,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | 方法 | 路徑 | 用途 | 串流 |
 | --- | --- | --- | --- |
 | GET | `/` | 健康檢查 → `{ ok, service, hasApiKey, apiKeyValid, adminConfigured }`（`apiKeyValid` 以免費的 GET /v1/models 探測、1 小時快取：true／false／null；沒有 `/health` 路由） | — |
-| POST | `/api/ai/tasks` | AI-01 / AI-03 / AI-04（非串流任務） | 否 |
+| POST | `/api/ai/tasks` | AI-01 / AI-02 / AI-03 / AI-04（非串流任務） | 否 |
 | POST | `/api/ai/coach` | AI-07 教練對話 | SSE |
 | GET | `/api/admin/accounts` | 帳號清單 `{ accounts:[{uid,email,displayName,emailVerified,disabled,providers,createdAt,lastLoginAt}] }` | 否 |
 | POST | `/api/admin/accounts` | 建帳號 `{ email, password(8–128), displayName? }` → 201 `{ account:{uid,email} }`；emailVerified=true | 否 |
@@ -168,7 +168,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | POST | `/api/admin/accounts/:uid/delete` | 刪帳號 `{ confirmEmail, purgeData?: boolean }` → `{ ok, deleted:{uid,email}, purge:{platformProfile,userDocs,error?} }`；不能刪自己 | 否 |
 | GET／POST | `/api/admin/auth-config` | 讀／套用登入方式：POST `{ disableSignup?: true, googleEnabled?: boolean }` → 啟用 Email/Password＋關閉自助註冊（＋開關 Google 供應商）；GET 回 `{ emailPasswordEnabled, signUpDisabled, googleEnabled, authorizedDomains }` | 否 |
 
-**`POST /api/ai/tasks`**：Request `{ "taskCode": "AI-01|AI-03|AI-04", "input": {...} }` → Response `{ taskCode, state: "draft", payload, confidence, model, usage }`。後端流程：`sanitizeObject(input)` → `callClaude(tier, system, buildUser)` → JSON 解析（含容錯擷取 `{...}`）→ `normalize`。
+**`POST /api/ai/tasks`**：Request `{ "taskCode": "AI-01|AI-02|AI-03|AI-04", "input": {...} }` → Response `{ taskCode, state: "draft", payload, confidence, model, usage }`。後端流程：`sanitizeObject(input)` → `callClaude(tier, system, buildUser)` → JSON 解析（含容錯擷取 `{...}`）→ `normalize`。
 
 **`POST /api/ai/coach`**（SSE）：Request `{ "messages": [{ "role": "user|assistant", "content": "..." }] }`。SSE 事件：`coach.delta {delta}`、`coach.done {ok}`、`coach.error {message}`。
 
@@ -205,6 +205,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | 任務 | 模型 | 形式 | input | payload（採納後寫入） |
 | --- | --- | --- | --- | --- |
 | **AI-01** 洞察生成 | sonnet | JSON | `{ toolName, toolCategory, framework:[欄位標籤], inputs, context:{archetype,growthGap,otherInsights,opportunities}, mode }` | `{ insights:[], confidence }` → `toolAnalyses[code].insights`。**兩種模式**（2026-09-09）：`inputs` 有值＝analysis；空＝hypothesis——依公司背景與工具框架提出 3–5 條【假說】開頭、句末「→ 需驗證：…」、confidence ≤ 0.4 的洞察（前端 `buildAiContext` 組 context，`buildAiInsightInput` 決定 mode；AI 按鈕永遠可按） |
+| **AI-02** 機會方向候選 | sonnet | JSON | `{ toolName, toolCategory, framework, insights:[本工具主要洞察], existingOpportunities:[避免重複], context, mode }` | `{ opportunities:[], confidence }` → 採納後 append 到 `toolAnalyses[code].opportunitiesNote`。每條「市場／客群 × 產品或服務 × 方式（來自：洞察 N）」；insights 空＝假說模式（【假說】＋需驗證、≤ 0.4）。normalize 把物件項攤成字串（2026-09-09） |
 | **AI-03** 四象限評分 | sonnet | JSON | `{ title, archetype, gap, insights[], template2 }` | `{ ratings{size,potential,path,rightToWin: 1–5}, ebitBand, cagrBand, rationale, confidence }` → `template3.ratings/ebitBand/cagrBand`。`normalize` 會把巢狀 `{score,rationale}` 攤平為純數字 |
 | **AI-04** 機會排序 | sonnet | JSON | `{ opportunities[] }` | `{ order:[機會 id 由高到低], rationale }` → `opp.rank` |
 | **AI-07** 教練對話 | opus | SSE | `{ messages[] }` | 不持久化（即時對話） |

@@ -79,3 +79,26 @@ export function buildAiInsightInput(tool, inputs = {}, context = null) {
         : '尚未填寫欄位：AI 會依公司背景與本工具框架提出「假說級」洞察（信心較低、需驗證）；填寫欄位可得到更具體的洞察。'),
   };
 }
+
+// AI-02 機會方向候選的輸入組裝（2026-09-09）：依該工具的主要洞察；洞察為空走假說模式。
+export function buildAiOpportunityInput(tool, insights = [], context = null, existingOpportunities = []) {
+  if (!tool) return { ready: false, hasData: false, mode: 'hypothesis', payload: null, hint: '找不到工具。' };
+  const cleaned = (Array.isArray(insights) ? insights : []).map((s) => clip(s, 300)).filter(Boolean).slice(0, 12);
+  const existing = (Array.isArray(existingOpportunities) ? existingOpportunities : []).map((s) => clip(s, 80)).filter(Boolean).slice(0, 20);
+  const hasData = cleaned.length > 0;
+  return {
+    ready: true,
+    hasData,
+    mode: hasData ? 'analysis' : 'hypothesis',
+    payload: {
+      toolName: tool.name || '',
+      toolCategory: tool.category || '',
+      framework: hasFieldSchema(tool) ? tool.fieldSchema.fields.map((f) => f.label) : [],
+      insights: cleaned,
+      existingOpportunities: existing,
+      context: context || null,
+      mode: hasData ? 'analysis' : 'hypothesis',
+    },
+    hint: hasData ? '' : '主要洞察還是空的：AI 會依公司背景與本工具框架提出「假說級」機會方向（信心較低、需驗證）；先填或採納幾條洞察，機會方向會更具體。',
+  };
+}

@@ -9,7 +9,7 @@ import { IMETextarea } from '../IMEInput';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
 import AiSuggestionCard from '../ai/AiSuggestionCard';
 import { aiText } from '../../lib/ai/aiText';
-import { buildAiInsightInput, buildAiContext, hasFieldSchema, showsNotes, NOTES_KEY } from '../../utils/toolAiInput';
+import { buildAiInsightInput, buildAiOpportunityInput, buildAiContext, hasFieldSchema, showsNotes, NOTES_KEY } from '../../utils/toolAiInput';
 import toast from 'react-hot-toast';
 
 // 字串列表編輯器（主要洞察 / 機會）
@@ -77,6 +77,7 @@ export default function ToolAnalysis() {
   const [opps, setOpps] = useState(existing.opportunitiesNote || []);
   const [status, setStatus] = useState(existing.status);
   const [ai, setAi] = useState({ loading: false, insights: null, confidence: null, error: null });
+  const [aiOpp, setAiOpp] = useState({ loading: false, items: null, confidence: null, error: null });
 
   if (!tool) {
     return (
@@ -124,7 +125,8 @@ export default function ToolAnalysis() {
   };
 
   // AI-01 輸入組裝：永遠可按——沒資料時走假說模式，附公司背景與本工具框架（2026-09-09 裁定）
-  const aiInput = buildAiInsightInput(tool, inputs, buildAiContext(state, { toolNameById: TOOL_NAME_BY_ID, currentToolId: tool.id }));
+  const aiContext = buildAiContext(state, { toolNameById: TOOL_NAME_BY_ID, currentToolId: tool.id });
+  const aiInput = buildAiInsightInput(tool, inputs, aiContext);
   const handleAiInsight = async () => {
     if (!aiInput.ready) return;
     setAi({ loading: true, insights: null, confidence: null, error: null });
@@ -142,6 +144,30 @@ export default function ToolAnalysis() {
     toast.success('已採納 AI 洞察');
   };
   const clearAi = () => setAi({ loading: false, insights: null, confidence: null, error: null });
+
+  // AI-02 機會方向候選：依本工具的主要洞察（含剛採納者）；洞察為空走假說模式（2026-09-09）
+  const aiOppInput = buildAiOpportunityInput(
+    tool,
+    insights,
+    aiContext,
+    [...opps, ...((aiContext && aiContext.opportunities) || [])]
+  );
+  const handleAiOpportunities = async () => {
+    if (!aiOppInput.ready) return;
+    setAiOpp({ loading: true, items: null, confidence: null, error: null });
+    try {
+      const r = await runAiTask('AI-02', aiOppInput.payload);
+      setAiOpp({ loading: false, items: Array.isArray(r.payload?.opportunities) ? r.payload.opportunities : [], confidence: r.confidence, error: null });
+    } catch (e) {
+      setAiOpp({ loading: false, items: null, confidence: null, error: e.message });
+    }
+  };
+  const acceptAiOpportunities = () => {
+    setOppList([...opps, ...(aiOpp.items || []).map(aiText)]);
+    setAiOpp({ loading: false, items: null, confidence: null, error: null });
+    toast.success('已採納 AI 機會方向');
+  };
+  const clearAiOpp = () => setAiOpp({ loading: false, items: null, confidence: null, error: null });
 
   const isCompleted = status === TOOL_ANALYSIS_STATUS.COMPLETED;
 
@@ -240,6 +266,36 @@ export default function ToolAnalysis() {
           placeholder="使用此工具獲得的洞察，幫助打破既有框架…"
           accent="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
         />
+        {/* AI 機會方向候選（AI-02，人在迴路）：依上方主要洞察 */}
+        {isAiEnabled() && (
+          <div>
+            <button
+              onClick={handleAiOpportunities}
+              disabled={aiOpp.loading || !aiOppInput.ready}
+              title={aiOppInput.hint || undefined}
+              className="text-sm font-medium px-4 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {aiOppInput.hasData ? '✨ 請 AI 依洞察提出機會方向' : '✨ 請 AI 依公司背景提出假說機會'}
+            </button>
+            {!aiOppInput.hasData && !aiOpp.loading && (
+              <p className="mt-2 text-xs text-amber-700">{aiOppInput.hint}</p>
+            )}
+            {(aiOpp.loading || aiOpp.items || aiOpp.error) && (
+              <AiSuggestionCard
+                loading={aiOpp.loading}
+                error={aiOpp.error}
+                confidence={aiOpp.confidence}
+                title="機會方向候選"
+                onAccept={acceptAiOpportunities}
+                onReject={clearAiOpp}
+              >
+                <ul className="list-disc pl-5 space-y-1">
+                  {(aiOpp.items || []).map((s, i) => <li key={i}>{aiText(s)}</li>)}
+                </ul>
+              </AiSuggestionCard>
+            )}
+          </div>
+        )}
         <ListEditor
           title="機會"
           required

@@ -65,3 +65,21 @@ describe('buildAiContext（公司背景摘要，全部截斷）', () => {
     expect(buildAiContext({}).growthGap).toBeNull();
   });
 });
+
+describe('buildAiOpportunityInput（AI-02 機會方向）', () => {
+  it('有洞察 → analysis，洞察去空白截斷、既有機會帶入避免重複；無洞察 → hypothesis 並提示', async () => {
+    const { buildAiOpportunityInput } = await import('../utils/toolAiInput');
+    const tool = { id: 1, name: '市場地圖', category: '產業面', observationType: 'external', fieldSchema: { fields: [{ key: 'a', label: '市場區隔與規模' }] } };
+    const r = buildAiOpportunityInput(tool, ['  電商區隔成長最快  ', '', 'x'.repeat(400)], { archetype: 'A' }, ['企業團購', '']);
+    expect(r.ready).toBe(true);
+    expect(r.mode).toBe('analysis');
+    expect(r.payload.insights).toEqual(['電商區隔成長最快', 'x'.repeat(300)]);
+    expect(r.payload.existingOpportunities).toEqual(['企業團購']);
+    expect(r.payload.framework).toEqual(['市場區隔與規模']);
+    expect(r.payload.context).toEqual({ archetype: 'A' });
+    const h = buildAiOpportunityInput(tool, [' ', ''], null, []);
+    expect(h.mode).toBe('hypothesis');
+    expect(h.hint).toContain('假說');
+    expect(buildAiOpportunityInput(undefined, []).ready).toBe(false);
+  });
+});

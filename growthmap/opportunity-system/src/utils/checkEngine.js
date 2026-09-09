@@ -2,6 +2,7 @@
 import { SCORING_WEIGHTS, LONGLIST_MIN, LONGLIST_MAX } from './constants';
 import { ARCHETYPE_GUIDANCE, BCG_TOOL_LIBRARY } from './toolLibrary';
 import { isShortlisted } from './opportunityStatus';
+import { toYi, fmtAmount } from './amount';
 
 const P0_CODES = ['CHK-1', 'CHK-2', 'CHK-3'];
 
@@ -33,23 +34,26 @@ function recommendedModesOf(archetype) {
 }
 
 // CHK-1 機會營收充足度（P0）
+// 單位契約（utils/amount.js）：estRevenue 以「元」填寫、第二堂成長差距以「億」計——比對前先把總和換算成億，
+// 否則 298,000,000 元 ÷ 1.5 億會算成約 2 億倍、永遠 pass（2026-09-09 修正）。
 function chk1(shortlisted, projectMeta) {
-  const sum = shortlisted.reduce((a, o) => a + (Number(o.estRevenue) || 0), 0);
+  const sum = shortlisted.reduce((a, o) => a + (Number(o.estRevenue) || 0), 0); // 元
+  const sumYi = toYi(sum); // 億
   const snap = projectMeta.targetSnapshot;
   const buffer = projectMeta.bufferRatio ?? 1.2;
   if (!snap || !snap.growthGap) {
-    return { code: 'CHK-1', title: '機會營收充足度', status: 'warn', detail: { sum, message: '尚未同步第二堂成長差距，無法判定。請先於工作台「從第二堂同步」。' } };
+    return { code: 'CHK-1', title: '機會營收充足度', status: 'warn', detail: { sum, sumYi, message: '尚未同步第二堂成長差距，無法判定。請先於工作台「從第二堂同步」。' } };
   }
-  const gap = snap.growthGap;
-  const ratio = gap > 0 ? sum / gap : 0;
+  const gap = snap.growthGap; // 億
+  const ratio = gap > 0 ? sumYi / gap : 0;
   let status = 'fail';
   if (ratio >= buffer) status = 'pass';
   else if (ratio >= 1.0) status = 'warn';
   const message =
     status === 'pass'
-      ? `長清單預估營收總和為成長差距的 ${ratio.toFixed(2)} 倍（≥ 緩衝 ${buffer}）。`
-      : `長清單營收總和為成長差距的 ${ratio.toFixed(2)} 倍，建議補強機會或提高預估，使其 ≥ ${buffer} 倍。`;
-  return { code: 'CHK-1', title: '機會營收充足度', status, detail: { sum, gap, ratio, buffer, message } };
+      ? `長清單預估營收總和 ${fmtAmount(sumYi, 2)} 億，為成長差距 ${fmtAmount(gap)} 億的 ${ratio.toFixed(2)} 倍（≥ 緩衝 ${buffer}）。`
+      : `長清單預估營收總和 ${fmtAmount(sumYi, 2)} 億，僅為成長差距 ${fmtAmount(gap)} 億的 ${ratio.toFixed(2)} 倍，建議補強機會或提高預估，使其 ≥ ${buffer} 倍。`;
+  return { code: 'CHK-1', title: '機會營收充足度', status, detail: { sum, sumYi, gap, ratio, buffer, message } };
 }
 
 // CHK-2 定位對齊度（P0）

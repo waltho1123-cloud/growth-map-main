@@ -245,7 +245,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
   ```
 - **Migration**：`migrateData` / `migrateOpportunity` 為**冪等純增量補欄位**，不刪既有資料；新欄位與舊扁平欄位**並存**是刻意的漸進切換設計，勿「順手清理」舊欄位。
 - **狀態機**：`draft → insight_linked → evaluated → shortlisted → handed_off → archived`。
-- **檢查引擎（CHK）**：例 CHK-1 機會營收總和 ≥ 成長差距 × 緩衝係數（預設 1.2，可於設定頁調整，ADR-010）；CHK-4 長清單合格數 7–12。資料一變動即令上次檢查失效。
+- **檢查引擎（CHK）**：例 CHK-1 機會營收總和 ≥ 成長差距 × 緩衝係數（預設 1.2，可於設定頁調整，ADR-010）；CHK-4 長清單合格數 7–12。資料一變動即令上次檢查失效。 **金額單位契約（2026-09-09 立，正本 `utils/amount.js`）**：第二堂所有營收欄位以「億」填寫 → `targetSnapshot.aspiration／momentum／growthGap` 皆為億；第三堂 `estRevenue` 以「元」填寫（既有資料全為元）。CHK-1、交付面板、PDF 顯示前一律以 `toYi()` 把元換算成億再比對／並列，顯示保留小數（`fmtAmount`）——修正前 CHK-1 拿元總和直接除以億差距，永遠 pass。
 - **BCG 工具庫**（`utils/toolLibrary.js`）：24 工具，**17–24 啟用（內部洞察）**、1–16 預留（外部觀察）。資料驅動（ADR-007 / GD-08）。**1–16 的 fieldSchema 是 2026-09-09 起草的「草案欄位」**（`fieldSchema.draft=true` 為主持人用的內部旗標，**畫面不顯示**——2026-09-09 使用者裁定學員端不該看到「草案」字樣；Dropbox 與 repo 都沒有 BCG 原始方法論規格，欄位依標準策略框架設計，主持人確認後把該工具的 draft 移除、要改欄位直接改 toolLibrary.js），仍 `defaultEnabled:false`。外部工具的分析頁另保留「觀察資料／研究筆記」自由欄（`inputs.notes`，隨既有同步）作為萬用出口；`utils/toolAiInput.js` 的 `buildAiInsightInput` 決定 AI 按鈕可否按（至少一個欄位有值，或筆記 ≥ 20 字；內部工具只看欄位），並把有值欄位＋筆記一起餵 AI-01；**什麼都沒填時 AI 仍可按**，改走假說模式（見 AI-01 任務說明），按鈕文字變「請 AI 依公司背景提出假說洞察」並顯示琥珀提示（2026-09-09 使用者裁定）。
 
 ### 持久化與雲端即時同步

@@ -1,3 +1,4 @@
+import { fmtAmount, fmtYi, amountUnit } from '../../utils/amount';
 import React from 'react';
 import { useOpportunity } from '../../contexts/OpportunityContext';
 import { useNav } from '../../contexts/NavContext';
@@ -6,9 +7,7 @@ import { isShortlisted } from '../../utils/opportunityStatus';
 import { buildHandoffSnapshot, downloadJson } from '../../utils/handoff';
 import toast from 'react-hot-toast';
 
-function fmt(n) {
-  return new Intl.NumberFormat('zh-TW').format(Math.round(Number(n) || 0));
-}
+// 金額顯示走 utils/amount：estRevenue（元）換算成億、成長差距（億）保留小數，兩者同單位並列。
 
 export default function HandoffPanel() {
   const { state, dispatch } = useOpportunity();
@@ -73,12 +72,12 @@ export default function HandoffPanel() {
               <p className="text-xl font-bold text-gray-800">{shortlisted.length}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">預估營收總和</p>
-              <p className="text-xl font-bold text-emerald-700">{fmt(sumRevenue)}</p>
+              <p className="text-xs text-gray-500">預估營收總和（{amountUnit('TWD')}，由元換算）</p>
+              <p className="text-xl font-bold text-emerald-700">{fmtYi(sumRevenue)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">成長差距</p>
-              <p className="text-xl font-bold text-amber-600">{state.projectMeta.targetSnapshot ? fmt(state.projectMeta.targetSnapshot.growthGap) : '—'}</p>
+              <p className="text-xs text-gray-500">成長差距（{amountUnit(state.projectMeta.targetSnapshot?.currency)}）</p>
+              <p className="text-xl font-bold text-amber-600">{state.projectMeta.targetSnapshot ? fmtAmount(state.projectMeta.targetSnapshot.growthGap) : '—'}</p>
             </div>
           </div>
           <button

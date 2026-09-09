@@ -1,4 +1,5 @@
 import { GO_TO_MARKET_FACETS, RATING_MAX, OPPORTUNITY_STATUS_LABELS } from './constants';
+import { fmtYi } from './amount';
 import { TOOL_NAME_BY_ID } from './toolLibrary';
 import { aiText } from '../lib/ai/aiText';
 
@@ -282,7 +283,7 @@ export async function exportToPdf(opportunities, toolAnalyses = {}) {
       if (opp.rank != null) metaParts.push(`AI 排序：#${opp.rank}`);
       if (opp.aiScore != null) metaParts.push(`AI 評分：${opp.aiScore}`);
       const rev = Number(opp.estRevenue) || 0;
-      if (rev) metaParts.push(`預估年營收：${rev.toLocaleString()} ${opp.currency || ''}`.trim());
+      if (rev) metaParts.push(`預估年營收：${rev.toLocaleString()}${opp.currency ? ` ${opp.currency}` : ''}（≈ ${fmtYi(rev)} 億）`);
       const statusLabel = OPPORTUNITY_STATUS_LABELS[opp.status];
       if (statusLabel) metaParts.push(`狀態：${statusLabel}`);
       if (metaParts.length) {

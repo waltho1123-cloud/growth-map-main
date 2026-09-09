@@ -87,19 +87,20 @@ describe('check engine', () => {
     template1: { companyType: '堡壘', growthLever: lever, growthType: [], insights: 'i', growthDimension: '新產品' },
     template3: { ...createEmptyOpportunity().template3, ratings: { size: 4, potential: 4, path: 4, rightToWin: 4 } },
   });
-  const makeState = (opps, gap = 1000) => ({
+  // 單位契約：成長差距（第二堂）以「億」計、estRevenue 以「元」填寫，CHK-1 比對前換算（utils/amount.js）
+  const makeState = (opps, gap = 1.5) => ({
     opportunities: opps,
     projectMeta: { ...createDefaultProjectMeta(), targetSnapshot: { aspiration: gap * 2, momentum: gap, growthGap: gap, currency: 'TWD' } },
     toolAnalyses: {},
   });
 
-  test('CHK-1 營收充足度：ratio≥1.2 pass', () => {
-    const run = computeChecks(makeState([shortlistedOpp(1300)], 1000));
+  test('CHK-1 營收充足度：ratio≥1.2 pass（2 億元 vs 1.5 億差距 = 1.33 倍）', () => {
+    const run = computeChecks(makeState([shortlistedOpp(200000000)], 1.5));
     expect(run.results.find((r) => r.code === 'CHK-1').status).toBe('pass');
   });
 
-  test('CHK-1 營收不足 fail', () => {
-    const run = computeChecks(makeState([shortlistedOpp(500)], 1000));
+  test('CHK-1 營收不足 fail（5,000 萬元 vs 1.5 億差距 = 0.33 倍）', () => {
+    const run = computeChecks(makeState([shortlistedOpp(50000000)], 1.5));
     expect(run.results.find((r) => r.code === 'CHK-1').status).toBe('fail');
   });
 

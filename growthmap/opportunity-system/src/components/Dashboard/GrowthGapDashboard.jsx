@@ -4,10 +4,7 @@ import { useAuth } from '../../lib/cloud/auth';
 import { loadOrientSnapshot } from '../../lib/cloud/orient';
 import { isFirebaseConfigured } from '../../lib/cloud/firebase-config';
 import toast from 'react-hot-toast';
-
-function fmt(n) {
-  return new Intl.NumberFormat('zh-TW').format(Math.round(Number(n) || 0));
-}
+import { fmtAmount, amountUnit } from '../../utils/amount';
 
 function Stat({ label, value, sub, color }) {
   return (
@@ -77,12 +74,12 @@ export default function GrowthGapDashboard() {
       {snap ? (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Stat label="Aspiration 加速增長目標" value={fmt(snap.aspiration)} sub={currency} color="text-emerald-700" />
-            <Stat label="Momentum 自然增長推估" value={fmt(snap.momentum)} sub={currency} color="text-gray-700" />
-            <Stat label="成長差距" value={fmt(snap.growthGap)} sub={`${gapPct.toFixed(0)}% vs 自然增長`} color="text-amber-600" />
+            <Stat label="Aspiration 加速增長目標" value={fmtAmount(snap.aspiration)} sub={amountUnit(currency)} color="text-emerald-700" />
+            <Stat label="Momentum 自然增長推估" value={fmtAmount(snap.momentum)} sub={amountUnit(currency)} color="text-gray-700" />
+            <Stat label="成長差距" value={fmtAmount(snap.growthGap)} sub={`${amountUnit(currency)} · ${gapPct.toFixed(0)}% vs 自然增長`} color="text-amber-600" />
           </div>
           {snap.companyName && (
-            <p className="text-xs text-gray-400 mt-3">資料來源：第二堂「{snap.companyName}」· 機會預估營收請以相同單位（{currency}）填寫，供綜合檢查 CHK-1 比對。</p>
+            <p className="text-xs text-gray-400 mt-3">資料來源：第二堂「{snap.companyName}」· 數字單位為 {amountUnit(currency)}；機會的預估年營收以「元」填寫，綜合檢查 CHK-1 會自動換算成億與成長差距比對。</p>
           )}
         </>
       ) : (

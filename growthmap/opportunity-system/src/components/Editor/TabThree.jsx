@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { fmtYi } from '../../utils/amount';
 import { COMPETITIVE_ENVIRONMENTS, CAGR_OPTIONS, EBIT_OPTIONS, RATING_MAX, DEFAULT_CURRENCY } from '../../utils/constants';
 import { IMEInput, IMETextarea } from '../IMEInput';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
@@ -141,7 +142,7 @@ export default function TabThree({ data, onChange }) {
         <h3 className="text-sm font-bold text-gray-800 mb-3">預估營收貢獻 <span className="text-xs font-normal text-gray-400">（供綜合檢查 CHK-1：機會營收總和 ≥ 成長差距 × 緩衝係數）</span></h3>
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label htmlFor="t3-f1" className="block text-xs font-medium text-gray-600 mb-1">預估年營收</label>
+            <label htmlFor="t3-f1" className="block text-xs font-medium text-gray-600 mb-1">預估年營收（元）</label>
             <input id="t3-f1"
               type="number"
               min="0"
@@ -151,9 +152,14 @@ export default function TabThree({ data, onChange }) {
                 const v = e.target.value;
                 onChange({ estRevenue: v === '' ? 0 : Math.max(0, Number(v) || 0) });
               }}
-              placeholder="例如 5000000"
+              placeholder="例如 20000000"
               className="w-48 rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
             />
+            <p className="text-[11px] text-gray-400 mt-1">
+              {Number(data.estRevenue) > 0
+                ? `≈ ${fmtYi(data.estRevenue)} 億 ${data.currency || DEFAULT_CURRENCY}（第二堂成長差距以億計，CHK-1 會自動換算比對）`
+                : '以新台幣「元」填寫；綜合檢查 CHK-1 會自動換算成億，與第二堂成長差距比對。'}
+            </p>
           </div>
           <div>
             <label htmlFor="t3-f2" className="block text-xs font-medium text-gray-600 mb-1">幣別</label>

@@ -9,6 +9,7 @@ import { IMETextarea } from '../IMEInput';
 import { isAiEnabled, runAiTask } from '../../lib/ai/aiClient';
 import AiSuggestionCard from '../ai/AiSuggestionCard';
 import { aiText } from '../../lib/ai/aiText';
+import { buildAiInsightInput, hasFieldSchema, NOTES_KEY } from '../../utils/toolAiInput';
 import toast from 'react-hot-toast';
 
 // 字串列表編輯器（主要洞察 / 機會）
@@ -122,10 +123,13 @@ export default function ToolAnalysis() {
     toast.success(`已完成「${tool.name}」分析`);
   };
 
+  // AI-01 輸入組裝與可按判定：外部工具用 inputs.notes 自由欄，內部工具用已填的 schema 欄位
+  const aiInput = buildAiInsightInput(tool, inputs);
   const handleAiInsight = async () => {
+    if (!aiInput.ready) return;
     setAi({ loading: true, insights: null, confidence: null, error: null });
     try {
-      const r = await runAiTask('AI-01', { toolName: tool.name, inputs });
+      const r = await runAiTask('AI-01', aiInput.payload);
       setAi({ loading: false, insights: Array.isArray(r.payload?.insights) ? r.payload.insights : [], confidence: r.confidence, error: null });
     } catch (e) {
       setAi({ loading: false, insights: null, confidence: null, error: e.message });
@@ -163,7 +167,7 @@ export default function ToolAnalysis() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* 工具專屬分析欄位（依 fieldSchema 動態渲染） */}
-        {tool.fieldSchema.fields.length > 0 ? (
+        {hasFieldSchema(tool) ? (
           <div className="glass-card rounded-xl p-5 space-y-5">
             <h3 className="text-sm font-bold text-gray-800">工具分析</h3>
             {tool.fieldSchema.fields.map((field) => (
@@ -176,8 +180,20 @@ export default function ToolAnalysis() {
             ))}
           </div>
         ) : (
-          <div className="glass-card rounded-xl p-5 text-sm text-gray-500">
-            此工具尚未定義專屬分析欄位（外部觀察工具預留），仍可填寫下方主要洞察與機會。
+          <div className="glass-card rounded-xl p-5 space-y-3">
+            <h3 className="text-sm font-bold text-gray-800">觀察資料／研究筆記</h3>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              此工具屬外部觀察，沒有專屬分析欄位。把市場數據、研究摘要、訪談紀錄或新聞重點貼在這裡，
+              AI 會據此產出洞察候選；也可以跳過，直接填寫下方主要洞察與機會。
+            </p>
+            <IMETextarea
+              value={inputs[NOTES_KEY] || ''}
+              onValueChange={(v) => setField(NOTES_KEY, v)}
+              rows={8}
+              aria-label="觀察資料／研究筆記"
+              placeholder="例：2025 年台灣機能服飾市場規模約 …；前三品牌市佔 …；成長最快的區隔是 …；主要通路變化 …"
+              className="w-full rounded-lg neu-input focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+            />
           </div>
         )}
 
@@ -186,11 +202,15 @@ export default function ToolAnalysis() {
           <div>
             <button
               onClick={handleAiInsight}
-              disabled={ai.loading}
-              className="text-sm font-medium px-4 py-2 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-60"
+              disabled={ai.loading || !aiInput.ready}
+              title={aiInput.hint || undefined}
+              className="text-sm font-medium px-4 py-2 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               ✨ 請 AI 依分析產洞察
             </button>
+            {!aiInput.ready && !ai.loading && (
+              <p className="mt-2 text-xs text-gray-400">{aiInput.hint}</p>
+            )}
             {(ai.loading || ai.insights || ai.error) && (
               <AiSuggestionCard
                 loading={ai.loading}

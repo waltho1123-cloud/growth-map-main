@@ -231,7 +231,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
 - **Migration**：`migrateData` / `migrateOpportunity` 為**冪等純增量補欄位**，不刪既有資料；新欄位與舊扁平欄位**並存**是刻意的漸進切換設計，勿「順手清理」舊欄位。
 - **狀態機**：`draft → insight_linked → evaluated → shortlisted → handed_off → archived`。
 - **檢查引擎（CHK）**：例 CHK-1 機會營收總和 ≥ 成長差距 × 緩衝係數（預設 1.2，可於設定頁調整，ADR-010）；CHK-4 長清單合格數 7–12。資料一變動即令上次檢查失效。
-- **BCG 工具庫**（`utils/toolLibrary.js`）：24 工具，**17–24 啟用（內部洞察）**、1–16 預留（外部觀察）。資料驅動（ADR-007 / GD-08）。
+- **BCG 工具庫**（`utils/toolLibrary.js`）：24 工具，**17–24 啟用（內部洞察）**、1–16 預留（外部觀察）。資料驅動（ADR-007 / GD-08）。**1–16 沒有 fieldSchema**：分析頁改提供「觀察資料／研究筆記」自由欄（存 `toolAnalyses[code].inputs.notes`，隨既有同步），AI-01 以它為輸入；`utils/toolAiInput.js` 的 `buildAiInsightInput` 決定 AI 按鈕可否按（外部工具筆記 ≥ 20 字、內部工具至少一個欄位有值），否則停用並提示——避免送空輸入得到「資料為空」的 10% 信心建議稿（2026-09-09）。
 
 ### 持久化與雲端即時同步
 - **本地**：localStorage，key `bw_opportunity_v2`（`utils/storage.js`）。

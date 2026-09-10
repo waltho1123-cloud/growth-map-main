@@ -6,9 +6,11 @@ import { create } from 'zustand';
 
 export const useSyncStatus = create((set) => ({
   pending: 0,
+  // 第幾輪「從 0 進入在途」——TopBar 用來判斷延遲顯示的「同步中」是否屬於當前這輪（寫入結束即失效）
+  pendingCycle: 0,
   lastError: null,
   lastSyncedAt: null,
-  _begin() { set((s) => ({ pending: s.pending + 1 })); },
+  _begin() { set((s) => ({ pending: s.pending + 1, pendingCycle: s.pending === 0 ? s.pendingCycle + 1 : s.pendingCycle })); },
   _end(error) {
     set((s) => ({
       pending: Math.max(0, s.pending - 1),

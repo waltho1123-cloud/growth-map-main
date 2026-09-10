@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useUiStore } from '../../store/useUiStore';
 import { useSyncStatus } from '../../store/useSyncStatus';
@@ -8,17 +9,41 @@ import { aiEnabled } from '../../lib/ai';
 import { ROLES } from '../../domain/model';
 import { Lamp, Chip } from '../common/ui';
 
-// 同其他單元的「頭像＋已同步」膠囊；狀態來自在途寫入計數（useSyncStatus）
+// 同其他單元的「頭像＋已同步」膠囊；狀態來自在途寫入計數（useSyncStatus）。
+// 2026-09-10 修正「評分時頂列晃動」：第四堂每個評分都是一筆即發寫入、幾十毫秒就完成，
+// 膠囊文字在「已同步／同步中…」間切換時寬度不同，右側整組按鈕跟著左右位移。
+// 兩個對策：(1) 「同步中」只在寫入持續超過 SHOW_PENDING_MS 才顯示，短寫入不閃；
+// (2) 文字以三種狀態的最寬字樣佔位（不可見，同格疊放），換文字不換寬度。
+const SHOW_PENDING_MS = 400;
+
+function useDelayedPending(pending, pendingCycle) {
+  const isPending = pending > 0;
+  // armedCycle＝計時器到期時所屬的那一輪；寫入結束（isPending=false）立刻回「已同步」，
+  // 下一輪開始時 armedCycle 已過期，要再等一次延遲——不在 effect 內同步 setState（react-hooks 規則）。
+  const [armedCycle, setArmedCycle] = useState(0);
+  useEffect(() => {
+    if (!isPending) return undefined;
+    const t = setTimeout(() => setArmedCycle(pendingCycle), SHOW_PENDING_MS);
+    return () => clearTimeout(t);
+  }, [isPending, pendingCycle]);
+  return isPending && armedCycle === pendingCycle;
+}
+
+const PILL_STATES = {
+  error: { text: '同步失敗', cls: 'border-red-200 bg-red-50 text-red-700', dot: '⚠' },
+  pending: { text: '同步中…', cls: 'border-amber-200 bg-amber-50 text-amber-700', dot: '⟳' },
+  synced: { text: '已同步', cls: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: '✓' },
+};
+
 function SyncPill({ user }) {
   const pending = useSyncStatus((s) => s.pending);
   const lastError = useSyncStatus((s) => s.lastError);
-  const tone = lastError
-    ? { text: '同步失敗', cls: 'border-red-200 bg-red-50 text-red-700', dot: '⚠' }
-    : pending > 0
-      ? { text: '同步中…', cls: 'border-amber-200 bg-amber-50 text-amber-700', dot: '⟳' }
-      : { text: '已同步', cls: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: '✓' };
+  const pendingCycle = useSyncStatus((s) => s.pendingCycle);
+  const showPending = useDelayedPending(pending, pendingCycle);
+  const tone = lastError ? PILL_STATES.error : showPending ? PILL_STATES.pending : PILL_STATES.synced;
   return (
-    <span title={lastError || '雲端寫入狀態'} className={`flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2.5 text-xs font-medium ${tone.cls}`}>
+    <span title={lastError || '雲端寫入狀態'} data-testid="sync-pill"
+      className={`flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2.5 text-xs font-medium transition-colors ${tone.cls}`}>
       {user.photoURL ? (
         <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="h-6 w-6 rounded-full" />
       ) : (
@@ -26,7 +51,13 @@ function SyncPill({ user }) {
           {(user.displayName || user.email || '?').slice(0, 1).toUpperCase()}
         </span>
       )}
-      <span>{tone.dot} {tone.text}</span>
+      {/* 三種狀態疊在同一格，最寬者決定寬度：文字切換不改變版面 */}
+      <span className="grid text-center whitespace-nowrap">
+        {Object.values(PILL_STATES).map((st) => (
+          <span key={st.text} aria-hidden="true" className="invisible col-start-1 row-start-1">{st.dot} {st.text}</span>
+        ))}
+        <span className="col-start-1 row-start-1" data-testid="sync-pill-label">{tone.dot} {tone.text}</span>
+      </span>
     </span>
   );
 }

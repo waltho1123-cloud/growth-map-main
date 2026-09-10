@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { setSubDoc, updateSubDoc } from '../../lib/db';
 import { DIMENSIONS } from '../../domain/criteria';
-import { totalOf, isComplete, axesOf, aggregateScores, rationaleRequired, scoreDocId } from '../../domain/scoring';
+import { totalOf, isComplete, axesOf, aggregateScores, rationaleSuggested, scoreDocId } from '../../domain/scoring';
 import { logEvent } from '../../lib/events';
 import { navigate } from '../../lib/useHashRoute';
 import { Section, Btn, Chip, EmptyState, Modal } from '../common/ui';
@@ -81,17 +81,8 @@ export default function P04Scoring({ ctx }) {
   const submitMine = async (opp) => {
     const mine = myScoreOf(opp.id);
     if (!mine || !isComplete(mine.dims)) return;
-    // 極端分數必填依據（P-04 驗證）；缺 TAM/SAM 時維度①依據必填
-    const missing = DIMENSIONS.filter((d) => {
-      const v = mine.dims[d.key];
-      const needsByExtreme = rationaleRequired(v);
-      const needsByTam = d.key === 'size' && (opp.qualityFlags?.tamMissing);
-      return (needsByExtreme || needsByTam) && !(mine.rationales?.[d.key] || '').trim();
-    });
-    if (missing.length > 0) {
-      alert(`請先填寫評分依據：${missing.map((d) => d.name).join('、')}（1／5 分或缺 TAM 的市場維度必填）`);
-      return;
-    }
+    // 評分依據為選填（2026-09-10 使用者裁定）：極端分數／缺 TAM 只在畫面上提示「建議填寫」，不阻擋提交；
+    // 是否有填仍記進 EVT-04（hasRationales）供事後檢視。
     await updateSubDoc(project.id, 'scores', scoreDocId(opp.id, activeRoundN, ctx.user.uid), { submitted: true, updatedAt: Date.now() });
     logEvent(project.id, 'score.submitted', { // EVT-04
       oppId: opp.id, round: activeRoundN,
@@ -184,7 +175,7 @@ export default function P04Scoring({ ctx }) {
                     <tr key={o.id} className="border-b border-slate-100 align-top">
                       <td className="max-w-72 py-2 pr-3">
                         <div className="text-[13px] font-medium leading-snug text-slate-800">{o.opportunityName || '（未命名）'}</div>
-                        {o.qualityFlags?.tamMissing && <div className="mt-0.5 text-[11px] text-amber-700">缺 TAM／SAM：維度①依據必填</div>}
+                        {o.qualityFlags?.tamMissing && <div className="mt-0.5 text-[11px] text-amber-700">缺 TAM／SAM：建議補維度①的評分依據</div>}
                         {plays.some((p) => (p.sourceOppIds || []).includes(o.id)) && (
                           <div className="mt-0.5 text-[11px] text-indigo-600" title="PD-05：系統只提示、不自動填分——分數只抓七八成，最後由討論拍板">
                             本項已編入策略方案，操作潛力可視為滿分（仍需人工點選）
@@ -193,17 +184,21 @@ export default function P04Scoring({ ctx }) {
                       </td>
                       {DIMENSIONS.map((d) => {
                         const v = mine?.dims?.[d.key] || 0;
-                        const needR = (rationaleRequired(v) || (d.key === 'size' && o.qualityFlags?.tamMissing)) && v > 0;
+                        // 選填：每個維度一選分就出現依據欄；1／5 分或缺 TAM 的市場維度只以琥珀色提示「建議填寫」
+                        const suggested = (rationaleSuggested(v) || (d.key === 'size' && o.qualityFlags?.tamMissing)) && v > 0;
+                        const filled = !!(mine?.rationales?.[d.key] || '').trim();
                         return (
                           <td key={d.key} className="py-2 pr-3">
                             <ScorePicker value={v} disabled={locked} onPick={(nv) => setDim(o, d.key, nv)} />
-                            {needR && (
+                            {v > 0 && (
                               <input
                                 defaultValue={mine?.rationales?.[d.key] || ''}
                                 disabled={locked}
                                 onBlur={(e) => setRationale(o, d.key, e.target.value)}
-                                placeholder="評分依據（必填）"
-                                className={`mt-1 w-full rounded border px-1.5 py-1 text-[11px] ${!(mine?.rationales?.[d.key] || '').trim() ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
+                                placeholder={suggested && !filled ? '評分依據（選填，建議填寫）' : '評分依據（選填）'}
+                                title={suggested ? '1／5 分或缺 TAM 的市場維度建議說明依據；不填也可提交' : '選填'}
+                                aria-label={`${d.name} 評分依據（選填）`}
+                                className={`mt-1 w-full rounded border px-1.5 py-1 text-[11px] ${suggested && !filled ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
                               />
                             )}
                           </td>

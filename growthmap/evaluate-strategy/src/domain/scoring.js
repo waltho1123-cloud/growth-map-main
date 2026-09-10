@@ -48,8 +48,9 @@ export function axesOf(dims, weighting = null) {
   };
 }
 
-// 極端分數（1 或 5）評分依據必填（P-04 驗證）
-export function rationaleRequired(value) {
+// 極端分數（1 或 5）建議附評分依據（P-04 提示）。
+// 2026-09-10 使用者裁定：評分依據一律「選填」，不再阻擋提交——本函式只用來標示「建議填寫」的提示強度。
+export function rationaleSuggested(value) {
   const v = clampScore(value);
   return v === 1 || v === 5;
 }

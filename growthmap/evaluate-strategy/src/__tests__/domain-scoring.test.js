@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { totalOf, isComplete, axesOf, rationaleSuggested, aggregateScores, scoreDocId } from '../domain/scoring';
+import { totalOf, isComplete, axesOf, rationaleRequired, aggregateScores, scoreDocId } from '../domain/scoring';
 import { defaultDividers, quadrantOf, QUADRANTS } from '../domain/matrix';
 import {
   checkGr1, checkGr3, checkGr7, playCountStatus, longlistCountStatus, computeOpportunityFlags,
@@ -31,11 +31,11 @@ describe('scoring', () => {
     expect(y).toBe(4.2); // (5*40+1*10)/50
   });
 
-  test('rationaleSuggested：1 或 5 分建議填依據（選填，不阻擋提交）', () => {
-    expect(rationaleSuggested(1)).toBe(true);
-    expect(rationaleSuggested(5)).toBe(true);
-    expect(rationaleSuggested(3)).toBe(false);
-    expect(rationaleSuggested(0)).toBe(false); // 未評不要求
+  test('rationaleRequired：1 或 5 分必填依據', () => {
+    expect(rationaleRequired(1)).toBe(true);
+    expect(rationaleRequired(5)).toBe(true);
+    expect(rationaleRequired(3)).toBe(false);
+    expect(rationaleRequired(0)).toBe(false); // 未評不要求
   });
 
   test('aggregateScores：平均/中位數/極差；極差 ≥ 2 標記複議（US-005）', () => {

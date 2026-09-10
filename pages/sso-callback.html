@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Wiwi Hub 登入中…</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/portal.css">
+  <style>
+    .sso-error__title { font-size: 1.25rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 8px; }
+    #error-message { font-size: 1rem; color: var(--color-text-secondary); margin: 0 0 20px; }
+    .sso-error__links { display: flex; gap: 20px; justify-content: center; font-size: .9rem; margin: 0; }
+    .sso-error__links a { color: var(--color-in-progress); font-weight: 600; text-decoration: none; }
+    .sso-error__links a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <section id="view-error" class="error-state" style="display:none">
+    <span class="error-state__icon" aria-hidden="true">⚠️</span>
+    <h1 class="sso-error__title">SSO 登入失敗</h1>
+    <p id="error-message"></p>
+    <p class="sso-error__links">
+      <a href="/">改用帳密登入</a>
+      <a href="https://wiwi-hub.zeabur.app/dashboard">回 Wiwi Hub</a>
+    </p>
+  </section>
+  <script type="module" src="../js/sso-callback.js"></script>
+</body>
+</html>

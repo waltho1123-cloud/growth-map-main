@@ -16,6 +16,7 @@ import {
 import { checkPlatformAdmin } from './admin-guard.js';
 import { createFirestoreAdminClient } from './admin-firestore.js';
 import { createKeyProbe } from './anthropic-probe.js';
+import { createSsoExchangeHandler } from './hub-sso.js';
 
 const app = new Hono();
 
@@ -36,6 +37,10 @@ const firestoreAdmin = serviceAccount
   : null;
 if (serviceAccount) console.log(`[admin] 服務帳號已載入：${serviceAccount.clientEmail}`);
 else console.log('[admin] 未設定 FIREBASE_SERVICE_ACCOUNT_JSON——/api/admin/* 停用（503）');
+// Wiwi Hub SSO（2026-09-10）：三態——已啟用／密鑰已設但服務帳號未設（端點回 404）／未設密鑰（停用，404）
+if (config.hubJwtSecret && serviceAccount) console.log('[sso] Wiwi Hub SSO 已啟用（/api/auth/sso/exchange）');
+else if (config.hubJwtSecret) console.warn('[sso] HUB_JWT_SECRET 已設但服務帳號未設（FIREBASE_SERVICE_ACCOUNT_JSON）——端點回 404');
+else console.log('[sso] 未設定 HUB_JWT_SECRET——/api/auth/sso/exchange 停用（404）');
 
 // Anthropic 金鑰有效性：啟動探測一次並記 log；健康檢查回 apiKeyValid（1 小時快取）
 const keyProbe = createKeyProbe({ apiKey: config.anthropic.apiKey, baseURL: config.anthropic.baseURL });
@@ -60,6 +65,8 @@ app.use(
 
 // auth：REQUIRE_AUTH=true 時驗證 Firebase ID token（簽章 + claims）
 app.use('/api/*', async (c, next) => {
+  // hub SSO 交換是登入前呼叫（沒有 Firebase ID token），/api/* 唯一公開路徑；自身以 hub 簽章守門；rate limit 仍套用
+  if (c.req.path === '/api/auth/sso/exchange') return next();
   if (config.requireAuth) {
     if (c.req.method === 'OPTIONS') return next(); // 預檢不需 token
     const auth = c.req.header('Authorization');
@@ -125,8 +132,17 @@ app.get('/', async (c) => {
     hasApiKey: hasApiKey(),
     apiKeyValid: key.valid, // true／false／null（探測未完成）
     adminConfigured: Boolean(adminClient),
+    ssoConfigured: Boolean(config.hubJwtSecret && adminClient),
   });
 });
+
+// ── Wiwi Hub SSO 交換（2026-09-10）：hub 簽 HS256 token 換 Firebase custom token；
+// 未設 HUB_JWT_SECRET 或服務帳號＝端點視同不存在（404）。實作見 hub-sso.js。──────────────
+app.post('/api/auth/sso/exchange', createSsoExchangeHandler({
+  getSecret: () => config.hubJwtSecret,
+  getAdminClient: () => adminClient,
+  serviceAccount,
+}));
 
 // ── 管理端點（做法 A，2026-09-08）：平台管理員從 pages/admin.html 管 Firebase 帳號 ──────────
 // 守門三層：(1) 有效 Firebase ID token（上方 auth 中介層）(2) email 已驗證且

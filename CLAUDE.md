@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 路徑 | 內容 | 框架 | 建置輸出 |
 | --- | --- | --- | --- |
-| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站（單元卡片資料驅動自 `data/unit-registry.json`；全站登入膠囊 `js/portal-auth.js`（email／密碼登入，表單與錯誤翻譯共用 `js/auth-ui.js`，見下方「登入方式」）；**平台帳號管理頁 `pages/admin.html`**——帳號與密碼（經後端服務帳號建帳號／設密碼／停用／刪除）＋登入方式設定＋活動目錄／平台封鎖＋AI 白名單＋增補管理員，root 管理員寫死於 firestore.rules；portal 層 Firebase config 唯一複本在 `js/firebase-config.js`（正本 `packages/firebase`，config-sync.test 驗一致＋CDN 版本＝安裝版）；同源共享 session，portal 登入＝四單元登入；**管理員登入後膠囊顯示「帳號管理」連結**（判定＝以登入者身分能否讀 `platform/meta`，與 rules／後端 admin-guard 同源）。portal 層未 hash 的 `js/`／`css/` 由 Caddyfile 送 `no-cache`（ETag 重驗證）；2026-09-09 曾因缺此標頭讓瀏覽器啟發式快取舊 `portal-auth.js` 數天，故 `index.html`／`admin.html` 的模組網址帶一次性 `?v=`。**登入會自動寫 `platformUsers/{uid}` 帳號目錄**（useAuth 內 fire-and-forget）；封鎖帳號＝全平台禁寫（isBlocked 織入所有寫入規則），完全停用走 Firebase Console | 純靜態，Caddy 提供 | 無需建置 |
+| repo 根（`index.html` + `css/ js/ data/ pages/`） | Portal 入口站（單元卡片資料驅動自 `data/unit-registry.json`；全站登入膠囊 `js/portal-auth.js`（email／密碼登入，表單與錯誤翻譯共用 `js/auth-ui.js`，見下方「登入方式」）；**Wiwi Hub SSO 落地頁 `pages/sso-callback.html`**（見「登入方式」的 Wiwi Hub SSO 小節）；**平台帳號管理頁 `pages/admin.html`**——帳號與密碼（經後端服務帳號建帳號／設密碼／停用／刪除）＋登入方式設定＋活動目錄／平台封鎖＋AI 白名單＋增補管理員，root 管理員寫死於 firestore.rules；portal 層 Firebase config 唯一複本在 `js/firebase-config.js`（正本 `packages/firebase`，config-sync.test 驗一致＋CDN 版本＝安裝版）；同源共享 session，portal 登入＝四單元登入；**管理員登入後膠囊顯示「帳號管理」連結**（判定＝以登入者身分能否讀 `platform/meta`，與 rules／後端 admin-guard 同源）。portal 層未 hash 的 `js/`／`css/` 由 Caddyfile 送 `no-cache`（ETag 重驗證）；2026-09-09 曾因缺此標頭讓瀏覽器啟發式快取舊 `portal-auth.js` 數天，故 `index.html`／`admin.html` 的模組網址帶一次性 `?v=`。**登入會自動寫 `platformUsers/{uid}` 帳號目錄**（useAuth 內 fire-and-forget）；封鎖帳號＝全平台禁寫（isBlocked 織入所有寫入規則），完全停用走 Firebase Console | 純靜態，Caddy 提供 | 無需建置 |
 | `growthmap/opportunity-system/` | 識別機會（第三堂） | Vite 8 + React + Tailwind | `build/`（**要 commit**） |
 | `growthmap/aspiration-case/` | 願景 | Vite 8 + React + zustand | `dist/`（要 commit） |
 | `growthmap/momentum-case/` | 動能 | Vite 8 + React + TS | `out/`（要 commit） |
@@ -43,6 +43,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **帳號與密碼統一由管理員控管（做法 A，2026-09-08 裁定）**：平台不提供自助註冊；學員端登入表單不提供「忘記密碼」（顯示「請聯絡平台管理員」，只有管理頁登入表單保留重設信給管理員自助）。管理員在 `pages/admin.html` 的「帳號與密碼」卡建帳號、指定／重設密碼、停用／啟用，在「登入方式設定」卡一鍵啟用 Email/Password 供應商＋關閉自助註冊——全部經後端 `/api/admin/*` 以 **Firebase 服務帳號**代辦（Identity Toolkit REST；`src/service-account.js` 以 Node crypto 簽 jwt-bearer 換 OAuth token，仍不引入 firebase-admin）。管理員建立或設密碼的帳號一律 `emailVerified=true`（管理員背書），rules／AI 白名單的驗證守門直接放行。既有 Google 帳號由管理員直接設密碼（uid 不變、資料不動）。管理員身分後端不另存名單：`src/admin-guard.js` 用呼叫者 token 探測 `platform/meta` 可讀與否，正本仍是 firestore.rules。**刪除帳號**（2026-09-09）：需在請求重打目標 email、不能刪自己；Auth 先刪，再以同一把服務帳號走 Firestore REST 刪 `platformUsers/{uid}`（一定）與 `users/{uid}` 工作簿整棵樹（`purgeData` 勾選才刪，`src/admin-firestore.js` 遞迴含子集合、2000 份文件安全閥）；Firestore 清理失敗不回滾、以 `purge.error` 回報。第四堂 evalProjects 成員資格不動。
 
 **Bootstrap（金鑰只存 Zeabur，不進 git／對話）**：Firebase Console → 專案設定 → 服務帳號 → 產生新的私密金鑰 → 整份 JSON 存 Zeabur 後端環境變數 `FIREBASE_SERVICE_ACCOUNT_JSON` → 重新部署後端 → 在容器內跑 `node scripts/auth-admin.mjs configure`（`zeabur service exec`；啟用 Email/Password＋關閉自助註冊）→ root 管理員用管理頁登入表單的「忘記密碼」設自己的密碼 → 之後全由管理頁操作。CLI 另有 `status`／`list`／`set-password <email>`（密碼走 `NEW_PASSWORD` 環境變數）／`verify-email <email>`／`delete <email> [--purge-data]`／`google-provider <enable|disable>`。**Google 供應商已於 2026-09-09 關閉**（admin v2 `defaultSupportedIdpConfigs/google.com` enabled=false；帳號與資料不動），管理頁「登入方式設定」卡可重新啟用；`auth-config` 回 `googleEnabled`。未設金鑰時 `/api/admin/*` 回 503 `IDO_ADMIN_NOT_CONFIGURED`，其餘功能不受影響。
+
+### Wiwi Hub SSO（2026-09-10 起，第三種登入入口；帳號仍由管理員控管）
+
+公司中控 [wiwi-hub](https://wiwi-hub.zeabur.app) 的「成長藍圖」卡片可免密碼進本平台。交接兩段式：hub `/launch/growth-map-main` 簽 60 秒 HS256 token（`iss=wiwi-hub`、`aud=growth-map-main`、`email`）→ 302 到 `pages/sso-callback.html?sso_token=…`（純靜態頁，`js/sso-callback.js`）→ 頁面立刻把 token 從網址列移除並 `POST ${AI_BASE_URL}/api/auth/sso/exchange`（跨網域，走既有 CORS 白名單）→ 後端 `src/hub-sso.js` 驗章 → 以 email `lookupByEmail` 查**既有** Firebase 帳號（**無 JIT、不建帳號**；查無、停用、驗章失敗一律同一個 401 不洩漏存在性）→ 用既有服務帳號簽 Firebase **custom token**（300 秒）→ 前端 `signInWithCustomToken` → `location.replace('/')`。成功路徑零過場（不渲染 UI），失敗才顯示錯誤卡（改用帳密登入／回 Wiwi Hub）。同源共享 session，落地後四單元同樣已登入。
+
+政策：既有 email／密碼登入完全不動（純加法）；帳號建立仍只在管理頁（hub 有帳號但本平台沒有的人，點卡片會被安全拒絕）；`emailVerified` 不因 SSO 改變（管理員建的帳號本來就已驗證）；管理員身分仍由 firestore.rules 決定，hub 的 role 不帶入。啟用條件＝後端同時設有 `HUB_JWT_SECRET`（與 hub 同值）與 `FIREBASE_SERVICE_ACCOUNT_JSON`，缺一則端點回 404、健康檢查 `ssoConfigured:false`。回滾＝hub 後台 `/admin/apps` 取消勾「成長藍圖」的 SSO（卡片回到純連結），本平台不必改碼。不引入 jose／jsonwebtoken／firebase-admin：HMAC 驗 hub token 與 RS256 簽 custom token 皆 Node 內建 crypto（與「自實作 Firebase token 驗證」同一裁定）。
 
 ### 第四堂（evaluate-strategy）——多人協作模型，與單人模型刻意分離
 
@@ -143,6 +149,7 @@ npx zeabur@latest deploy --project-id 69a70ecee10515e35593d1c2 --service-id 6a25
 | `ALLOWED_EMAIL_DOMAINS` | AI 端點 email 網域白名單 CSV（保底；如 `corp.tw`，嚴格比對、子網域不放行；管理頁亦可設網域） |
 | `FIREBASE_PROJECT_ID` | 驗 token aud/iss 用 |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | 選填。Firebase 服務帳號金鑰（整份 JSON 或 base64）；設了才開 `/api/admin/*`（管理頁的帳號／密碼／登入方式）。Console「產生新的私密金鑰」的 firebase-adminsdk 帳號權限即足夠 |
+| `HUB_JWT_SECRET` | 選填。Wiwi Hub SSO 共享密鑰（與 hub service 同值）；與服務帳號同時設定才開 `POST /api/auth/sso/exchange`，否則該端點 404 |
 | `PORT` | 預設 8787（線上由平台給 8080） |
 
 ## API 規範 — ido-ai-service
@@ -151,7 +158,7 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 
 ### 中介層（順序）
 1. **CORS**（`/*`）：來源限 `ALLOWED_ORIGINS`（CSV）。**fail-closed**：未設＝不允許任何跨來源（防止變成公開的 Anthropic proxy）；要全開須顯式設 `*`。
-2. **Auth**（`/api/*`）：`REQUIRE_AUTH=true` 時驗證 `Authorization: Bearer <Firebase ID token>`。OPTIONS 預檢免 token。驗證成功將 `{ uid, email }` 放入 context。
+2. **Auth**（`/api/*`）：`REQUIRE_AUTH=true` 時驗證 `Authorization: Bearer <Firebase ID token>`。OPTIONS 預檢免 token。驗證成功將 `{ uid, email }` 放入 context。**唯一公開例外 `POST /api/auth/sso/exchange`**（登入前呼叫、沒有 ID token；自身以 hub 簽章守門，rate limit 仍套用）。
 3. **Rate limit**（`/api/*`）：in-memory、per-IP、**20 次/分**，超過回 429。
 4. **Admin guard**（`/api/admin/*`）：email 已驗證＋firestore.rules 認定的平台管理員（`admin-guard.js` 探測 `platform/meta`，60s 快取）＋服務帳號已設定；此組端點不套 AI 白名單。
 
@@ -159,7 +166,8 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 
 | 方法 | 路徑 | 用途 | 串流 |
 | --- | --- | --- | --- |
-| GET | `/` | 健康檢查 → `{ ok, service, hasApiKey, apiKeyValid, adminConfigured }`（`apiKeyValid` 以免費的 GET /v1/models 探測、1 小時快取：true／false／null；沒有 `/health` 路由） | — |
+| GET | `/` | 健康檢查 → `{ ok, service, hasApiKey, apiKeyValid, adminConfigured, ssoConfigured }`（`apiKeyValid` 以免費的 GET /v1/models 探測、1 小時快取：true／false／null；沒有 `/health` 路由） | — |
+| POST | `/api/auth/sso/exchange` | Wiwi Hub SSO 交換（公開，不需 ID token）：`{ sso_token }` → `{ customToken, expiresIn: 300 }`；HS256 驗章（iss=wiwi-hub／aud=growth-map-main／exp，±30s）→ email 查既有帳號（無 JIT）→ 簽 Firebase custom token；未設 `HUB_JWT_SECRET` 或服務帳號 → 404 | 否 |
 | POST | `/api/ai/tasks` | AI-01 / AI-02 / AI-03 / AI-04（非串流任務） | 否 |
 | POST | `/api/ai/coach` | AI-07 教練對話 | SSE |
 | GET | `/api/admin/accounts` | 帳號清單 `{ accounts:[{uid,email,displayName,emailVerified,disabled,providers,createdAt,lastLoginAt}] }` | 否 |
@@ -194,6 +202,8 @@ Base URL：`https://growthmap-ai.zeabur.app`。框架 Hono。所有 AI 產出皆
 | `IDO_ADMIN_ONLY` | 403 | 非平台管理員（或 email 未驗證）呼叫 `/api/admin/*` |
 | `IDO_ADMIN_NOT_CONFIGURED` | 503 | 未設 `FIREBASE_SERVICE_ACCOUNT_JSON`，或 `REQUIRE_AUTH` 非 true |
 | `IDO_ADMIN_UPSTREAM` | 502 | Firebase 管理 API 錯誤（訊息含原因）或管理員身分查核暫時失敗 |
+| `IDO_SSO_NOT_CONFIGURED` | 404 | 未設 `HUB_JWT_SECRET` 或服務帳號——SSO 交換端點視同不存在 |
+| `IDO_SSO_TOKEN_INVALID` | 401 | hub token 驗章／iss／aud／過期失敗、查無帳號、帳號停用——**統一同一碼同一訊息**，不洩漏帳號存在性（原因只進伺服器 log） |
 
 ### 認證機制
 
@@ -271,6 +281,7 @@ Vite + React，`src/` 依功能分目錄。流程：**工具分析 → 新增機
 - **ADR-010**：CHK-1 緩衝係數可於設定頁調整（預設 1.2）。
 - **Fail-closed CORS**：避免忘設 `ALLOWED_ORIGINS` 變成對外全開的付費 Anthropic proxy。
 - **自實作 Firebase token 驗證**：免 firebase-admin 重依賴，用 Node crypto 驗 RS256。
+- **ADR-011（2026-09-10）Wiwi Hub SSO 走 Firebase custom token**：後端驗 hub HS256 → 服務帳號簽 custom token → 前端 `signInWithCustomToken`；無 JIT、失敗統一 401、未設密鑰 404；不引入 JWT 套件；回滾在 hub 端取消勾 SSO。
 
 ## 本機開發注意
 

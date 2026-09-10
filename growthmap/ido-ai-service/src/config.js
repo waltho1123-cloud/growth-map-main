@@ -18,6 +18,8 @@ export const config = {
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   // 做法 A（2026-09-08）：服務帳號金鑰（JSON 或 base64）——管理端點 /api/admin/* 用；未設定則該組端點回 503
   serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '',
+  // Wiwi Hub SSO 共享密鑰；未設＝/api/auth/sso/exchange 回 404
+  hubJwtSecret: process.env.HUB_JWT_SECRET || '',
 };
 
 export const hasApiKey = () => Boolean(config.anthropic.apiKey);

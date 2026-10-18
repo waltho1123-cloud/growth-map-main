@@ -65,10 +65,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Workspace 根（repo 根執行）
 npm install                                  # 一次裝全部 workspace（唯一的安裝入口）
-VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 三單元全建
+VITE_AI_BASE_URL=https://growthmap-ai.wiwiapps.com npm run build   # 三單元全建
 npm test                                     # 全 workspace 測試（contracts/cloud/opportunity）
 npm run lint                                 # 三單元 lint（基線全綠）
-VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run preflight   # 部署前必跑：test+lint+build 全綠才准 deploy
+VITE_AI_BASE_URL=https://growthmap-ai.wiwiapps.com npm run preflight   # 部署前必跑：test+lint+build 全綠才准 deploy
 # 建置產物入版控＋Tailwind v4 自動掃描：三個 v4 單元的 CSS 入口有 `@source not "../dist"`（momentum 為 ../../out），
 # 否則上一次的 bundle 會被當 class 來源、hash 延遲一個週期才穩定（2026-09-09 根因）。opportunity 是 Tailwind v3（content 明列）不受影響。
 # preflight 開頭有兩個前置 gate（scripts/）：check:env 未帶 VITE_AI_BASE_URL 直接 fail（防 GD-06 靜默停用）；
@@ -79,7 +79,7 @@ npm start                                    # Vite dev server :5173
 npm test                                     # Vitest 跑一次（preflight 用；測試在 src/__tests__/）
 npm run test:watch                           # watch 模式（開發用）
 npm run lint                                 # eslint（0 error 為基線）
-VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（見下方「關鍵」）
+VITE_AI_BASE_URL=https://growthmap-ai.wiwiapps.com npm run build   # 正式建置（見下方「關鍵」）
 # 瀏覽器支援下限明訂於 vite.config.mjs 的 build.target；Node ^22.22.2 || ^24.15.0 || >=26（engines）
 # build 內建 eslint gate（0 error 才建置）；PDF 字型走 public/fonts 穩定路徑（部署相容契約，勿改 hashed）
 
@@ -93,6 +93,8 @@ npm run dev                                  # --watch + 讀 .env（需 ANTHROPI
 ```
 
 ## 部署（Zeabur，direct deploy 非 git 連動）
+
+> **2026-10 W2 搬遷（Zeabur→Vultr）**：後端新網域改為 `https://growthmap-ai.wiwiapps.com`、前端站為 `https://growthmap.wiwiapps.com`。`js/platform-config.js` 的 `AI_BASE_URL` 與兩個會呼叫後端的單元（opportunity-system、evaluate-strategy）的 committed 建置產物已用新後端網址重建（重建結果與舊產物逐檔比對，只有後端網址與 chunk 檔名不同）——**之後正式建置的 `VITE_AI_BASE_URL` 一律用新網址**。下方 Zeabur 服務表與 `zeabur deploy` 指令是搬遷前的做法，切換完成後由搬遷計畫更新；後端 `ALLOWED_ORIGINS` 在回退期要同時含新舊前端 origin，Firebase Authorized domains 同理。
 
 Zeabur 專案 `growth-map-main`：project-id `69a70ecee10515e35593d1c2`、env `69a70ecea2c1609bd1efd98a`。**`zeabur deploy` 上傳的是目前工作目錄**：前端站（prod／staging）一律在 repo 根執行、後端一律在 `growthmap/ido-ai-service` 執行；同一串指令切了目錄後要切回來——2026-09-09 曾把後端目錄上傳到 staging 前端服務（整站 404、根路徑變成健康檢查 JSON），重新從 repo 根部署即恢復。部署後用「只有新版才有的檔案 md5」輪詢確認，勿只信 CLI 的 deployed successfully。兩個 Dockerfile 的基底映像走 `mirror.gcr.io/library/*`（Docker Hub 鏡像）：Zeabur 建置機直拉 docker.io 會遇 429 限流（2026-09-08 連兩次 build failed），勿改回。**push GitHub 不會觸發部署**，改完必須手動 deploy。重新部署**務必帶 `--service-id`**，否則會建出重複服務：
 

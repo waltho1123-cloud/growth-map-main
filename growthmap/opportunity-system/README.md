@@ -8,7 +8,7 @@
 npm start          # Vite dev server（http://localhost:5173）
 npm test           # Vitest watch；跑一次用 npm test -- run
 npm run lint       # eslint（react + react-hooks 經典規則）
-VITE_AI_BASE_URL=https://growthmap-ai.zeabur.app npm run build   # 正式建置（先跑 eslint gate；漏設變數則 AI 功能停用）
+VITE_AI_BASE_URL=https://growthmap-ai.wiwiapps.com npm run build   # 正式建置（先跑 eslint gate；漏設變數則 AI 功能停用）
 npm run preview    # 本機預覽 build 產物
 ```
 

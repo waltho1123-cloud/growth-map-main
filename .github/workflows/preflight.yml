@@ -21,7 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run preflight
         env:
-          VITE_AI_BASE_URL: https://growthmap-ai.zeabur.app
+          VITE_AI_BASE_URL: https://growthmap-ai.wiwiapps.com
   rules:
     runs-on: ubuntu-latest
     timeout-minutes: 15

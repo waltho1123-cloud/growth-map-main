@@ -1,4 +1,6 @@
 # 線上健康檢查：每 10 分鐘探測後端 `/`（ok／apiKeyValid／adminConfigured）與前端站 200。
+# 2026-10 W2 搬遷：探測網址已改為新網域（後端 growthmap-ai.wiwiapps.com、前端 growthmap.wiwiapps.com）；
+# 這個 workflow 要在切換當下才生效——舊站暫停後再不改，探測會一直失敗並開 issue。
 # 失敗＝workflow 紅燈（GitHub 會寄信）＋開／更新 issue「🚨 線上健康檢查失敗」；恢復後自動關 issue。
 # 注意：公開 repo 60 天無 commit 時 GitHub 會暫停排程 workflow，需到 Actions 頁手動重新啟用。
 name: health-check
@@ -23,12 +25,12 @@ jobs:
         run: |
           set -u
           fail=""
-          body=$(curl -s -m 20 https://growthmap-ai.zeabur.app/ || true)
+          body=$(curl -s -m 20 https://growthmap-ai.wiwiapps.com/ || true)
           echo "backend: $body"
           echo "$body" | grep -q '"ok":true' || fail="$fail backend-not-ok;"
           echo "$body" | grep -q '"apiKeyValid":true' || fail="$fail anthropic-key-invalid;"
           echo "$body" | grep -q '"adminConfigured":true' || fail="$fail admin-not-configured;"
-          code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' https://growth-map-main.zeabur.app/ || echo 000)
+          code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' https://growthmap.wiwiapps.com/ || echo 000)
           echo "frontend: HTTP $code"
           [ "$code" = "200" ] || fail="$fail frontend-http-$code;"
           echo "fail=$fail" >> "$GITHUB_OUTPUT"
@@ -44,7 +46,7 @@ jobs:
           body="時間：$(date -u +%FT%TZ)（UTC）
           失敗項目：${FAIL:-unknown}
           Run：$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          判讀：anthropic-key-invalid → Zeabur 後端更新 ANTHROPIC_API_KEY；admin-not-configured → FIREBASE_SERVICE_ACCOUNT_JSON；backend-not-ok／frontend-http → 看 Zeabur 部署與 runtime log（CLAUDE.md 部署章節）。"
+          判讀：anthropic-key-invalid → 後端更新 ANTHROPIC_API_KEY；admin-not-configured → FIREBASE_SERVICE_ACCOUNT_JSON；backend-not-ok／frontend-http → 看部署與 runtime log（CLAUDE.md 部署章節）。"
           if [ -n "$num" ]; then gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body "$body"; else gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"; fi
       - name: Close alert issue on recovery
         if: success()

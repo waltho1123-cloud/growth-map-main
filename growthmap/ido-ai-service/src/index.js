@@ -45,7 +45,7 @@ else console.log('[sso] 未設定 HUB_JWT_SECRET——/api/auth/sso/exchange 停
 // Anthropic 金鑰有效性：啟動探測一次並記 log；健康檢查回 apiKeyValid（1 小時快取）
 const keyProbe = createKeyProbe({ apiKey: config.anthropic.apiKey, baseURL: config.anthropic.baseURL });
 keyProbe.check().then((r) => {
-  if (r.valid === false) console.error(`[anthropic] API key 無效（HTTP ${r.status}）——線上 AI 功能全部會回 401/503，請到 Zeabur 更新 ANTHROPIC_API_KEY`);
+  if (r.valid === false) console.error(`[anthropic] API key 無效（HTTP ${r.status}）——線上 AI 功能全部會回 401/503，請到 Coolify 的 growthmap-ai 應用，在環境變數（Environment Variables）更新 ANTHROPIC_API_KEY 後按 Redeploy 重新部署`);
   else if (r.valid === null) console.warn('[anthropic] API key 探測未完成：', r.reason || `HTTP ${r.status}`);
   else console.log('[anthropic] API key 有效');
 });
@@ -165,7 +165,7 @@ app.use('/api/admin/*', async (c, next) => {
     return c.json({ error: { code: 'IDO_ADMIN_UPSTREAM', message: '管理員身分查核暫時失敗，請稍後重試' } }, 502);
   }
   if (!adminClient) {
-    return c.json({ error: { code: 'IDO_ADMIN_NOT_CONFIGURED', message: '後端未設定 FIREBASE_SERVICE_ACCOUNT_JSON（Zeabur 環境變數）' } }, 503);
+    return c.json({ error: { code: 'IDO_ADMIN_NOT_CONFIGURED', message: '後端未設定 FIREBASE_SERVICE_ACCOUNT_JSON（Coolify growthmap-ai 應用的環境變數 Environment Variables）' } }, 503);
   }
   return next();
 });
@@ -376,7 +376,7 @@ app.post('/api/ai/tasks', async (c) => {
     // 上游 401/403＝伺服器金鑰無效或無權限：對使用者是「平台設定問題」，不要把原始 JSON 丟到畫面
     if (e?.status === 401 || e?.status === 403) {
       keyProbe.check({ force: true }).catch(() => {});
-      return c.json({ error: { code: 'IDO_AI_KEY_INVALID', message: 'AI 服務的金鑰無效或已失效，請聯絡平台管理員（Zeabur 後端 ANTHROPIC_API_KEY）' } }, 503);
+      return c.json({ error: { code: 'IDO_AI_KEY_INVALID', message: 'AI 服務的金鑰無效或已失效，請聯絡平台管理員（Coolify growthmap-ai 應用的環境變數 ANTHROPIC_API_KEY）' } }, 503);
     }
     return c.json({ error: { code: 'IDO_AI_ERROR', message: String(e?.message || e) } }, 502);
   }

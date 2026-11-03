@@ -41,7 +41,7 @@ favicon.ico，404 即部署迴歸，不再是可忽略例外**）、兩個 PDF �
 > （過去 Google OAuth 擋 CDP 瀏覽器、必須真人手動的限制已不存在）。測試帳號請在
 > Firebase Console → Authentication → Users 建立，勿用真實學員帳號。
 
-1. Chrome **一般視窗**開 staging 單元頁（aspiration 或 momentum）→ email／密碼登入。
+1. Chrome **一般視窗**開線上單元頁（https://growthmap.wiwiapps.com 下的 aspiration 或 momentum）→ email／密碼登入。
 2. **無痕視窗**開同一網址 → 登入同一帳號（兩環境的 storage 完全隔離＝兩台裝置）。
 3. 視窗 A 改一個欄位；30 秒內視窗 B 改**另一個 section** 的欄位
    （aspiration：Part A vs Part B；momentum：驅動因子 vs 棘手挑戰——同 section
@@ -78,7 +78,7 @@ playwright-cli console error
 ## 真帳號登入 e2e（動到登入流程、@growthmap/firebase、js/auth-ui.js 時必跑）
 
 ```bash
-scripts/smoke-login.sh https://growthmap-staging.zeabur.app   # 或 prod 網址
+scripts/smoke-login.sh https://growthmap.wiwiapps.com   # 腳本內建預設值是舊的 Zeabur staging 網址，務必明確帶網址
 ```
 
 需要 `~/.config/growthmap/smoke.env`（`SMOKE_EMAIL`／`SMOKE_PASSWORD`，chmod 600）。smoke 帳號
@@ -88,7 +88,7 @@ scripts/smoke-login.sh https://growthmap-staging.zeabur.app   # 或 prod 網址
 ## 第四堂多人流程 UAT（動到 evalProjects 規則、邀請／加入、ProjectPicker／SettingsPage 時必跑）
 
 ```bash
-scripts/uat-evaluate-multiuser.sh https://growthmap-staging.zeabur.app
+scripts/uat-evaluate-multiuser.sh https://growthmap.wiwiapps.com   # 同上，務必明確帶網址（內建預設值是舊的 Zeabur staging 網址）
 ```
 
 兩個 smoke 帳號（`smoke.env` 的 SMOKE 與 SMOKE2）各開一個 Playwright session（`-s=uat-owner`／`-s=uat-member`）。

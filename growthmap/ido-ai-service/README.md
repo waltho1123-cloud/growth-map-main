@@ -24,11 +24,11 @@ npm install
 node --env-file=.env src/index.js   # 或 npm run dev
 ```
 
-## Zeabur 部署（第二服務）
+## 部署（Vultr＋Coolify，2026-10-26 起）
 
-1. 同 repo 新增服務，**Root Directory** 設為 `growthmap/ido-ai-service`（Dockerfile 自動偵測）。
-2. 環境變數設定：`ANTHROPIC_API_KEY`、`ALLOWED_ORIGINS`（填前端正式域名）、`REQUIRE_AUTH=true`、`MODEL_*`（可選）。
-3. 前端 `opportunity-system` 設定 `VITE_AI_BASE_URL` 指向本服務網址。
+1. 跑在 Coolify 專案 `growth-map-main` 的應用 `growthmap-ai`（Vultr 東京主機 `app2`；主控台 https://ops.wiwiapps.com ，只有管理者能登入），正式網址 https://growthmap-ai.wiwiapps.com ，容器埠 8787。**Base Directory** 是 `growthmap/ido-ai-service`，用該目錄的 `Dockerfile`；push `main` 自動部署，回退在應用頁 Deployments 挑前一次重新部署。（2026-10-26 前在 Zeabur，當時是同 repo 新增第二服務。）
+2. 環境變數在 Coolify 應用頁的 Environment Variables 設定（值不進 git）：`ANTHROPIC_API_KEY`、`ALLOWED_ORIGINS`（填前端正式域名）、`REQUIRE_AUTH=true`、`MODEL_*`（可選）；完整清單見 repo 根 `CLAUDE.md`「後端環境變數」。Log 看應用頁的 Logs。
+3. 前端 `opportunity-system` 設定 `VITE_AI_BASE_URL` 指向本服務網址（https://growthmap-ai.wiwiapps.com）。
 
 ## 安全
 

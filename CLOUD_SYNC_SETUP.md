@@ -59,7 +59,7 @@ const firebaseConfig = {
 
 Authentication → Settings → Authorized domains → 新增：
 - `localhost`（本機開發用）
-- Zeabur 正式域名（例：`growth-map-main.zeabur.app` 或你綁的自訂域名）
+- 正式網域（目前是 `growthmap.wiwiapps.com`；2026-10-26 前在 Zeabur，網域是 `growth-map-main.zeabur.app`）
 
 ## 7. 把 config 給我
 

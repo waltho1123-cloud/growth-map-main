@@ -2,6 +2,7 @@
 
 > 將《成長藍圖平台 — 識別機會模組 SDD v1.0》整合進現有 `opportunity-system`。
 > 本文件為執行依據；遵循 SDD 精神（規格驅動），但技術棧依現實做務實對應。
+> 2026-10-26 已從 Zeabur 搬到 Vultr＋Coolify：AI/BFF 後端現為 Coolify 應用 `growthmap-ai`，現行部署方式見 repo 根 `CLAUDE.md`「部署」段；下文提到 Zeabur 的規劃與進度紀錄保留原樣（僅更新仍在描述現況的幾處）。
 
 ## 一、架構決策（已與使用者確認）
 
@@ -22,7 +23,7 @@ Portal (靜態) ── unit-3 opportunity-system (CRA SPA, 擴充)
                         │
                         │  AI 任務 / 教練對話 經由 ↓
                         ▼
-                IDO AI/BFF 服務 (Zeabur 第二服務, Node + Hono)
+                IDO AI/BFF 服務 (獨立後端服務, Node + Hono)
                 ├─ POST /api/ai/tasks  (AI-01 洞察 / AI-03 評分 / AI-04 排序) → draft 建議
                 ├─ POST /api/ai/coach  (AI-07 教練, SSE 串流)
                 ├─ Firebase ID token 驗證 + 去識別化 + prompt 注入防護
@@ -109,7 +110,7 @@ Phase 0–4、6 不需 Claude API key，可先完成。Phase 5 需使用者提�
 - **端點**：`POST /api/ai/tasks`（回 draft 建議 + confidence）、`POST /api/ai/coach`（SSE）。
 - **安全（GD-07）**：Firebase ID token 驗證；送 LLM 前去識別化（僅統計特徵，不傳客戶 PII/逐筆營收）；使用者輸入標註為「資料非指令」防注入；輸出不觸發任何副作用。
 - **降級（GD-06）**：供應商故障→前端切手動模式，核心表單仍可用。
-- **部署**：Zeabur 第二服務；前端以環境變數設定 API base URL。
+- **部署**：獨立後端服務（2026-10-26 起是 Coolify 應用 `growthmap-ai`，原為 Zeabur 第二服務）；前端以環境變數設定 API base URL。
 
 ## 七、待使用者提供
 
@@ -122,7 +123,7 @@ GD-02 鎖技術棧（不引入 PostgreSQL/Redis）；GD-04 AI 皆 draft 經人�
 
 ## 九、工作流注意
 
-- 改 `src/` 後須 `npm run build`（產 `build/`）；`.zeaburignore` 排除 `src/`，Caddy 只服務 `build/`。
+- 改 `src/` 後須 `npm run build`（產 `build/`）並 commit；前端站 `Dockerfile` 只 `COPY` 已 commit 的 `build/`，Caddy 只服務 `build/`（舊 Zeabur 時期靠 `.zeaburignore` 排除 `src/`）。
 - React 19 + Vite 8（2026-08 自 CRA 遷移）：`npm install` 直接可用，不再需要 `--legacy-peer-deps`。
 
 ## 十、進度
@@ -132,16 +133,16 @@ GD-02 鎖技術棧（不引入 PostgreSQL/Redis）；GD-04 AI 皆 draft 經人�
 - [x] **Phase 2** MOD-03 三模版完整化（TabTwo 七面向、TabThree 四象限評分 + estRevenue）
 - [x] **Phase 3** MOD-01/08 差距儀表 + 機會狀態機（orient / opportunityStatus / GrowthGapDashboard）
 - [x] **Phase 4** MOD-05 綜合檢查 CHK-1~5 + 排序（checkEngine / CheckPanel）
-- [ ] **Phase 5** MOD-06 AI 協作後端 + 人在迴路 — **需 Claude API key / Zeabur AI Hub**
+- [x] **Phase 5** MOD-06 AI 協作後端 + 人在迴路 — **需 Claude API key / Zeabur AI Hub**（已完成，見下方同名項目；後端現為 Coolify 應用 `growthmap-ai`）
 - [x] **Phase 6** MOD-08 交付輸出（JSON）+ 不可變快照（HandoffPanel / handoff，GD-09）
-- [x] **Phase 5** MOD-06 AI 協作 — 後端服務 + 前端 AI-01/03/04/07 + 人在迴路 **程式碼完成**；僅 Zeabur 部署待做
+- [x] **Phase 5** MOD-06 AI 協作 — 後端服務 + 前端 AI-01/03/04/07 + 人在迴路 **程式碼完成**；後端已部署（2026-10-26 起是 Coolify 應用 `growthmap-ai`，原 Zeabur 第二服務）
 
 ### Phase 5 細節
 - 後端 `growthmap/ido-ai-service`（Node + Hono + `@anthropic-ai/sdk`）：`/api/ai/tasks`（AI-01/03/04）、`/api/ai/coach`（AI-07 SSE）。去識別化、CORS、rate limit、人在迴路（只回 draft）。已用真實 key 驗證 AI-01 通過（`claude-sonnet-4-6`）。
 - 前端：`lib/ai/aiClient.js`、`components/ai/AiSuggestionCard.js`（accept/reject）、`CoachDrawer.js`；工具分析「AI 產洞察」、模版三「AI 評分」、右下教練浮動鈕。`VITE_AI_BASE_URL` 未設時 AI 停用（降級 GD-06）。
 - AI-04 排序：已完成（`components/ai/AiRankPanel.js`，採納寫入機會 `rank`，長清單優先依 rank 排序）。
-- **待辦**：本地端到端測試（`VITE_AI_BASE_URL=http://localhost:8787 npm start` + 後端 `node --env-file=.env src/index.js`）；Zeabur 第二服務部署。
-- **⚠️ key 安全**：使用者曾將 key 貼於對話，需撤銷換新；正式環境用 Zeabur 環境變數。
+- **待辦**：本地端到端測試（`VITE_AI_BASE_URL=http://localhost:8787 npm start` + 後端 `node --env-file=.env src/index.js`）；後端部署已完成（2026-10-26 起是 Coolify 應用 `growthmap-ai`，原 Zeabur 第二服務）。
+- **⚠️ key 安全**：使用者曾將 key 貼於對話，需撤銷換新；正式環境用 Coolify 應用的環境變數（原 Zeabur 環境變數）。
 
 Phase 0–4、6 全綠 + **17/17 整合測試通過**（2026-08-09，Vite 8 遷移後）。`build/` 已 commit 進 repo（「GitHub = 線上」慣例）。AI 在無 `VITE_AI_BASE_URL` 的 build 中停用（GD-06）。
 

@@ -32,3 +32,16 @@ input[type="number"] {
 html {
   font-family: system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
 }
+
+/*
+ * iOS Safari 聚焦字級小於 16px 的輸入框時會自動放大整頁、且不會縮回（手機上看起來像頁面跑掉）。
+ * 觸控裝置上，文字輸入框、文字框、下拉選單一律 16px；滑鼠裝置（桌面）不受影響。
+ * 不用 viewport maximum-scale 擋：那會讓使用者無法雙指縮放（WCAG 1.4.4）。2026-11-08，同 wiwi-kbs PR #93。
+ */
+@media (hover: none), (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']):not([type='hidden']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
